@@ -70,8 +70,11 @@ for count in range(0, max_samples):
 
     if adwin.detected_change():
         drift_detected = True
-        contingency_table = [[0]*2 for i in range(2)]
         print(f"Drift detected at {count}")
+
+        contingency_table = [[0]*2 for i in range(2)]
+        adwin.reset()
+
 
     # train
     learner.partial_fit(X, y)
