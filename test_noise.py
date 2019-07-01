@@ -17,6 +17,7 @@ from sklearn.metrics import cohen_kappa_score
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
+fig, ax = plt.subplots(3, 1, sharex=True, sharey=True)
 
 max_samples = 20000
 n_wait = 1000
@@ -25,7 +26,7 @@ pretrain_size = n_wait
 # for computing hoeffding bound
 class_count = 2
 r = math.log(class_count, 2)
-confidence = 0.05
+confidence_intervals = [0.05, 0.1, 0.2]
 
 def compute_hoeffding_bound(r, confidence, n_samples):
     return math.sqrt(((r*r) * math.log(1.0/confidence)) / (2.0*n_samples));
@@ -47,11 +48,13 @@ def stats_test(correct, drift_correct, accuracy, drift_accuracy):
     # hoeffding test
     error_rate = incorrect / n_wait
     drift_error_rate = drift_incorrect / n_wait
-    hoeffding_bound = compute_hoeffding_bound(r, confidence, n_wait)
-    if abs(error_rate - drift_error_rate) < hoeffding_bound:
-        hoeffding_result = "within bound"
-    else:
-        hoeffding_result = "outside boune"
+
+    for ci in confidence_intervals:
+        hoeffding_bound = compute_hoeffding_bound(r, ci, n_wait)
+        if abs(error_rate - drift_error_rate) < hoeffding_bound:
+            hoeffding_result = "within bound"
+        else:
+            hoeffding_result = "outside boune"
 
     print(f"{count},{accuracy},{drift_accuracy}"
           f"{fisher_pvalue},{kappa},{ks_pvalue},{hoeffding_result}")
@@ -78,11 +81,14 @@ def prepare_stream(noise_1 = 0.1, noise_2 = 0.1):
     return stream
 
 noise_levels = [0.2, 0.3, 0.4]
-for noise_level in noise_levels:
+for i in range(0, len(noise_levels)):
+    accuracy_list_old = []
+    accuracy_list_new = []
+
     learner = HoeffdingTree()
     drift_learner = HoeffdingTree()
     adwin = ADWIN()
-    stream = prepare_stream(noise_2=noise_level)
+    stream = prepare_stream(noise_2=noise_levels[i])
 
     if pretrain_size > 0:
         X, y = stream.next_sample(pretrain_size)
@@ -95,6 +101,9 @@ for noise_level in noise_levels:
 
     predictions = []
     drift_predictions = []
+
+    x_axis_old = []
+    x_axis_new = []
 
     for count in range(0, max_samples):
 
@@ -134,7 +143,12 @@ for noise_level in noise_levels:
             accuracy = correct / n_wait
             drift_accuracy = drift_correct / n_wait
 
+            x_axis_old.append(count)
+            accuracy_list_old.append(accuracy)
+
             if drift_detected:
+                x_axis_new.append(count)
+                accuracy_list_new.append(drift_accuracy)
                 stats_test(correct, drift_correct, accuracy, drift_accuracy)
             else:
                 print(f"{count},{accuracy}")
@@ -144,3 +158,13 @@ for noise_level in noise_levels:
             drift_correct = 0
             predictions = []
             drift_predictions = []
+
+
+    ax[i].set_title(r"noise=%s" % str(noise_levels[i]))
+    ax[i].plot(x_axis_old, accuracy_list_old)
+    ax[i].plot(x_axis_new, accuracy_list_new)
+
+plt.xlabel("no. instances")
+plt.xlabel("accuracy")
+
+plt.show()
