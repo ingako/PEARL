@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 import math
+import numpy as np
 
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
 from skmultiflow.evaluation import EvaluatePrequential
 from skmultiflow.data import LEDGeneratorDrift
+from skmultiflow.data import AGRAWALGenerator
 from skmultiflow.data import ConceptDriftStream
 
 from scipy.stats import ks_2samp
@@ -17,16 +19,26 @@ from sklearn.metrics import cohen_kappa_score
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
-fig, ax = plt.subplots(3, 2) # sharex=True, sharey=True)
+plt.rcParams["figure.figsize"] = (20, 10)
+
+fig, ax = plt.subplots(3, 4, sharey=True, constrained_layout=True) # sharex=True
 
 max_samples = 20000
 n_wait = 1000
 pretrain_size = n_wait
+p_value = 0.05
 
 # for computing hoeffding bound
 class_count = 2
 r = math.log(class_count, 2)
 confidence_intervals = [0.05, 0.1, 0.2]
+
+def plot_stats(ax, x_axis, y_axis, p_value):
+    for xy in zip(x_axis, y_axis):
+        color = 'C0'
+        if xy[1] < p_value:
+            color = 'C3'
+        ax.plot(xy[0], xy[1], 'o', color=color, picker=True)
 
 def compute_hoeffding_bound(r, confidence, n_samples):
     return math.sqrt(((r*r) * math.log(1.0/confidence)) / (2.0*n_samples));
@@ -61,7 +73,7 @@ def stats_test(correct, drift_correct, accuracy, drift_accuracy):
 
     return ks_pvalue, kappa, fisher_pvalue
 
-def prepare_stream(noise_1 = 0.1, noise_2 = 0.1):
+def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1):
     stream_1 = LEDGeneratorDrift(random_state=0,
                                  noise_percentage=noise_1,
                                  has_noise=False,
@@ -71,13 +83,27 @@ def prepare_stream(noise_1 = 0.1, noise_2 = 0.1):
                                  noise_percentage=noise_2,
                                  has_noise=False,
                                  n_drift_features=5)
+    return stream_1, stream_2
 
-    stream = ConceptDriftStream(
-        stream=stream_1,
-        drift_stream=stream_2,
-        random_state=None,
-        position=10000,
-        width=1)
+def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1):
+    stream_1 = AGRAWALGenerator(classification_function=0,
+                                random_state=0,
+                                balance_classes=False,
+                                perturbation=noise_1)
+
+    stream_2 = AGRAWALGenerator(classification_function=4,
+                                random_state=0,
+                                balance_classes=False,
+                                perturbation=noise_2)
+
+    return stream_1, stream_2
+
+def prepare_concept_drift_stream(stream_1, stream_2):
+    stream = ConceptDriftStream(stream=stream_1,
+                                drift_stream=stream_2,
+                                random_state=None,
+                                position=10000,
+                                width=1)
 
     stream.prepare_for_use()
     return stream
@@ -97,8 +123,11 @@ for i in range(0, len(noise_levels)):
 
     learner = HoeffdingTree()
     drift_learner = HoeffdingTree()
-    adwin = ADWIN()
-    stream = prepare_stream(noise_2=noise_levels[i])
+    adwin = ADWIN(0.001)
+
+    # stream = prepare_stream(noise_2=noise_levels[i])
+    stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i])
+    stream = prepare_concept_drift_stream(stream_1, stream_2)
 
     if pretrain_size > 0:
         X, y = stream.next_sample(pretrain_size)
@@ -138,9 +167,10 @@ for i in range(0, len(noise_levels)):
 
         if adwin.detected_change():
             drift_detected = True
-            # print(f"Drift detected at {count}")
+            print(f"Drift detected at {count}")
 
             predictions = []
+            drift_predictions = []
             adwin.reset()
 
         # train
@@ -160,12 +190,13 @@ for i in range(0, len(noise_levels)):
                 x_axis_new.append(count)
                 accuracy_list_new.append(drift_accuracy)
 
-                ks_pvalue, kappa, fisher_pvalue = stats_test(correct, drift_correct, accuracy, drift_accuracy)
+                ks_pvalue, kappa, fisher_pvalue = stats_test(correct,
+                                                             drift_correct,
+                                                             accuracy,
+                                                             drift_accuracy)
                 ks_pvalues.append(ks_pvalue)
                 kappa_values.append(kappa)
                 fisher_pvalues.append(fisher_pvalue)
-            # else:
-                # print(f"{count},{accuracy}")
 
             # reset all metrics
             correct = 0
@@ -173,23 +204,23 @@ for i in range(0, len(noise_levels)):
             predictions = []
             drift_predictions = []
 
-
     ax[i, 0].set_title(r"noise=%s" % str(noise_levels[i]))
     ax[i, 0].plot(x_axis_old, accuracy_list_old)
     ax[i, 0].plot(x_axis_new, accuracy_list_new)
 
-    ax[0, 1].plot(x_axis_new, ks_pvalues, label=r"noise=%s" % str(noise_levels[i]))
-    ax[1, 1].plot(x_axis_new, kappa_values, label=r"noise=%s" % str(noise_levels[i]))
-    ax[2, 1].plot(x_axis_new, fisher_pvalues, label=r"noise=%s" % str(noise_levels[i]))
+    plot_stats(ax[i, 1], x_axis_new, ks_pvalues, p_value)
+    plot_stats(ax[i, 2], x_axis_new, fisher_pvalues, p_value)
+    ax[i, 3].plot(x_axis_new, kappa_values, 'o', color='C2')#, label=r"noise=%s" % str(noise_levels[i]))
+
+
+ax[0, 1].set_title("KS Test p-value")
+ax[0, 2].set_title("Fisher's Exact Test p-values")
+ax[0, 3].set_title("Kappa")
+
+# ax[1, 1].legend()
 
 plt.xlabel("no. of instances")
 # plt.ylabel("")
 
-ax[0, 1].set_title("KS Test p-value")
-ax[1, 1].set_title("Kappa")
-ax[2, 1].set_title("Fisher's Exact Test p-values")
-
-ax[1, 1].legend()
-
-plt.tight_layout()
+#plt.tight_layout()
 plt.show()
