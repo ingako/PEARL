@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
-fig, ax = plt.subplots(3, 4, sharey=True, constrained_layout=True) # sharex=True
+fig, ax = plt.subplots(3, 5, sharey=True, constrained_layout=True) # sharex=True
 
 max_samples = 20000
 n_wait = 1000
@@ -33,10 +33,10 @@ class_count = 2
 r = math.log(class_count, 2)
 confidence_intervals = [0.05, 0.1, 0.2]
 
-def plot_stats(ax, x_axis, y_axis, p_value):
+def plot_stats(ax, x_axis, y_axis, bound, alt_color='C0'):
     for xy in zip(x_axis, y_axis):
-        color = 'C0'
-        if xy[1] < p_value:
+        color=alt_color
+        if xy[1] < bound:
             color = 'C3'
         ax.plot(xy[0], xy[1], 'o', color=color, picker=True)
 
@@ -61,17 +61,13 @@ def stats_test(correct, drift_correct, accuracy, drift_accuracy):
     error_rate = incorrect / n_wait
     drift_error_rate = drift_incorrect / n_wait
 
-    hoeffding_results = []
+    hoeffding_result = 0
     for ci in confidence_intervals:
         hoeffding_bound = compute_hoeffding_bound(r, ci, n_wait)
         if abs(error_rate - drift_error_rate) < hoeffding_bound:
-            hoeffding_results.append("within boundary")
-        else:
-            hoeffding_results.append("out of boundary")
+            hoeffding_result = 1
 
-    print(f"{count},{hoeffding_results[0]},{hoeffding_results[1]},{hoeffding_results[2]}")
-
-    return ks_pvalue, kappa, fisher_pvalue
+    return ks_pvalue, kappa, fisher_pvalue, hoeffding_result
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1):
     stream_1 = LEDGeneratorDrift(random_state=0,
@@ -116,6 +112,7 @@ for i in range(0, len(noise_levels)):
 
     accuracy_list_old = []
     accuracy_list_new = []
+    hoeffding_results = []
 
     ks_pvalues = []
     kappa_values = []
@@ -125,8 +122,8 @@ for i in range(0, len(noise_levels)):
     drift_learner = HoeffdingTree()
     adwin = ADWIN(0.001)
 
-    # stream = prepare_stream(noise_2=noise_levels[i])
-    stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i])
+    stream_1, stream_2 = prepare_led_streams(noise_2=noise_levels[i])
+    # stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i])
     stream = prepare_concept_drift_stream(stream_1, stream_2)
 
     if pretrain_size > 0:
@@ -190,13 +187,14 @@ for i in range(0, len(noise_levels)):
                 x_axis_new.append(count)
                 accuracy_list_new.append(drift_accuracy)
 
-                ks_pvalue, kappa, fisher_pvalue = stats_test(correct,
-                                                             drift_correct,
-                                                             accuracy,
-                                                             drift_accuracy)
+                ks_pvalue, kappa, fisher_pvalue, hoeffding_result = stats_test(correct,
+                                                                               drift_correct,
+                                                                               accuracy,
+                                                                               drift_accuracy)
                 ks_pvalues.append(ks_pvalue)
                 kappa_values.append(kappa)
                 fisher_pvalues.append(fisher_pvalue)
+                hoeffding_results.append(hoeffding_result)
 
             # reset all metrics
             correct = 0
@@ -208,14 +206,16 @@ for i in range(0, len(noise_levels)):
     ax[i, 0].plot(x_axis_old, accuracy_list_old)
     ax[i, 0].plot(x_axis_new, accuracy_list_new)
 
-    plot_stats(ax[i, 1], x_axis_new, ks_pvalues, p_value)
-    plot_stats(ax[i, 2], x_axis_new, fisher_pvalues, p_value)
+    plot_stats(ax[i, 1], x_axis_new, ks_pvalues, bound=p_value)
+    plot_stats(ax[i, 2], x_axis_new, fisher_pvalues, bound=p_value)
     ax[i, 3].plot(x_axis_new, kappa_values, 'o', color='C2')#, label=r"noise=%s" % str(noise_levels[i]))
+    plot_stats(ax[i, 4], x_axis_new, hoeffding_results, bound=0.5, alt_color='C4')
 
 
 ax[0, 1].set_title("KS Test p-value")
 ax[0, 2].set_title("Fisher's Exact Test p-values")
 ax[0, 3].set_title("Kappa")
+ax[0, 4].set_title("Hoeffding Bound")
 
 # ax[1, 1].legend()
 
