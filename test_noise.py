@@ -2,11 +2,13 @@
 
 import sys
 import math
+from timeit import default_timer as timer
 
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
 from skmultiflow.evaluation import EvaluatePrequential
+from skmultiflow.data import SEAGenerator
 from skmultiflow.data import LEDGeneratorDrift
 from skmultiflow.data import AGRAWALGenerator
 from skmultiflow.data import ConceptDriftStream
@@ -32,6 +34,10 @@ if generator == 'led':
     led_n_drift = sys.argv[2]
     filename = f"led-{led_n_drift}-{plot_hoeffding}"
     print(f"Running on led with {led_n_drift} drift features")
+elif generator == 'sea':
+    agrawal_alt_func = sys.argv[2]
+    filename = f"sea-{agrawal_alt_func}-{plot_hoeffding}"
+    print(f"Running on sea with {agrawal_alt_func} function")
 else:
     agrawal_alt_func = sys.argv[2]
     filename = f"agrawal-{agrawal_alt_func}-{plot_hoeffding}"
@@ -119,6 +125,19 @@ def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, alt_func=0):
 
     return stream_1, stream_2
 
+def prepare_sea_streams(noise_1 = 0.05, noise_2 = 0.1, alt_func=0):
+    stream_1 = SEAGenerator(classification_function=0,
+                            random_state=0,
+                            balance_classes=False,
+                            noise_percentage=noise_1)
+
+    stream_2 = SEAGenerator(classification_function=alt_func,
+                            random_state=0,
+                            balance_classes=False,
+                            noise_percentage=noise_2)
+
+    return stream_1, stream_2
+
 def prepare_concept_drift_stream(stream_1, stream_2):
     stream = ConceptDriftStream(stream=stream_1,
                                 drift_stream=stream_2,
@@ -150,6 +169,9 @@ for i in range(0, len(noise_levels)):
 
     if generator == 'led':
         stream_1, stream_2 = prepare_led_streams(noise_2=noise_levels[i], n_drift=led_n_drift)
+    elif generator == 'sea':
+        stream_1, stream_2 = prepare_sea_streams(noise_2=noise_levels[i],
+                                                 alt_func=int(agrawal_alt_func))
     else:
         stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i],
                                                      alt_func=int(agrawal_alt_func))
