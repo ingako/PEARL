@@ -14,6 +14,7 @@ from skmultiflow.data import AGRAWALGenerator
 from skmultiflow.data import ConceptDriftStream
 
 from scipy.stats import ks_2samp
+from scipy.stats import anderson_ksamp
 from scipy.stats import fisher_exact
 
 from sklearn.metrics import cohen_kappa_score
@@ -24,27 +25,20 @@ matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
 generator = sys.argv[1]
-plot_hoeffding = sys.argv[3]
 
-filename = ""
-led_n_drift = 0
-agrawal_alt_func = 0
+func = int(sys.argv[2])
+alt_func = int(sys.argv[3])
 
-if generator == 'led':
-    led_n_drift = sys.argv[2]
-    filename = f"led-{led_n_drift}-{plot_hoeffding}"
-    print(f"Running on led with {led_n_drift} drift features")
-elif generator == 'sea':
-    agrawal_alt_func = sys.argv[2]
-    filename = f"sea-{agrawal_alt_func}-{plot_hoeffding}"
-    print(f"Running on sea with {agrawal_alt_func} function")
+drift_width = int(sys.argv[4])
+plot_hoeffding = sys.argv[5]
+
+filename = f"{generator}-{alt_func}-{drift_width}-{plot_hoeffding}"
+print(f"Running on {generator} {func}-{alt_func} with drift width {drift_width}")
+
+if plot_hoeffding == 'f':
+    fig, ax = plt.subplots(3, 5, sharey=True, constrained_layout=True)
 else:
-    agrawal_alt_func = sys.argv[2]
-    filename = f"agrawal-{agrawal_alt_func}-{plot_hoeffding}"
-    print(f"Running on agrawal with {agrawal_alt_func} function")
-
-
-fig, ax = plt.subplots(3, 4, sharey=True, constrained_layout=True) # sharex=True
+    fig, ax = plt.subplots(3, 4, sharey=True, constrained_layout=True) # sharex=True
 
 max_samples = 20000
 n_wait = 1000
@@ -89,31 +83,34 @@ def stats_test(correct, drift_correct, accuracy, drift_accuracy):
     drift_incorrect = n_wait - drift_correct;
     contingency_table = [[correct, incorrect], [drift_correct, drift_incorrect]]
 
+    # KS test
+    _, ks_pvalue = ks_2samp(predictions, drift_predictions)
+
+    # anderson-daring
+    _, _, ad_stat = anderson_ksamp([predictions, drift_predictions])
+
     # fisher's exact
     _, fisher_pvalue = fisher_exact(contingency_table)
 
     # kappa statistics
     kappa = cohen_kappa_score(predictions, drift_predictions)
 
-    # KS test
-    _, ks_pvalue= ks_2samp(predictions, drift_predictions)
+    return ad_stat, ks_pvalue, kappa, fisher_pvalue
 
-    return ks_pvalue, kappa, fisher_pvalue
-
-def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, n_drift=0):
+def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
     stream_1 = LEDGeneratorDrift(random_state=0,
                                  noise_percentage=noise_1,
                                  has_noise=False,
-                                 n_drift_features=0)
+                                 n_drift_features=func)
 
     stream_2 = LEDGeneratorDrift(random_state=0,
                                  noise_percentage=noise_2,
                                  has_noise=False,
-                                 n_drift_features=n_drift)
+                                 n_drift_features=alt_func)
     return stream_1, stream_2
 
-def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, alt_func=0):
-    stream_1 = AGRAWALGenerator(classification_function=3,
+def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, func=0, alt_func=0):
+    stream_1 = AGRAWALGenerator(classification_function=func,
                                 random_state=0,
                                 balance_classes=False,
                                 perturbation=noise_1)
@@ -125,8 +122,8 @@ def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, alt_func=0):
 
     return stream_1, stream_2
 
-def prepare_sea_streams(noise_1 = 0.05, noise_2 = 0.1, alt_func=0):
-    stream_1 = SEAGenerator(classification_function=0,
+def prepare_sea_streams(noise_1 = 0.05, noise_2 = 0.1, func=0, alt_func=0):
+    stream_1 = SEAGenerator(classification_function=func,
                             random_state=0,
                             balance_classes=False,
                             noise_percentage=noise_1)
@@ -143,7 +140,7 @@ def prepare_concept_drift_stream(stream_1, stream_2):
                                 drift_stream=stream_2,
                                 random_state=None,
                                 position=10000,
-                                width=1)
+                                width=drift_width)
 
     stream.prepare_for_use()
     return stream
@@ -158,6 +155,7 @@ for i in range(0, len(noise_levels)):
     accuracy_list_new = []
     hoeffding_results = [[], [], []]
 
+    ad_stats = []
     ks_pvalues = []
     kappa_values = []
     fisher_pvalues = []
@@ -168,13 +166,11 @@ for i in range(0, len(noise_levels)):
     change_detector_enabled = True
 
     if generator == 'led':
-        stream_1, stream_2 = prepare_led_streams(noise_2=noise_levels[i], n_drift=led_n_drift)
+        stream_1, stream_2 = prepare_led_streams(noise_2=noise_levels[i], func=func, alt_func=alt_func)
     elif generator == 'sea':
-        stream_1, stream_2 = prepare_sea_streams(noise_2=noise_levels[i],
-                                                 alt_func=int(agrawal_alt_func))
+        stream_1, stream_2 = prepare_sea_streams(noise_2=noise_levels[i], func=func, alt_func=alt_func)
     else:
-        stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i],
-                                                     alt_func=int(agrawal_alt_func))
+        stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i], func=func, alt_func=alt_func)
 
     stream = prepare_concept_drift_stream(stream_1, stream_2)
 
@@ -227,9 +223,11 @@ for i in range(0, len(noise_levels)):
             change_detector_enabled = False
 
         # train
-        learner.partial_fit(X, y)
         if drift_detected:
             drift_learner.partial_fit(X, y)
+        else:
+            learner.partial_fit(X, y)
+
 
         if (count % n_wait == 0) and (count != 0):
             # log metrics
@@ -244,10 +242,11 @@ for i in range(0, len(noise_levels)):
                 accuracy_list_new.append(drift_accuracy)
 
                 if plot_hoeffding == 'f':
-                    ks_pvalue, kappa, fisher_pvalue = stats_test(correct,
+                    ad_stat, ks_pvalue, kappa, fisher_pvalue = stats_test(correct,
                                                              drift_correct,
                                                              accuracy,
                                                              drift_accuracy)
+                    ad_stats.append(ad_stat)
                     ks_pvalues.append(ks_pvalue)
                     kappa_values.append(kappa)
                     fisher_pvalues.append(fisher_pvalue)
@@ -268,6 +267,7 @@ for i in range(0, len(noise_levels)):
         plot_stats(ax[i, 1], x_axis_new, ks_pvalues, bound=p_value)
         plot_stats(ax[i, 2], x_axis_new, fisher_pvalues, bound=p_value)
         ax[i, 3].plot(x_axis_new, kappa_values, 'o', color='C2')#, label=r"noise=%s" % str(noise_levels[i]))
+        plot_stats(ax[i, 4], x_axis_new, ad_stats, bound=p_value)
     else:
         for ci_idx in range(0, len(confidence_intervals)):
             plot_stats(ax[i, ci_idx + 1], x_axis_new, hoeffding_results[ci_idx], bound=0.5, alt_color='C4')
@@ -276,6 +276,7 @@ if plot_hoeffding == 'f':
     ax[0, 1].set_title("KS Test p-value")
     ax[0, 2].set_title("Fisher's Exact Test p-values")
     ax[0, 3].set_title("Kappa")
+    ax[0, 4].set_title("Anderson")
 else:
     for i in range(0, len(confidence_intervals)):
         #plot_stats(ax[0, i+1], x_axis_new, hoeffding_results[1], bound=0.5, alt_color='C4')
