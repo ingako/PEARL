@@ -2,6 +2,7 @@
 
 import sys
 import math
+import numpy as np
 from timeit import default_timer as timer
 
 from skmultiflow.trees import HoeffdingTree
@@ -32,7 +33,7 @@ alt_func = int(sys.argv[3])
 drift_width = int(sys.argv[4])
 plot_hoeffding = sys.argv[5]
 
-filename = f"{generator}-{alt_func}-{drift_width}-{plot_hoeffding}"
+filename = f"{generator}-{func}-{alt_func}-w{drift_width}-{plot_hoeffding}"
 print(f"Running on {generator} {func}-{alt_func} with drift width {drift_width}")
 
 if plot_hoeffding == 'f':
@@ -40,9 +41,9 @@ if plot_hoeffding == 'f':
 else:
     fig, ax = plt.subplots(3, 4, sharey=True, constrained_layout=True) # sharex=True
 
-max_samples = 20000
-n_wait = 1000
-pretrain_size = n_wait
+max_samples = 10000
+n_wait = 200
+pretrain_size = n_wait * 5
 p_value = 0.05
 
 # for computing hoeffding bound
@@ -58,7 +59,8 @@ def plot_stats(ax, x_axis, y_axis, bound, alt_color='C0'):
         ax.plot(xy[0], xy[1], 'o', color=color, picker=True)
 
 def compute_hoeffding_bound(r, confidence, n_samples):
-    return math.sqrt(((r*r) * math.log(1.0/confidence)) / (2.0*n_samples));
+    # return math.sqrt(((r*r) * math.log(1.0/confidence)) / (2.0*n_samples));
+    return np.sqrt((r * r * np.log(1.0/confidence)) / (2.0*n_samples))
 
 def hoeffding_test(correct, drift_correct, hoeffding_results):
     incorrect = n_wait - correct;
@@ -68,8 +70,6 @@ def hoeffding_test(correct, drift_correct, hoeffding_results):
     error_rate = incorrect / n_wait
     drift_error_rate = drift_incorrect / n_wait
 
-    # hoeffding_result = 0
-    # for ci in confidence_intervals:
     for i in range(0, len(confidence_intervals)):
         ci = confidence_intervals[i]
         hoeffding_bound = compute_hoeffding_bound(r, ci, n_wait)
@@ -78,7 +78,7 @@ def hoeffding_test(correct, drift_correct, hoeffding_results):
         else:
             hoeffding_results[i].append(0)
 
-def stats_test(correct, drift_correct, accuracy, drift_accuracy):
+def stats_test(correct, drift_correct):
     incorrect = n_wait - correct;
     drift_incorrect = n_wait - drift_correct;
     contingency_table = [[correct, incorrect], [drift_correct, drift_incorrect]]
@@ -106,7 +106,7 @@ def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
     stream_2 = LEDGeneratorDrift(random_state=0,
                                  noise_percentage=noise_2,
                                  has_noise=False,
-                                 n_drift_features=alt_func)
+                                 n_drift_feeatures=alt_func)
     return stream_1, stream_2
 
 def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, func=0, alt_func=0):
@@ -139,13 +139,13 @@ def prepare_concept_drift_stream(stream_1, stream_2):
     stream = ConceptDriftStream(stream=stream_1,
                                 drift_stream=stream_2,
                                 random_state=None,
-                                position=10000,
+                                position=5000+pretrain_size,
                                 width=drift_width)
 
     stream.prepare_for_use()
     return stream
 
-noise_levels = [0.2, 0.3, 0.4]
+noise_levels = [0.2, 0.3, 0.35]
 print("#instances,ci=0.05,ci=0.1,ci=0.2")
 
 for i in range(0, len(noise_levels)):
@@ -162,7 +162,8 @@ for i in range(0, len(noise_levels)):
 
     learner = HoeffdingTree()
     drift_learner = HoeffdingTree()
-    adwin = ADWIN(0.00001)
+    warning = ADWIN(0.001)
+    adwin = ADWIN(0.0001)
     change_detector_enabled = True
 
     if generator == 'led':
@@ -181,6 +182,7 @@ for i in range(0, len(noise_levels)):
     correct = 0
     drift_correct = 0
 
+    warning_detected = False
     drift_detected = False
 
     predictions = []
@@ -199,8 +201,10 @@ for i in range(0, len(noise_levels)):
 
         if prediction == y[0]:
             correct += 1
+            warning.add_element(0)
             adwin.add_element(0)
         else:
+            warning.add_element(1)
             adwin.add_element(1)
 
         if drift_detected:
@@ -210,7 +214,11 @@ for i in range(0, len(noise_levels)):
             if drift_prediction == y[0]:
                 drift_correct += 1
 
-        if change_detector_enabled and  adwin.detected_change():
+        if not warning_detected and warning.detected_change():
+            warning_detected = True
+            print(f"Warning detected at {count}")
+
+        if change_detector_enabled and adwin.detected_change():
             drift_detected = True
             print(f"Drift detected at {count}")
 
@@ -227,7 +235,8 @@ for i in range(0, len(noise_levels)):
             drift_learner.partial_fit(X, y)
         else:
             learner.partial_fit(X, y)
-
+            if warning_detected and not drift_detected:
+                drift_learner.partial_fit(X, y)
 
         if (count % n_wait == 0) and (count != 0):
             # log metrics
@@ -243,9 +252,7 @@ for i in range(0, len(noise_levels)):
 
                 if plot_hoeffding == 'f':
                     ad_stat, ks_pvalue, kappa, fisher_pvalue = stats_test(correct,
-                                                             drift_correct,
-                                                             accuracy,
-                                                             drift_accuracy)
+                                                             drift_correct)
                     ad_stats.append(ad_stat)
                     ks_pvalues.append(ks_pvalue)
                     kappa_values.append(kappa)
@@ -279,7 +286,7 @@ if plot_hoeffding == 'f':
     ax[0, 4].set_title("Anderson")
 else:
     for i in range(0, len(confidence_intervals)):
-        #plot_stats(ax[0, i+1], x_axis_new, hoeffding_results[1], bound=0.5, alt_color='C4')
+        # plot_stats(ax[0, i+1], x_axis_new, hoeffding_results[1], bound=0.5, alt_color='C4')
         ax[0, i+1].set_title(f"Hoeffding Bound ci={confidence_intervals[i]}")
 
 # ax[0, 4].legend()
