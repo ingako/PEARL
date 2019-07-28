@@ -4,15 +4,12 @@ import sys
 import math
 import numpy as np
 from timeit import default_timer as timer
+from stream_generators import *
 
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
 from skmultiflow.evaluation import EvaluatePrequential
-from skmultiflow.data import SEAGenerator
-from skmultiflow.data import LEDGeneratorDrift
-from skmultiflow.data import AGRAWALGenerator
-from skmultiflow.data import ConceptDriftStream
 
 from scipy.stats import ks_2samp
 from scipy.stats import anderson_ksamp
@@ -84,10 +81,16 @@ def stats_test(correct, drift_correct):
     contingency_table = [[correct, incorrect], [drift_correct, drift_incorrect]]
 
     # KS test
+    # start = timer()
     _, ks_pvalue = ks_2samp(predictions, drift_predictions)
+    # end = timer()
+    # print(f"ks time: {end - start}")
 
     # anderson-daring
+    # start = timer()
     _, _, ad_stat = anderson_ksamp([predictions, drift_predictions])
+    # end = timer()
+    # print(f"anderson time: {end - start}")
 
     # fisher's exact
     _, fisher_pvalue = fisher_exact(contingency_table)
@@ -97,53 +100,6 @@ def stats_test(correct, drift_correct):
 
     return ad_stat, ks_pvalue, kappa, fisher_pvalue
 
-def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
-    stream_1 = LEDGeneratorDrift(random_state=0,
-                                 noise_percentage=noise_1,
-                                 has_noise=False,
-                                 n_drift_features=func)
-
-    stream_2 = LEDGeneratorDrift(random_state=0,
-                                 noise_percentage=noise_2,
-                                 has_noise=False,
-                                 n_drift_feeatures=alt_func)
-    return stream_1, stream_2
-
-def prepare_agrawal_streams(noise_1 = 0.05, noise_2 = 0.1, func=0, alt_func=0):
-    stream_1 = AGRAWALGenerator(classification_function=func,
-                                random_state=0,
-                                balance_classes=False,
-                                perturbation=noise_1)
-
-    stream_2 = AGRAWALGenerator(classification_function=alt_func,
-                                random_state=0,
-                                balance_classes=False,
-                                perturbation=noise_2)
-
-    return stream_1, stream_2
-
-def prepare_sea_streams(noise_1 = 0.05, noise_2 = 0.1, func=0, alt_func=0):
-    stream_1 = SEAGenerator(classification_function=func,
-                            random_state=0,
-                            balance_classes=False,
-                            noise_percentage=noise_1)
-
-    stream_2 = SEAGenerator(classification_function=alt_func,
-                            random_state=0,
-                            balance_classes=False,
-                            noise_percentage=noise_2)
-
-    return stream_1, stream_2
-
-def prepare_concept_drift_stream(stream_1, stream_2):
-    stream = ConceptDriftStream(stream=stream_1,
-                                drift_stream=stream_2,
-                                random_state=None,
-                                position=5000+pretrain_size,
-                                width=drift_width)
-
-    stream.prepare_for_use()
-    return stream
 
 noise_levels = [0.2, 0.3, 0.35]
 print("#instances,ci=0.05,ci=0.1,ci=0.2")
@@ -173,7 +129,8 @@ for i in range(0, len(noise_levels)):
     else:
         stream_1, stream_2 = prepare_agrawal_streams(noise_2=noise_levels[i], func=func, alt_func=alt_func)
 
-    stream = prepare_concept_drift_stream(stream_1, stream_2)
+    stream = prepare_concept_drift_stream(stream_1, stream_2, 5000+pretrain_size,
+                                          drift_width)
 
     if pretrain_size > 0:
         X, y = stream.next_sample(pretrain_size)
@@ -190,6 +147,11 @@ for i in range(0, len(noise_levels)):
 
     x_axis_old = []
     x_axis_new = []
+
+    cached_data_x = []
+    cached_data_y = []
+    backtrack_counter = 0
+    backtrack_limit = n_wait * 2
 
     for count in range(0, max_samples):
 
