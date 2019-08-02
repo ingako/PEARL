@@ -6,7 +6,7 @@ import numpy as np
 from collections import defaultdict
 from stream_generators import *
 
-from skmultiflow.trees import HoeffdingTree
+from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
 from scipy.stats import ks_2samp
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
-fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
+# fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
 
 def predict(X, trees):
     predictions = []
@@ -35,19 +35,27 @@ def partial_fit(X, y, trees):
         for tree in trees:
             if tree == None:
                 continue
-            tree.partial_fit([X[i]], [y[i]])
+            n = np.random.poisson(1)
+            for j in range(0, n):
+                tree.partial_fit([X[i]], [y[i]])
 
 stream = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.1)
 stream.prepare_for_use()
 print(stream.get_data_info())
 
 num_classes = 2
+arf_max_features = int(math.log2(num_classes))
+
 num_trees = int(sys.argv[1])
 warning_delta = 0.001
 drift_delta = 0.0001
 
-fg_trees = [HoeffdingTree()]
+
+fg_trees = []
+for i in range(0, num_trees):
+    fg_trees.append(ARFHoeffdingTree(max_features=arf_max_features))
 bg_trees = [None] * num_trees
+
 warning_detectors = [ADWIN(warning_delta)] * num_trees
 drift_detectors = [ADWIN(drift_delta)] * num_trees
 
@@ -82,7 +90,7 @@ for count in range(0, max_samples):
     # train
     partial_fit(X, y, fg_trees)
 
-ax[0, 0].plot(x_axis, accuracy_list)
-ax[0, 0].set_title("Accuracy")
-plt.xlabel("no. of instances")
-plt.show()
+# ax[0, 0].plot(x_axis, accuracy_list)
+# ax[0, 0].set_title("Accuracy")
+# plt.xlabel("no. of instances")
+# plt.show()
