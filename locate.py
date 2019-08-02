@@ -198,7 +198,7 @@ for i in range(0, len(noise_levels)):
             drift_learner.partial_fit(X, y)
         else:
             learner.partial_fit(X, y)
-            if warning_detected and not drift_detected:
+            if warning_detected:
                 drift_learner.partial_fit(X, y)
 
         if (count % n_wait == 0) and (count != 0):
