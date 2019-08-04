@@ -19,13 +19,20 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
+class adaptive_tree(object):
+    def __init__(self, arf_max_features, warning_delta, drift_delta):
+        self.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
+        self.bg_tree = None
+        self.warning_detector = ADWIN(args.warning_delta)
+        self.drift_detector = ADWIN(args.drift_delta)
+
 def predict(X, trees):
     predictions = []
 
     for row in X:
         votes = defaultdict(int)
         for tree in trees:
-            prediction = tree.predict([row])[0]
+            prediction = tree.fg_tree.predict([row])[0]
             votes[prediction] += 1
         predictions.append(max(votes, key=votes.get))
 
@@ -38,41 +45,46 @@ def partial_fit(X, y, trees):
                 continue
             n = np.random.poisson(1)
             for j in range(0, n):
-                tree.partial_fit([X[i]], [y[i]])
+                tree.fg_tree.partial_fit([X[i]], [y[i]])
 
 def prequantial_evaluation(stream,
-                           fg_trees,
-                           bg_trees,
-                           warning_detectors,
-                           drift_detectors,
+                           adaptive_trees,
                            states):
     correct = 0
     x_axis = []
     accuracy_list = []
 
-    # pretrain
-    X, y = stream.next_sample(args.wait_samples * 3)
-    partial_fit(X, y, fg_trees)
+    with open('hyperplane.csv', 'w') as out:
+        # pretrain
+        X, y = stream.next_sample(args.wait_samples * 3)
+        partial_fit(X, y, adaptive_trees)
 
-    for count in range(0, args.max_samples):
-        X, y = stream.next_sample()
+        for row in X:
+            features = ",".join(str(v) for v in row)
+            out.write(f"{features},{str(y[0])}\n")
 
-        # test
-        prediction = predict(X, fg_trees)[0]
+        for count in range(0, args.max_samples):
+            X, y = stream.next_sample()
 
-        if prediction == y[0]:
-            correct += 1
+            # test
+            prediction = predict(X, adaptive_trees)[0]
 
-        if (count % args.wait_samples == 0) and (count != 0):
-            accuracy = correct / args.wait_samples
-            print(accuracy)
+            if prediction == y[0]:
+                correct += 1
 
-            x_axis.append(count)
-            accuracy_list.append(accuracy)
-            correct = 0
+            if (count % args.wait_samples == 0) and (count != 0):
+                accuracy = correct / args.wait_samples
+                print(accuracy)
 
-        # train
-        partial_fit(X, y, fg_trees)
+                x_axis.append(count)
+                accuracy_list.append(accuracy)
+                correct = 0
+
+            # train
+            partial_fit(X, y, adaptive_trees)
+
+            features = ",".join(str(v) for v in X[0])
+            out.write(f"{features},{str(y[0])}\n")
 
     return x_axis, accuracy_list
 
@@ -89,19 +101,12 @@ def evaluate():
     repo_size = args.num_trees * 4
     states = LRU_state(repo_size)
 
-    fg_trees = []
-    for i in range(0, args.num_trees):
-        fg_trees.append(ARFHoeffdingTree(max_features=arf_max_features))
-    bg_trees = [None] * args.num_trees
-
-    warning_detectors = [ADWIN(args.warning_delta)] * args.num_trees
-    drift_detectors = [ADWIN(args.drift_delta)] * args.num_trees
+    adaptive_trees = [adaptive_tree(arf_max_features,
+                                    args.warning_delta,
+                                    args.drift_delta) for _ in range(0, args.num_trees)]
 
     x_axis, accuracy_list = prequantial_evaluation(stream,
-                                                   fg_trees,
-                                                   bg_trees,
-                                                   warning_detectors,
-                                                   drift_detectors,
+                                                   adaptive_trees,
                                                    states)
 
     ax[0, 0].plot(x_axis, accuracy_list)
