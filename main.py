@@ -26,14 +26,22 @@ class adaptive_tree(object):
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
 
-def predict(X, trees):
+def predict(X, y, trees):
     predictions = []
 
     for row in X:
         votes = defaultdict(int)
         for tree in trees:
             prediction = tree.fg_tree.predict([row])[0]
+            if prediction == y[0]:
+                tree.warning_detector.add_element(0)
+                tree.drift_detector.add_element(0)
+            else:
+                tree.warning_detector.add_element(1)
+                tree.drift_detector.add_element(1)
+
             votes[prediction] += 1
+
         predictions.append(max(votes, key=votes.get))
 
     return predictions
@@ -41,11 +49,12 @@ def predict(X, trees):
 def partial_fit(X, y, trees):
     for i in range(0, len(X)):
         for tree in trees:
-            if tree == None:
-                continue
             n = np.random.poisson(1)
             for j in range(0, n):
                 tree.fg_tree.partial_fit([X[i]], [y[i]])
+                if tree.bg_tree is not None:
+                    tree.bg_tree.partial_fit([X[i]], [y[i]])
+
 
 def prequantial_evaluation(stream,
                            adaptive_trees,
@@ -67,10 +76,22 @@ def prequantial_evaluation(stream,
             X, y = stream.next_sample()
 
             # test
-            prediction = predict(X, adaptive_trees)[0]
+            prediction = predict(X, y, adaptive_trees)[0]
 
             if prediction == y[0]:
                 correct += 1
+
+            for tree in adaptive_trees:
+                if tree.warning_detector.detected_change():
+                    tree.warning_detector.reset()
+                    tree.bg_tree = ARFHoeffdingTree(arf_max_features)
+                if tree.drift_detector.detected_change():
+                    tree.drift_detector.reset()
+                    if tree.bg_tree is None:
+                        tree.fg_tree = ARFHoeffdingTree(arf_max_features)
+                    else:
+                        tree.fg_tree = tree.bg_tree
+                        tree.bg_tree = None
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -95,10 +116,6 @@ def evaluate():
     stream.prepare_for_use()
     print(stream.get_data_info())
 
-    num_classes = 2
-    arf_max_features = int(math.log2(num_classes)) + 1
-
-    repo_size = args.num_trees * 4
     states = LRU_state(repo_size)
 
     adaptive_trees = [adaptive_tree(arf_max_features,
@@ -138,5 +155,9 @@ if __name__ == '__main__':
     print(f"drift_delta: {args.drift_delta}")
     print(f"max_samples: {args.max_samples}")
     print(f"wait_samples: {args.wait_samples}")
+
+    num_classes = 2
+    arf_max_features = int(math.log2(num_classes)) + 1
+    repo_size = args.num_trees * 4
 
     evaluate()
