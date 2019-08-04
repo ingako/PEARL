@@ -4,7 +4,10 @@ import sys
 import math
 import numpy as np
 from collections import defaultdict
+from argparse import ArgumentParser
+
 from stream_generators import *
+from LRU_state import *
 
 from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
@@ -44,9 +47,14 @@ stream.prepare_for_use()
 print(stream.get_data_info())
 
 num_classes = 2
-arf_max_features = int(math.log2(num_classes))
+arf_max_features = int(math.log2(num_classes)) + 1
 
 num_trees = int(sys.argv[1])
+repo_size = num_trees * 4
+states = LRU_state(repo_size)
+states.put("1001", 3)
+print(states.get("1001"))
+
 warning_delta = 0.001
 drift_delta = 0.0001
 
