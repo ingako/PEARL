@@ -10,7 +10,9 @@ class LRU_state:
         self.distance_threshold = distance_threshold
         self.state_dict = OrderedDict()
 
-    def enqueue(self, state):
+    def enqueue(self, state_list):
+        state = "".join(state_list)
+
         if state not in self.state_dict:
             self.state_dict[state] = 0
         self.state_dict[state] += 1

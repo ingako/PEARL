@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import sys
 import math
 import argparse
@@ -20,9 +21,11 @@ matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
 class adaptive_tree(object):
-    def __init__(self, arf_max_features, warning_delta, drift_delta):
+    def __init__(self, tree_id, arf_max_features, warning_delta, drift_delta):
+        self.id = tree_id
         self.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
         self.bg_tree = None
+        self.cd_tree = None
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
 
@@ -55,22 +58,23 @@ def partial_fit(X, y, trees):
                 if tree.bg_tree is not None:
                     tree.bg_tree.partial_fit([X[i]], [y[i]])
 
-
-def prequantial_evaluation(stream,
-                           adaptive_trees,
-                           states):
+def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, cur_state):
     correct = 0
     x_axis = []
     accuracy_list = []
+    current_state = []
 
-    with open('hyperplane.csv', 'w') as out:
+    tree_pool = [None] * args.tree_pool_size
+    next_tree_id = args.tree_pool_size
+
+    with open('hyperplane.csv', 'w') as data_out, open('results.csv', 'w') as out:
         # pretrain
         X, y = stream.next_sample(args.wait_samples * 3)
         partial_fit(X, y, adaptive_trees)
 
         for row in X:
             features = ",".join(str(v) for v in row)
-            out.write(f"{features},{str(y[0])}\n")
+            data_out.write(f"{features},{str(y[0])}\n")
 
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
@@ -81,17 +85,34 @@ def prequantial_evaluation(stream,
             if prediction == y[0]:
                 correct += 1
 
+            target_state = copy.deepcopy(cur_state)
+            drifted_tree = []
+
             for tree in adaptive_trees:
+
                 if tree.warning_detector.detected_change():
                     tree.warning_detector.reset()
                     tree.bg_tree = ARFHoeffdingTree(arf_max_features)
+                    target_state[tree.id] = '2'
+
                 if tree.drift_detector.detected_change():
                     tree.drift_detector.reset()
+                    drifted_tree_list.append(tree)
+
                     if tree.bg_tree is None:
                         tree.fg_tree = ARFHoeffdingTree(arf_max_features)
                     else:
                         tree.fg_tree = tree.bg_tree
                         tree.bg_tree = None
+
+            closest_state = lru_states.get_closest_state(target_state)
+            matched_trees = []
+
+            if len(closest_state) != 0:
+                for i in range(0, repo_size):
+                    if cur_state[i] == '0' and closest_state[i] == '1':
+                        # if any of the candidate tree is already in its state list
+                        pass
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -99,13 +120,14 @@ def prequantial_evaluation(stream,
 
                 x_axis.append(count)
                 accuracy_list.append(accuracy)
+                out.write(f"{count},{accuracy}")
                 correct = 0
 
             # train
             partial_fit(X, y, adaptive_trees)
 
             features = ",".join(str(v) for v in X[0])
-            out.write(f"{features},{str(y[0])}\n")
+            data_out.write(f"{features},{str(y[0])}\n")
 
     return x_axis, accuracy_list
 
@@ -116,15 +138,22 @@ def evaluate():
     stream.prepare_for_use()
     print(stream.get_data_info())
 
-    states = LRU_state(repo_size)
-
-    adaptive_trees = [adaptive_tree(arf_max_features,
+    adaptive_trees = [adaptive_tree(i,
+                                    arf_max_features,
                                     args.warning_delta,
-                                    args.drift_delta) for _ in range(0, args.num_trees)]
+                                    args.drift_delta) for i in range(0, args.num_trees)]
+    candidate_trees = [None] * args.num_trees
+
+    cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
+
+    lru_states = LRU_state(capacity=repo_size, distance_threshold=100)
+    lru_states.enqueue(cur_state)
 
     x_axis, accuracy_list = prequantial_evaluation(stream,
                                                    adaptive_trees,
-                                                   states)
+                                                   candidate_trees,
+                                                   lru_states,
+                                                   cur_state)
 
     ax[0, 0].plot(x_axis, accuracy_list)
     ax[0, 0].set_title("Accuracy")
@@ -136,6 +165,9 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=1, type=int,
                         help="number of trees in the forest")
+    parser.add_argument("-p", "--pool",
+                        dest="tree_pool_size", default=1, type=int,
+                        help="number of trees in the online tree repository")
     parser.add_argument("-w", "--warning",
                         dest="warning_delta", default=0.001, type=float,
                         help="delta value for drift warning detector")
