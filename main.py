@@ -13,21 +13,26 @@ from LRU_state import *
 from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
-from scipy.stats import ks_2samp
-
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
-class adaptive_tree(object):
-    def __init__(self, tree_id, arf_max_features, warning_delta, drift_delta):
-        self.id = tree_id
+class AdaptiveTree(object):
+    def __init__(self,
+                 tree_pool_id,
+                 foreground_idx,
+                 arf_max_features,
+                 warning_delta,
+                 drift_delta):
+        self.tree_pool_id = tree_pool_id
+        self.foreground_idx = foreground_idx
+        self.candidate_idx = -1
         self.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
         self.bg_tree = None
-        self.cd_tree = None
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
+        self.predictions= []
 
 def predict(X, y, trees):
     predictions = []
@@ -63,9 +68,12 @@ def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, 
     x_axis = []
     accuracy_list = []
     current_state = []
+    actual_labels = [] # a window of size arg.kappa_window
 
     tree_pool = [None] * args.tree_pool_size
     next_tree_id = args.tree_pool_size
+
+    next_avail_candidate_idx_list = [i for i in range(0, args.num_trees)]
 
     with open('hyperplane.csv', 'w') as data_out, open('results.csv', 'w') as out:
         # pretrain
@@ -86,14 +94,14 @@ def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, 
                 correct += 1
 
             target_state = copy.deepcopy(cur_state)
-            drifted_tree = []
+            drifted_tree_list = []
 
             for tree in adaptive_trees:
 
                 if tree.warning_detector.detected_change():
                     tree.warning_detector.reset()
                     tree.bg_tree = ARFHoeffdingTree(arf_max_features)
-                    target_state[tree.id] = '2'
+                    target_state[tree.tree_pool_id] = '2'
 
                 if tree.drift_detector.detected_change():
                     tree.drift_detector.reset()
@@ -106,13 +114,25 @@ def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, 
                         tree.bg_tree = None
 
             closest_state = lru_states.get_closest_state(target_state)
-            matched_trees = []
 
             if len(closest_state) != 0:
                 for i in range(0, repo_size):
-                    if cur_state[i] == '0' and closest_state[i] == '1':
-                        # if any of the candidate tree is already in its state list
-                        pass
+
+                    if cur_state[i] == '0' \
+                            and closest_state[i] == '1' \
+                            and not tree_pool[i].candidate_idx != -1:
+
+                        if len(next_avail_candidate_idx_list) == 0:
+                            worst_candidate = candidate_trees[0]
+                            next_idx = worst_candidate.candidate_idx
+                            worst_candidate.candidate_idx = -1
+
+                            # TODO
+                            candidate_trees.pop(0)
+                        else:
+                            next_idx = next_avail_candidate_idx_list.pop()
+
+                        candidate_trees[next_idx] = tree_pool[i]
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -138,10 +158,11 @@ def evaluate():
     stream.prepare_for_use()
     print(stream.get_data_info())
 
-    adaptive_trees = [adaptive_tree(i,
-                                    arf_max_features,
-                                    args.warning_delta,
-                                    args.drift_delta) for i in range(0, args.num_trees)]
+    adaptive_trees = [AdaptiveTree(tree_pool_id=i,
+                                   foreground_idx=i,
+                                   arf_max_features=arf_max_features,
+                                   warning_delta=args.warning_delta,
+                                   drift_delta=args.drift_delta) for i in range(0, args.num_trees)]
     candidate_trees = [None] * args.num_trees
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
