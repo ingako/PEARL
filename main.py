@@ -5,10 +5,12 @@ import sys
 import math
 import argparse
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, deque
 
 from stream_generators import *
 from LRU_state import *
+
+from sklearn.metrics import cohen_kappa_score
 
 from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
@@ -27,20 +29,29 @@ class AdaptiveTree(object):
                  drift_delta):
         self.tree_pool_id = tree_pool_id
         self.foreground_idx = foreground_idx
-        self.candidate_idx = -1
         self.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
         self.bg_tree = None
+        self.is_candidate = False
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
-        self.predictions= []
+        self.predicted_labels= deque(maxlen=args.kappa_window)
+        self.kappa = -sys.maxsize
 
-def predict(X, y, trees):
+    def reset():
+        self.foreground_idx = -1
+        self.is_candidate = False
+        self.kappa = -sys.maxsize
+        self.predicted_labels = deque(maxlen=args.kappa_window)
+
+def predict(X, y, trees, should_vote):
     predictions = []
 
     for row in X:
         votes = defaultdict(int)
         for tree in trees:
             prediction = tree.fg_tree.predict([row])[0]
+            tree.predicted_labels.append(prediction) # for kappa calculation
+
             if prediction == y[0]:
                 tree.warning_detector.add_element(0)
                 tree.drift_detector.add_element(0)
@@ -50,7 +61,8 @@ def predict(X, y, trees):
 
             votes[prediction] += 1
 
-        predictions.append(max(votes, key=votes.get))
+        if should_vote:
+            predictions.append(max(votes, key=votes.get))
 
     return predictions
 
@@ -63,17 +75,17 @@ def partial_fit(X, y, trees):
                 if tree.bg_tree is not None:
                     tree.bg_tree.partial_fit([X[i]], [y[i]])
 
-def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, cur_state):
+def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
     correct = 0
     x_axis = []
     accuracy_list = []
+    actual_labels = deque(maxlen=args.kappa_window) # a window of size arg.kappa_window
+
     current_state = []
-    actual_labels = [] # a window of size arg.kappa_window
+    candidate_trees = []
 
     tree_pool = [None] * args.tree_pool_size
     next_tree_id = args.tree_pool_size
-
-    next_avail_candidate_idx_list = [i for i in range(0, args.num_trees)]
 
     with open('hyperplane.csv', 'w') as data_out, open('results.csv', 'w') as out:
         # pretrain
@@ -86,9 +98,13 @@ def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, 
 
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
+            actual_labels.append(y[0])
 
             # test
-            prediction = predict(X, y, adaptive_trees)[0]
+            prediction = predict(X, y, adaptive_trees, should_vote=True)[0]
+
+            # test on candidate trees
+            predict(X, y, candidate_trees, should_vote=False)
 
             if prediction == y[0]:
                 correct += 1
@@ -120,19 +136,26 @@ def prequantial_evaluation(stream, adaptive_trees, candidate_trees, lru_states, 
 
                     if cur_state[i] == '0' \
                             and closest_state[i] == '1' \
-                            and not tree_pool[i].candidate_idx != -1:
+                            and not tree_pool[i].is_candidate:
 
-                        if len(next_avail_candidate_idx_list) == 0:
-                            worst_candidate = candidate_trees[0]
-                            next_idx = worst_candidate.candidate_idx
-                            worst_candidate.candidate_idx = -1
+                        if len(candidate_trees) >= args.num_trees:
+                            worst_candidate = candidate_trees.pop(0)
+                            worst_candidate.reset()
 
-                            # TODO
-                            candidate_trees.pop(0)
-                        else:
-                            next_idx = next_avail_candidate_idx_list.pop()
+                        tree_pool[i].is_candidate = True
+                        candidate_trees.append(tree_pool[i])
 
-                        candidate_trees[next_idx] = tree_pool[i]
+            if len(drifted_tree_list) > 0:
+                # sort candidates by kappa
+                for candidate_tree in candidate_trees:
+                    if candidate_tree.predicted_labels < args.kappa_window:
+                        candidate_tree.kappa = -sys.maxsize
+                    else:
+                        candidate_tree.kappa = cohen_kappa_score(actual_labels,
+                                                                 candidate_tree.predicted_labels)
+                candidate_trees.sort(key=lambda c : c.kappa)
+
+                next_state = cur_state
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -163,7 +186,6 @@ def evaluate():
                                    arf_max_features=arf_max_features,
                                    warning_delta=args.warning_delta,
                                    drift_delta=args.drift_delta) for i in range(0, args.num_trees)]
-    candidate_trees = [None] * args.num_trees
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
 
@@ -172,7 +194,6 @@ def evaluate():
 
     x_axis, accuracy_list = prequantial_evaluation(stream,
                                                    adaptive_trees,
-                                                   candidate_trees,
                                                    lru_states,
                                                    cur_state)
 
@@ -201,6 +222,9 @@ if __name__ == '__main__':
     parser.add_argument("--wait_samples",
                         dest="wait_samples", default=100, type=int,
                         help="number of samples per evaluation")
+    parser.add_argument("--kappa_window",
+                        dest="kappa_window", default=50, type=int,
+                        help="number of instances must be seen for calculating kappa")
     args = parser.parse_args()
 
     print(f"num_trees: {args.num_trees}")
@@ -208,6 +232,7 @@ if __name__ == '__main__':
     print(f"drift_delta: {args.drift_delta}")
     print(f"max_samples: {args.max_samples}")
     print(f"wait_samples: {args.wait_samples}")
+    print(f"kappa_window: {args.kappa_window}")
 
     num_classes = 2
     arf_max_features = int(math.log2(num_classes)) + 1
