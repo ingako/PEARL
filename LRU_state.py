@@ -11,7 +11,10 @@ class LRU_state:
         self.state_dict = OrderedDict()
 
     def enqueue(self, state_list):
-        state = "".join(state_list)
+        if state_list == None or len(state_list) == 0:
+            return
+
+        state = ''.join(state_list)
 
         if state not in self.state_dict:
             self.state_dict[state] = 0
@@ -57,7 +60,7 @@ class LRU_state:
             max_freq = cur_freq
             closest_state = cur_state
 
-        return closest_state
+        return [int(i) for i in closest_state]
 
     def __str__(self):
         return pprint.pformat(self.state_dict.items(), indent=4)

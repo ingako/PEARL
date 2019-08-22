@@ -73,6 +73,62 @@ def partial_fit(X, y, trees):
                 if tree.bg_tree is not None:
                     tree.bg_tree.partial_fit([X[i]], [y[i]])
 
+def update_candidate_trees(candidate_trees, tree_pool, cur_state, closest_state):
+    if len(closest_state) == 0:
+        return
+
+    for i in range(0, repo_size):
+
+        if cur_state[i] == '0' \
+                and closest_state[i] == '1' \
+                and not tree_pool[i].is_candidate:
+
+            if len(candidate_trees) >= args.num_trees:
+                worst_candidate = candidate_trees.pop(0)
+                worst_candidate.reset()
+
+            tree_pool[i].is_candidate = True
+            candidate_trees.append(tree_pool[i])
+
+def adapt_state(drifted_tree_list, candidate_trees, tree_pool, cur_state):
+    if len(drifted_tree_list) > 0:
+        return
+
+    # sort candidates by kappa
+    for candidate_tree in candidate_trees:
+        if candidate_tree.predicted_labels < args.kappa_window:
+            candidate_tree.kappa = -sys.maxsize
+        else:
+            candidate_tree.kappa = cohen_kappa_score(actual_labels,
+                                                     candidate_tree.predicted_labels)
+    candidate_trees.sort(key=lambda c : c.kappa)
+
+    for drifted_tree in drifted_tree_list:
+        # TODO
+        if cur_tree_pool_size >= args.tree_pool_size:
+            break
+
+        swap_tree = drifted_tree.fg_tree
+
+        if candidate_trees[-1].kappa - drifted_tree.kappa >= cd_kappa_threshold:
+            # swap drifted tree with the candidate tree
+            swap_tree = candidate_trees[-1].fg_tree
+        if drifted_tree.bg_tree.kappa - drifted_tree.kappa >= bg_kappa_threshold:
+            # assign a new tree_pool_id for background tree
+            # and add background tree to tree_pool
+            tree_pool[i] = AdaptiveTree(tree_pool_id=cur_tree_pool_size,
+                                        fg_tree=drifted_tree.bg_tree,
+                                        random_state=args.random_state)
+            cur_tree_pool_size += 1
+
+        # replace drifted tree with swap tree
+        drifted_tree.reset()
+        drifted_tree.fg_tree = swap_tree
+        drifted_tree.bg_tree = None
+
+        cur_state[swap_tree.tree_pool_id] = '1'
+        cur_state[drifted_tree.tree_pool_id] = '0'
+
 def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
     correct = 0
     x_axis = []
@@ -108,16 +164,19 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                 correct += 1
 
             target_state = copy.deepcopy(cur_state)
+            target_state_updated = False
             drifted_tree_list = []
 
             for tree in adaptive_trees:
 
+                warning_detected_only = False
                 if tree.warning_detector.detected_change():
+                    warning_detected_only = True
                     tree.warning_detector.reset()
                     tree.bg_tree = ARFHoeffdingTree(max_features=arf_max_features)
-                    target_state[tree.tree_pool_id] = '2'
 
                 if tree.drift_detector.detected_change():
+                    warning_detected_only = False
                     tree.drift_detector.reset()
                     drifted_tree_list.append(tree)
 
@@ -127,61 +186,27 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                         tree.fg_tree = tree.bg_tree
                         tree.bg_tree = None
 
-            closest_state = lru_states.get_closest_state(target_state)
+                if warning_detected_only:
+                    target_state_updated = True
+                    target_state[tree.tree_pool_id] = '2'
 
-            if len(closest_state) != 0:
-                for i in range(0, repo_size):
+            if not args.disable_state_adaption:
+                # if warnings are detected, find closest state and update candidate_trees list
+                if target_state_updated:
+                    closest_state = lru_states.get_closest_state(target_state)
+                    print(f"closest_state:{closest_state}")
+                    update_candidate_trees(candidate_trees=candidate_trees,
+                                           tree_pool=tree_pool,
+                                           cur_state=cur_state,
+                                           closest_state=closest_state)
 
-                    if cur_state[i] == '0' \
-                            and closest_state[i] == '1' \
-                            and not tree_pool[i].is_candidate:
+                # if actual drifts are detected, swap trees and update cur_state
+                adapt_state(drifted_tree_list=drifted_tree_list,
+                            candidate_trees=candidate_trees,
+                            tree_pool=tree_pool,
+                            cur_state=cur_state)
 
-                        if len(candidate_trees) >= args.num_trees:
-                            worst_candidate = candidate_trees.pop(0)
-                            worst_candidate.reset()
-
-                        tree_pool[i].is_candidate = True
-                        candidate_trees.append(tree_pool[i])
-
-            if len(drifted_tree_list) > 0:
-                # sort candidates by kappa
-                for candidate_tree in candidate_trees:
-                    if candidate_tree.predicted_labels < args.kappa_window:
-                        candidate_tree.kappa = -sys.maxsize
-                    else:
-                        candidate_tree.kappa = cohen_kappa_score(actual_labels,
-                                                                 candidate_tree.predicted_labels)
-                candidate_trees.sort(key=lambda c : c.kappa)
-
-                next_state = cur_state
-
-                for drifted_tree in drifted_tree_list:
-                    # TODO
-                    if cur_tree_pool_size >= args.tree_pool_size:
-                        break
-
-                    swap_tree = drifted_tree.fg_tree
-
-                    if candidate_trees[-1].kappa - drifted_tree.kappa >= cd_kappa_threshold:
-                        # swap drifted tree with the candidate tree
-                        swap_tree = candidate_trees[-1].fg_tree
-                    if drifted_tree.bg_tree.kappa - drifted_tree.kappa >= bg_kappa_threshold:
-                        # assign a new tree_pool_id for background tree
-                        # and add background tree to tree_pool
-                        tree_pool[i] = AdaptiveTree(tree_pool_id=cur_tree_pool_size,
-                                                        fg_tree=drifted_tree.bg_tree)
-                        cur_tree_pool_size += 1
-
-                    # replace drifted tree with swap tree
-                    drifted_tree.reset()
-                    drifted_tree.fg_tree = swap_tree
-                    drifted_tree.bg_tree = None
-
-                    next_state[swap_tree.tree_pool_id] = '1'
-                    next_state[drifted_tree.tree_pool_id] = '0'
-
-                lru_states.enqueue(next_state)
-                cur_state = next_state
+                lru_states.enqueue(cur_state)
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -209,7 +234,8 @@ def evaluate():
 
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
                                    foreground_idx=i,
-                                   fg_tree=ARFHoeffdingTree(max_features=arf_max_features)
+                                   fg_tree=ARFHoeffdingTree(max_features=arf_max_features,
+                                                            random_state=args.random_state)
                       ) for i in range(0, args.num_trees)]
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
@@ -229,6 +255,9 @@ def evaluate():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--disable_state_adaption",
+                        dest="disable_state_adaption", default=False, type=bool,
+                        help="disable the state adaption algorithm")
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=1, type=int,
                         help="number of trees in the forest")
@@ -250,6 +279,9 @@ if __name__ == '__main__':
     parser.add_argument("--kappa_window",
                         dest="kappa_window", default=50, type=int,
                         help="number of instances must be seen for calculating kappa")
+    parser.add_argument("--random_state",
+                        dest="random_state", default=50, type=int,
+                        help="Seed used for adaptive hoeffding tree")
     args = parser.parse_args()
 
     print(f"num_trees: {args.num_trees}")
@@ -258,6 +290,7 @@ if __name__ == '__main__':
     print(f"max_samples: {args.max_samples}")
     print(f"wait_samples: {args.wait_samples}")
     print(f"kappa_window: {args.kappa_window}")
+    print(f"random_state: {args.random_state}")
 
     num_classes = 2
     arf_max_features = int(math.log2(num_classes)) + 1

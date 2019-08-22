@@ -62,7 +62,7 @@ def prepare_hyperplane_streams(noise_1 = 0.05, noise_2 = 0.1):
 def prepare_concept_drift_stream(stream_1, stream_2, drift_position, drift_width):
     stream = ConceptDriftStream(stream=stream_1,
                                 drift_stream=stream_2,
-                                random_state=None,
+                                random_state=0,
                                 position=drift_position,
                                 width=drift_width)
 
