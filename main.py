@@ -140,6 +140,8 @@ def adapt_state(drifted_tree_list,
         # replace drifted tree with swap tree
         swap_tree.is_candidate = False
         adaptive_trees[drifted_tree.foreground_idx] = swap_tree
+        swap_tree.foreground_idx = drifted_tree.foreground_idx
+
         drifted_tree.bg_adaptive_tree = None
         drifted_tree.foreground_idx = -1
 
@@ -194,7 +196,8 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                     tree.warning_detector.reset()
 
                     tree.bg_adaptive_tree = \
-                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
+                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features,
+                                                           random_state=args.random_state))
 
                 if tree.drift_detector.detected_change():
                     warning_detected_only = False
@@ -330,5 +333,7 @@ if __name__ == '__main__':
     num_classes = 2
     arf_max_features = int(math.log2(num_classes)) + 1
     repo_size = args.num_trees * 4
+
+    np.random.seed(args.random_state)
 
     evaluate()
