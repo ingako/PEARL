@@ -22,40 +22,47 @@ plt.rcParams["figure.figsize"] = (20, 10)
 
 class AdaptiveTree(object):
     def __init__(self,
-                 tree_pool_id,
-                 fg_tree,
+                 tree,
+                 tree_pool_id=-1,
                  foreground_idx=-1):
         self.tree_pool_id = tree_pool_id
         self.foreground_idx = foreground_idx
-        self.fg_tree = fg_tree
-        self.bg_tree = None
+        self.tree = tree
+        self.bg_adaptive_tree = None
         self.is_candidate = False
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
-        self.predicted_labels= deque(maxlen=args.kappa_window)
+        self.predicted_labels = deque(maxlen=args.kappa_window)
         self.kappa = -sys.maxsize
+
+    def update_kappa(self, actual_labels):
+        if len(self.predicted_labels) < args.kappa_window:
+            self.kappa = -sys.maxsize
+        else:
+            self.kappa = cohen_kappa_score(actual_labels, self.predicted_labels)
+        return self.kappa
 
     def reset(self):
         self.foreground_idx = -1
         self.is_candidate = False
         self.kappa = -sys.maxsize
-        self.predicted_labels = deque(maxlen=args.kappa_window)
+        self.predicted_labels.clear()
 
-def predict(X, y, trees, should_vote):
+def predict(X, y, adaptive_trees, should_vote):
     predictions = []
 
     for row in X:
         votes = defaultdict(int)
-        for tree in trees:
-            prediction = tree.fg_tree.predict([row])[0]
-            tree.predicted_labels.append(prediction) # for kappa calculation
+        for adaptive_tree in adaptive_trees:
+            prediction = adaptive_tree.tree.predict([row])[0]
+            adaptive_tree.predicted_labels.append(prediction) # for kappa calculation
 
             if prediction == y[0]:
-                tree.warning_detector.add_element(0)
-                tree.drift_detector.add_element(0)
+                adaptive_tree.warning_detector.add_element(0)
+                adaptive_tree.drift_detector.add_element(0)
             else:
-                tree.warning_detector.add_element(1)
-                tree.drift_detector.add_element(1)
+                adaptive_tree.warning_detector.add_element(1)
+                adaptive_tree.drift_detector.add_element(1)
 
             votes[prediction] += 1
 
@@ -64,14 +71,14 @@ def predict(X, y, trees, should_vote):
 
     return predictions
 
-def partial_fit(X, y, trees):
+def partial_fit(X, y, adaptive_trees):
     for i in range(0, len(X)):
-        for tree in trees:
+        for adaptive_tree in adaptive_trees:
             n = np.random.poisson(1)
             for j in range(0, n):
-                tree.fg_tree.partial_fit([X[i]], [y[i]])
-                if tree.bg_tree is not None:
-                    tree.bg_tree.partial_fit([X[i]], [y[i]])
+                adaptive_tree.tree.partial_fit([X[i]], [y[i]])
+                if adaptive_tree.bg_adaptive_tree is not None:
+                    adaptive_tree.bg_adaptive_tree.tree.partial_fit([X[i]], [y[i]])
 
 def update_candidate_trees(candidate_trees, tree_pool, cur_state, closest_state):
     if len(closest_state) == 0:
@@ -90,19 +97,23 @@ def update_candidate_trees(candidate_trees, tree_pool, cur_state, closest_state)
             tree_pool[i].is_candidate = True
             candidate_trees.append(tree_pool[i])
 
-def adapt_state(drifted_tree_list, candidate_trees, tree_pool, cur_state, cur_tree_pool_size):
+def adapt_state(drifted_tree_list,
+                candidate_trees,
+                tree_pool,
+                cur_state,
+                cur_tree_pool_size,
+                adaptive_trees,
+                actual_labels):
+
     if len(drifted_tree_list) == 0:
         return cur_tree_pool_size
 
     print('Drifts detected. Adapting states for', [t.tree_pool_id for t in drifted_tree_list])
 
     # sort candidates by kappa
+    # map(lambda c : c.update_kappa(actual_labels))
     for candidate_tree in candidate_trees:
-        if candidate_tree.predicted_labels < args.kappa_window:
-            candidate_tree.kappa = -sys.maxsize
-        else:
-            candidate_tree.kappa = cohen_kappa_score(actual_labels,
-                                                     candidate_tree.predicted_labels)
+        candidate_tree.update_kappa(actual_labels)
     candidate_trees.sort(key=lambda c : c.kappa)
 
     for drifted_tree in drifted_tree_list:
@@ -110,28 +121,30 @@ def adapt_state(drifted_tree_list, candidate_trees, tree_pool, cur_state, cur_tr
         if cur_tree_pool_size >= args.tree_pool_size:
             break
 
-        swap_tree = drifted_tree.fg_tree
+        drifted_tree.update_kappa(actual_labels)
+        swap_tree = drifted_tree
 
         if len(candidate_trees) > 0 \
                 and candidate_trees[-1].kappa - drifted_tree.kappa >= args.cd_kappa_threshold:
             # swap drifted tree with the candidate tree
-            swap_tree = candidate_trees[-1].fg_tree
+            swap_tree = candidate_trees.pop()
 
-        # if drifted_tree.bg_tree.kappa - drifted_tree.kappa >= args.bg_kappa_threshold:
-        #     # assign a new tree_pool_id for background tree
-        #     # and add background tree to tree_pool
-        #     tree_pool[i] = AdaptiveTree(tree_pool_id=cur_tree_pool_size,
-        #                                 fg_tree=drifted_tree.bg_tree,
-        #                                 random_state=args.random_state)
-        #     cur_tree_pool_size += 1
+        if drifted_tree.bg_adaptive_tree is not None \
+                and drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+            # assign a new tree_pool_id for background tree
+            # and add background tree to tree_pool
+            tree_pool[cur_tree_pool_size] = drifted_tree.bg_adaptive_tree
+            cur_tree_pool_size += 1
+            swap_tree = tree_pool[cur_tree_pool_size]
 
         # replace drifted tree with swap tree
-        drifted_tree.reset()
-        drifted_tree.fg_tree = swap_tree
-        drifted_tree.bg_tree = None
+        swap_tree.is_candidate = False
+        adaptive_trees[drifted_tree.foreground_idx] = swap_tree
+        drifted_tree.bg_adaptive_tree = None
+        drifted_tree.foreground_idx = -1
 
-        # cur_state[swap_tree.tree_pool_id] = '1'
-        # cur_state[drifted_tree.tree_pool_id] = '0'
+        cur_state[drifted_tree.tree_pool_id] = '0'
+        cur_state[swap_tree.tree_pool_id] = '1'
 
     return cur_tree_pool_size
 
@@ -179,18 +192,20 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                 if tree.warning_detector.detected_change():
                     warning_detected_only = True
                     tree.warning_detector.reset()
-                    tree.bg_tree = ARFHoeffdingTree(max_features=arf_max_features)
+
+                    tree.bg_adaptive_tree = \
+                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
 
                 if tree.drift_detector.detected_change():
                     warning_detected_only = False
                     tree.drift_detector.reset()
                     drifted_tree_list.append(tree)
 
-                    if tree.bg_tree is None:
-                        tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
-                    else:
-                        tree.fg_tree = tree.bg_tree
-                        tree.bg_tree = None
+                    # TODO handle in adapt_state
+                    # if tree.bg_adaptive_tree is None:
+                    #     tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
+                    # else:
+                    #     tree.fg_tree = tree.bg_tree
 
                 if warning_detected_only:
                     target_state_updated = True
@@ -212,7 +227,9 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                                                  candidate_trees=candidate_trees,
                                                  tree_pool=tree_pool,
                                                  cur_state=cur_state,
-                                                 cur_tree_pool_size=cur_tree_pool_size)
+                                                 cur_tree_pool_size=cur_tree_pool_size,
+                                                 adaptive_trees=adaptive_trees,
+                                                 actual_labels=actual_labels)
 
                 lru_states.enqueue(cur_state)
                 # print(f"Add state: {cur_state}")
@@ -243,7 +260,7 @@ def evaluate():
 
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
                                    foreground_idx=i,
-                                   fg_tree=ARFHoeffdingTree(max_features=arf_max_features,
+                                   tree=ARFHoeffdingTree(max_features=arf_max_features,
                                                             random_state=args.random_state)
                       ) for i in range(0, args.num_trees)]
 
