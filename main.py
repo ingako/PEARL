@@ -44,9 +44,12 @@ class AdaptiveTree(object):
 
     def reset(self):
         self.foreground_idx = -1
+        self.bg_adaptive_tree = None
         self.is_candidate = False
-        self.kappa = -sys.maxsize
+        self.warning_detector.reset()
+        self.drift_detector.reset()
         self.predicted_labels.clear()
+        self.kappa = -sys.maxsize
 
 def predict(X, y, adaptive_trees, should_vote):
     predictions = []
@@ -80,11 +83,18 @@ def partial_fit(X, y, adaptive_trees):
                 if adaptive_tree.bg_adaptive_tree is not None:
                     adaptive_tree.bg_adaptive_tree.tree.partial_fit([X[i]], [y[i]])
 
-def update_candidate_trees(candidate_trees, tree_pool, cur_state, closest_state):
+def update_candidate_trees(candidate_trees,
+                           tree_pool,
+                           cur_state,
+                           closest_state,
+                           cur_tree_pool_size):
     if len(closest_state) == 0:
         return
 
-    for i in range(0, repo_size):
+    print(f"closest_state {closest_state}")
+    print(f"cur_state {cur_state}")
+
+    for i in range(0, cur_tree_pool_size):
 
         if cur_state[i] == '0' \
                 and closest_state[i] == '1' \
@@ -108,10 +118,9 @@ def adapt_state(drifted_tree_list,
     if len(drifted_tree_list) == 0:
         return cur_tree_pool_size
 
-    print('Drifts detected. Adapting states for', [t.tree_pool_id for t in drifted_tree_list])
+    print("Drifts detected. Adapting states for", [t.tree_pool_id for t in drifted_tree_list])
 
     # sort candidates by kappa
-    # map(lambda c : c.update_kappa(actual_labels))
     for candidate_tree in candidate_trees:
         candidate_tree.update_kappa(actual_labels)
     candidate_trees.sort(key=lambda c : c.kappa)
@@ -129,28 +138,30 @@ def adapt_state(drifted_tree_list,
             # swap drifted tree with the candidate tree
             swap_tree = candidate_trees.pop()
 
-        if drifted_tree.bg_adaptive_tree is not None \
-                and drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+        if drifted_tree.bg_adaptive_tree is not None:
+            # drifted_tree.update_kappa(actual_labels)
+            # if drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+
             # assign a new tree_pool_id for background tree
             # and add background tree to tree_pool
-            tree_pool[cur_tree_pool_size] = drifted_tree.bg_adaptive_tree
+            swap_tree = drifted_tree.bg_adaptive_tree
+            swap_tree.tree_pool_id = cur_tree_pool_size
+            tree_pool[cur_tree_pool_size] = swap_tree
             cur_tree_pool_size += 1
-            swap_tree = tree_pool[cur_tree_pool_size]
-
-        # replace drifted tree with swap tree
-        swap_tree.is_candidate = False
-        adaptive_trees[drifted_tree.foreground_idx] = swap_tree
-        swap_tree.foreground_idx = drifted_tree.foreground_idx
-
-        drifted_tree.bg_adaptive_tree = None
-        drifted_tree.foreground_idx = -1
 
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
 
+        # replace drifted tree with swap tree
+        swap_tree.is_candidate = False
+        swap_tree.foreground_idx = drifted_tree.foreground_idx
+        adaptive_trees[drifted_tree.foreground_idx] = swap_tree
+        drifted_tree.reset()
+
+
     return cur_tree_pool_size
 
-def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
+def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state, tree_pool):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -159,7 +170,6 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
     current_state = []
     candidate_trees = []
 
-    tree_pool = [None] * args.tree_pool_size
     cur_tree_pool_size = args.num_trees
 
     with open('hyperplane.csv', 'w') as data_out, open('results.csv', 'w') as out:
@@ -218,12 +228,13 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
                 # if warnings are detected, find closest state and update candidate_trees list
                 if target_state_updated:
                     closest_state = lru_states.get_closest_state(target_state)
-                    print(f"closest_state:{closest_state}")
 
                     update_candidate_trees(candidate_trees=candidate_trees,
                                            tree_pool=tree_pool,
                                            cur_state=cur_state,
-                                           closest_state=closest_state)
+                                           closest_state=closest_state,
+                                           cur_tree_pool_size=cur_tree_pool_size)
+                    print("candidate_trees", [c.tree_pool_id for c in candidate_trees])
 
                 # if actual drifts are detected, swap trees and update cur_state
                 cur_tree_pool_size = adapt_state(drifted_tree_list=drifted_tree_list,
@@ -239,7 +250,7 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state):
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
-                print(accuracy)
+                print(f"{count},{accuracy}")
 
                 x_axis.append(count)
                 accuracy_list.append(accuracy)
@@ -272,10 +283,15 @@ def evaluate():
     lru_states = LRU_state(capacity=repo_size, distance_threshold=100)
     lru_states.enqueue(cur_state)
 
+    tree_pool = [None] * args.tree_pool_size
+    for i in range(0, args.num_trees):
+        tree_pool[i] = adaptive_trees[i]
+
     x_axis, accuracy_list = prequantial_evaluation(stream,
                                                    adaptive_trees,
                                                    lru_states,
-                                                   cur_state)
+                                                   cur_state,
+                                                   tree_pool)
 
     ax[0, 0].plot(x_axis, accuracy_list)
     ax[0, 0].set_title("Accuracy")

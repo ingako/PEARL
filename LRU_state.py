@@ -17,6 +17,7 @@ class LRU_state:
         state = ''.join(state_list)
 
         if state not in self.state_dict:
+            print(f"Add state: {state}")
             self.state_dict[state] = 0
         self.state_dict[state] += 1
         self.state_dict.move_to_end(state)
@@ -60,7 +61,7 @@ class LRU_state:
             max_freq = cur_freq
             closest_state = cur_state
 
-        return [int(i) for i in closest_state]
+        return [i for i in closest_state]
 
     def __str__(self):
         return pprint.pformat(self.state_dict.items(), indent=4)
