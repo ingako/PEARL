@@ -43,28 +43,39 @@ class AdaptiveTree(object):
     def reset(self):
         self.bg_adaptive_tree = None
         self.is_candidate = False
-        # self.warning_detector.reset()
-        # self.drift_detector.reset()
+        self.warning_detector.reset()
+        self.drift_detector.reset()
         self.predicted_labels.clear()
         self.kappa = -sys.maxsize
+
+def update_drift_detector(adaptive_tree, predicted_label, actual_label):
+    if predicted_label == actual_label:
+        adaptive_tree.warning_detector.add_element(0)
+        adaptive_tree.drift_detector.add_element(0)
+    else:
+        adaptive_tree.warning_detector.add_element(1)
+        adaptive_tree.drift_detector.add_element(1)
 
 def predict(X, y, adaptive_trees, should_vote):
     predictions = []
 
-    for row in X:
+    for i in range(0, len(X)):
+        feature_row = X[i]
+        label = y[i]
+
         votes = defaultdict(int)
         for adaptive_tree in adaptive_trees:
-            prediction = adaptive_tree.tree.predict([row])[0]
-            adaptive_tree.predicted_labels.append(prediction) # for kappa calculation
+            predicted_label = adaptive_tree.tree.predict([feature_row])[0]
 
-            if prediction == y[0]:
-                adaptive_tree.warning_detector.add_element(0)
-                adaptive_tree.drift_detector.add_element(0)
-            else:
-                adaptive_tree.warning_detector.add_element(1)
-                adaptive_tree.drift_detector.add_element(1)
+            adaptive_tree.predicted_labels.append(predicted_label) # for kappa calculation
+            if should_vote:
+                update_drift_detector(adaptive_tree, predicted_label, label)
 
-            votes[prediction] += 1
+            votes[predicted_label] += 1
+
+            # background tree needs to predict for performance measurement
+            if adaptive_tree.bg_adaptive_tree is not None:
+                predict([feature_row], [label], [adaptive_tree.bg_adaptive_tree], False)
 
         if should_vote:
             predictions.append(max(votes, key=votes.get))
@@ -140,13 +151,29 @@ def adapt_state(drifted_tree_list,
             swap_tree = candidate_trees.pop()
             swap_tree.is_candidate = False
 
-        if drifted_tree.bg_adaptive_tree is not None:
-            # drifted_tree.update_kappa(actual_labels)
-            # if drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+        swap_bg_tree = False
+        if drifted_tree.bg_adaptive_tree is None:
+            if swap_tree is drifted_tree:
+                swap_tree = \
+                    AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
+                swap_with_bg_tree = True
 
-            # assign a new tree_pool_id for background tree
-            # and add background tree to tree_pool
-            swap_tree = drifted_tree.bg_adaptive_tree
+        else:
+            window_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
+            print(f"bg_tree window size: {window_size}")
+
+            drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
+            print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
+                  f"swap_tree.kappa: {swap_tree.kappa}")
+
+            if drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+
+                # assign a new tree_pool_id for background tree
+                # and add background tree to tree_pool
+                swap_tree = drifted_tree.bg_adaptive_tree
+                swap_bg_tree = True
+
+        if swap_bg_tree:
             swap_tree.tree_pool_id = cur_tree_pool_size
             tree_pool[cur_tree_pool_size] = swap_tree
             cur_tree_pool_size += 1
@@ -155,9 +182,9 @@ def adapt_state(drifted_tree_list,
         cur_state[swap_tree.tree_pool_id] = '1'
 
         # replace drifted tree with swap tree
-        pos = drifted_tree_pos.pop(0)
+        pos = drifted_tree_pos.pop()
         adaptive_trees[pos] = swap_tree
-        # drifted_tree.reset()
+        drifted_tree.reset()
 
     return cur_tree_pool_size
 
@@ -208,7 +235,7 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state, tree_p
                     tree.warning_detector.reset()
 
                     tree.bg_adaptive_tree = \
-                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features,))
+                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
 
                 if tree.drift_detector.detected_change():
                     warning_detected_only = False
@@ -216,9 +243,12 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state, tree_p
                     drifted_tree_list.append(tree)
                     drifted_tree_pos.append(i)
 
-                    if tree.bg_adaptive_tree is None:
-                        tree.bg_adaptive_tree = \
-                            AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
+                    if args.disable_state_adaption:
+                        if tree.bg_adaptive_tree is None:
+                            tree = ARFHoeffdingTree(max_features=arf_max_features)
+                        else:
+                            tree.tree = tree.bg_adaptive_tree.tree
+                            tree.bg_adaptive_tree = None
 
                 if warning_detected_only:
                     target_state_updated = True
@@ -320,17 +350,17 @@ if __name__ == '__main__':
                         dest="wait_samples", default=100, type=int,
                         help="number of samples per evaluation")
     parser.add_argument("--kappa_window",
-                        dest="kappa_window", default=50, type=int,
+                        dest="kappa_window", default=25, type=int,
                         help="number of instances must be seen for calculating kappa")
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
     parser.add_argument("--cd_kappa_threshold",
-                        dest="cd_kappa_threshold", default=0.0, type=float,
+                        dest="cd_kappa_threshold", default=0.05, type=float,
                         help="Kappa value that the candidate tree needs to outperform both"
                              "background tree and foreground drifted tree")
     parser.add_argument("--bg_kappa_threshold",
-                        dest="bg_kappa_threshold", default=0.0, type=float,
+                        dest="bg_kappa_threshold", default=0.05, type=float,
                         help="Kappa value that the background tree needs to outperform the "
                              "foreground drifted tree to prevent from false positive")
 
