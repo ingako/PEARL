@@ -151,29 +151,31 @@ def adapt_state(drifted_tree_list,
             swap_tree = candidate_trees.pop()
             swap_tree.is_candidate = False
 
-        swap_bg_tree = False
-        if drifted_tree.bg_adaptive_tree is None:
-            if swap_tree is drifted_tree:
-                swap_tree = \
-                    AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
-                swap_with_bg_tree = True
+        if swap_tree is drifted_tree:
+            if drifted_tree.bg_adaptive_tree is None:
+                    swap_tree = \
+                        AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
 
-        else:
-            window_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
-            print(f"bg_tree window size: {window_size}")
+            else:
+                window_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
+                print(f"bg_tree window size: {window_size}")
 
-            drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
-            print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
-                  f"swap_tree.kappa: {swap_tree.kappa}")
+                drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
+                print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
+                      f"swap_tree.kappa: {swap_tree.kappa}")
 
-            if drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
+                if drifted_tree.bg_adaptive_tree.kappa == -sys.maxsize:
+                    print("bg_adaptive_tree didn't fill the window")
+                    swap_tree = drifted_tree.bg_adaptive_tree
 
-                # assign a new tree_pool_id for background tree
-                # and add background tree to tree_pool
-                swap_tree = drifted_tree.bg_adaptive_tree
-                swap_bg_tree = True
+                elif drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
 
-        if swap_bg_tree:
+                    swap_tree = drifted_tree.bg_adaptive_tree
+
+            swap_tree.reset()
+
+            # assign a new tree_pool_id for background tree
+            # and add background tree to tree_pool
             swap_tree.tree_pool_id = cur_tree_pool_size
             tree_pool[cur_tree_pool_size] = swap_tree
             cur_tree_pool_size += 1
