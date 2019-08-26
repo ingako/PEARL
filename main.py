@@ -201,12 +201,12 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state, tree_p
 
     with open('hyperplane.csv', 'w') as data_out, open('results.csv', 'w') as out:
         # pretrain
-        X, y = stream.next_sample(args.wait_samples * 3)
-        partial_fit(X, y, adaptive_trees)
+        # X, y = stream.next_sample(args.wait_samples * 3)
+        # partial_fit(X, y, adaptive_trees)
 
-        for row in X:
-            features = ",".join(str(v) for v in row)
-            data_out.write(f"{features},{str(y[0])}\n")
+        # for row in X:
+        #     features = ",".join(str(v) for v in row)
+        #     data_out.write(f"{features},{str(y[0])}\n")
 
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
@@ -245,10 +245,10 @@ def prequantial_evaluation(stream, adaptive_trees, lru_states, cur_state, tree_p
 
                     if args.disable_state_adaption:
                         if tree.bg_adaptive_tree is None:
-                            tree = ARFHoeffdingTree(max_features=arf_max_features)
+                            tree.tree = ARFHoeffdingTree(max_features=arf_max_features)
                         else:
                             tree.tree = tree.bg_adaptive_tree.tree
-                            tree.bg_adaptive_tree = None
+                        tree.reset()
 
                 if warning_detected_only:
                     target_state_updated = True
@@ -374,8 +374,9 @@ if __name__ == '__main__':
     print(f"kappa_window: {args.kappa_window}")
     print(f"random_state: {args.random_state}")
 
-    num_classes = 2
-    arf_max_features = int(math.log2(num_classes)) + 1
+    num_labels = 2
+    num_features = 10
+    arf_max_features = int(math.log2(num_features)) + 1
     repo_size = args.num_trees * 4
 
     np.random.seed(args.random_state)
