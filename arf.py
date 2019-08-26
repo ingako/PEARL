@@ -78,10 +78,13 @@ def partial_fit(X, y, trees):
                 if tree.bg_tree is not None:
                     tree.bg_tree.partial_fit([X[i]], [y[i]])
 
-def prequantial_evaluation(stream, adaptive_trees):
+def prequential_evaluation(stream, adaptive_trees):
     correct = 0
     x_axis = []
     accuracy_list = []
+
+    sample_counter = 0
+    window_accuracy = 0.0
 
     with open('hyperplane.csv', 'w') as data_out, open('results_arf.csv', 'w') as out:
         # pretrain
@@ -121,12 +124,21 @@ def prequantial_evaluation(stream, adaptive_trees):
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
-                print(accuracy)
-
-                x_axis.append(count)
-                accuracy_list.append(accuracy)
-                out.write(f"{count},{accuracy}\n")
                 correct = 0
+
+                window_accuracy = (window_accuracy * sample_counter + accuracy) \
+                    / (sample_counter + 1)
+                sample_counter += args.wait_samples
+
+                if sample_counter == args.sample_freq:
+                    x_axis.append(count)
+                    accuracy_list.append(window_accuracy)
+
+                    print(f"{count},{window_accuracy}")
+                    out.write(f"{count},{window_accuracy}\n")
+
+                    sample_counter = 0
+                    window_accuracy = 0.0
 
             # train
             partial_fit(X, y, adaptive_trees)
@@ -149,7 +161,7 @@ def evaluate():
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
 
-    x_axis, accuracy_list = prequantial_evaluation(stream,
+    x_axis, accuracy_list = prequential_evaluation(stream,
                                                    adaptive_trees)
 
     ax[0, 0].plot(x_axis, accuracy_list)
@@ -160,23 +172,23 @@ def evaluate():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--tree",
-                        dest="num_trees", default=1, type=int,
+                        dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
-    parser.add_argument("-p", "--pool",
-                        dest="tree_pool_size", default=1, type=int,
-                        help="number of trees in the online tree repository")
     parser.add_argument("-w", "--warning",
-                        dest="warning_delta", default=0.001, type=float,
+                        dest="warning_delta", default=0.0001, type=float,
                         help="delta value for drift warning detector")
     parser.add_argument("-d", "--drift",
-                        dest="drift_delta", default=0.0001, type=float,
+                        dest="drift_delta", default=0.00001, type=float,
                         help="delta value for drift detector")
     parser.add_argument("--max_samples",
-                        dest="max_samples", default=10000, type=int,
+                        dest="max_samples", default=20000, type=int,
                         help="total number of samples")
     parser.add_argument("--wait_samples",
                         dest="wait_samples", default=100, type=int,
                         help="number of samples per evaluation")
+    parser.add_argument("--sample_freq",
+                        dest="sample_freq", default=400, type=int,
+                        help="log interval for performance")
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
