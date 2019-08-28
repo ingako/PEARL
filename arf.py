@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import copy
+import csv
 import sys
 import math
 import argparse
@@ -48,37 +49,31 @@ def update_drift_detector(adaptive_tree, predicted_label, actual_label):
         adaptive_tree.drift_detector.add_element(1)
 
 def predict(X, y, trees, should_vote):
-    predictions = []
+    votes = defaultdict(int)
+    for tree in trees:
+        predicted_label = tree.fg_tree.predict([X])[0]
 
-    for i in range(0, len(X)):
-        feature_row = X[i]
-        label = y[i]
-
-        votes = defaultdict(int)
-        for tree in trees:
-            predicted_label = tree.fg_tree.predict([feature_row])[0]
-
-            # tree.predicted_labels.append(predicted_label) # for kappa calculation
-            if should_vote:
-                update_drift_detector(tree, predicted_label, label)
-
-            votes[predicted_label] += 1
-
+        # tree.predicted_labels.append(predicted_label) # for kappa calculation
         if should_vote:
-            predictions.append(max(votes, key=votes.get))
+            update_drift_detector(tree, predicted_label, y)
 
-    return predictions
+        votes[predicted_label] += 1
+
+    prediction = -sys.maxsize
+    if should_vote:
+        prediction = max(votes, key=votes.get)
+
+    return prediction
 
 def partial_fit(X, y, trees):
-    for i in range(0, len(X)):
-        for tree in trees:
-            n = np.random.poisson(1)
-            for j in range(0, n):
-                tree.fg_tree.partial_fit([X[i]], [y[i]])
-                if tree.bg_tree is not None:
-                    tree.bg_tree.partial_fit([X[i]], [y[i]])
+    for tree in trees:
+        n = np.random.poisson(1)
+        for _ in range(0, n):
+            tree.fg_tree.partial_fit([X], [y])
+            if tree.bg_tree is not None:
+                tree.bg_tree.partial_fit([X], [y])
 
-def prequential_evaluation(stream, adaptive_trees):
+def prequential_evaluation(adaptive_trees):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -86,22 +81,18 @@ def prequential_evaluation(stream, adaptive_trees):
     sample_counter = 0
     window_accuracy = 0.0
 
-    with open('hyperplane.csv', 'w') as data_out, open('results_arf.csv', 'w') as out:
-        # pretrain
-        # X, y = stream.next_sample(args.wait_samples * 3)
-        # partial_fit(X, y, adaptive_trees)
+    with open("recur_hyperplane.csv") as f, open("results_arf.csv", "w") as out:
 
-        # for row in X:
-        #     features = ",".join(str(v) for v in row)
-        #     data_out.write(f"{features},{str(y[0])}\n")
+        reader = csv.reader(f, delimiter=',')
+        for count, line in enumerate(reader):
 
-        for count in range(0, args.max_samples):
-            X, y = stream.next_sample()
+            X = [float(v) for v in line[:-1]]
+            y = float(line[-1])
 
             # test
-            prediction = predict(X, y, adaptive_trees, should_vote=True)[0]
+            prediction = predict(X, y, adaptive_trees, should_vote=True)
 
-            if prediction == y[0]:
+            if prediction == y:
                 correct += 1
 
             drifted_tree_list = []
@@ -143,17 +134,10 @@ def prequential_evaluation(stream, adaptive_trees):
             # train
             partial_fit(X, y, adaptive_trees)
 
-            features = ",".join(str(v) for v in X[0])
-            data_out.write(f"{features},{str(y[0])}\n")
-
     return x_axis, accuracy_list
 
 def evaluate():
     fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
-
-    stream = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.1)
-    stream.prepare_for_use()
-    print(stream.get_data_info())
 
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
                                    fg_tree=ARFHoeffdingTree(max_features=arf_max_features)
@@ -161,8 +145,7 @@ def evaluate():
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
 
-    x_axis, accuracy_list = prequential_evaluation(stream,
-                                                   adaptive_trees)
+    x_axis, accuracy_list = prequential_evaluation(adaptive_trees)
 
     ax[0, 0].plot(x_axis, accuracy_list)
     ax[0, 0].set_title("Accuracy")
