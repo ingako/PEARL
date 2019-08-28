@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from skmultiflow.data import SEAGenerator
 from skmultiflow.data import LEDGeneratorDrift
 from skmultiflow.data import AGRAWALGenerator
@@ -57,7 +59,7 @@ def prepare_hyperplane_streams(noise_1 = 0.05, noise_2 = 0.1):
                                    mag_change=0.001,
                                    sigma_percentage=0.1)
 
-    return stream_1
+    return stream_1, stream_2
 
 def prepare_concept_drift_stream(stream_1, stream_2, drift_position, drift_width):
     stream = ConceptDriftStream(stream=stream_1,
@@ -66,5 +68,23 @@ def prepare_concept_drift_stream(stream_1, stream_2, drift_position, drift_width
                                 position=drift_position,
                                 width=drift_width)
 
-    stream.prepare_for_use()
+    # stream.prepare_for_use()
     return stream
+
+stream_1, stream_2 = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.05)
+drift_stream = prepare_concept_drift_stream(stream_1=stream_1,
+                                            stream_2=stream_2,
+                                            drift_position=1500,
+                                            drift_width=1)
+
+stream_3, stream_4 = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.05)
+
+stream = prepare_concept_drift_stream(drift_stream, stream_3, 0 , 1)
+stream.prepare_for_use()
+
+with open('recur_hyperplane.csv', 'w') as out:
+    max_samples = 20000
+    for i in range(0, max_samples):
+        X, y = stream.next_sample()
+        features = ",".join(str(v) for v in X[0])
+        out.write(f"{features},{str(y[0])}\n")
