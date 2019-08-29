@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 
 from stream_generators import *
 from LRU_state import *
+from state_graph import *
 
 from sklearn.metrics import cohen_kappa_score
 
@@ -115,6 +116,7 @@ def update_candidate_trees(candidate_trees,
 def adapt_state(drifted_tree_list,
                 candidate_trees,
                 tree_pool,
+                state_graph,
                 cur_state,
                 cur_tree_pool_size,
                 adaptive_trees,
@@ -178,6 +180,8 @@ def adapt_state(drifted_tree_list,
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
 
+        state_graph.add_edge(drifted_tree.tree_pool_id, swap_tree.tree_pool_id)
+
         # replace drifted tree with swap tree
         pos = drifted_tree_pos.pop()
         adaptive_trees[pos] = swap_tree
@@ -185,7 +189,7 @@ def adapt_state(drifted_tree_list,
 
     return cur_tree_pool_size
 
-def prequential_evaluation(adaptive_trees, lru_states, cur_state, tree_pool):
+def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -218,7 +222,8 @@ def prequential_evaluation(adaptive_trees, lru_states, cur_state, tree_pool):
                 correct += 1
 
             target_state = copy.deepcopy(cur_state)
-            target_state_updated = False
+
+            warning_tree_id_list = []
             drifted_tree_list = []
             drifted_tree_pos = []
 
@@ -247,24 +252,33 @@ def prequential_evaluation(adaptive_trees, lru_states, cur_state, tree_pool):
                         tree.reset()
 
                 if warning_detected_only:
-                    target_state_updated = True
+                    warning_tree_id_list.append(tree.tree_pool_id)
                     target_state[tree.tree_pool_id] = '2'
 
             if not args.disable_state_adaption:
                 # if warnings are detected, find closest state and update candidate_trees list
-                if target_state_updated:
-                    closest_state = lru_states.get_closest_state(target_state)
+                if len(warning_tree_id_list) > 0:
 
-                    update_candidate_trees(candidate_trees=candidate_trees,
-                                           tree_pool=tree_pool,
-                                           cur_state=cur_state,
-                                           closest_state=closest_state,
-                                           cur_tree_pool_size=cur_tree_pool_size)
+                    if state_graph.is_stable:
+                        for warning_tree_id in warning_tree_id_list:
+                            next_id = state_graph.get_next_tree_id(warning_tree_id)
+                            if not tree_pool[next_id].is_candidate:
+                                candidate_trees.append(tree_pool[next_id])
+
+                    else:
+                        closest_state = lru_states.get_closest_state(target_state)
+
+                        update_candidate_trees(candidate_trees=candidate_trees,
+                                               tree_pool=tree_pool,
+                                               cur_state=cur_state,
+                                               closest_state=closest_state,
+                                               cur_tree_pool_size=cur_tree_pool_size)
 
                 # if actual drifts are detected, swap trees and update cur_state
                 cur_tree_pool_size = adapt_state(drifted_tree_list=drifted_tree_list,
                                                  candidate_trees=candidate_trees,
                                                  tree_pool=tree_pool,
+                                                 state_graph=state_graph,
                                                  cur_state=cur_state,
                                                  cur_tree_pool_size=cur_tree_pool_size,
                                                  adaptive_trees=adaptive_trees,
@@ -309,12 +323,15 @@ def evaluate():
     lru_states = LRU_state(capacity=repo_size, distance_threshold=100)
     lru_states.enqueue(cur_state)
 
+    state_graph = LossyStateGraph(repo_size)
+
     tree_pool = [None] * args.tree_pool_size
     for i in range(0, args.num_trees):
         tree_pool[i] = adaptive_trees[i]
 
     x_axis, accuracy_list = prequential_evaluation(adaptive_trees,
                                                    lru_states,
+                                                   state_graph,
                                                    cur_state,
                                                    tree_pool)
 
