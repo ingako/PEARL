@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 from random import randrange
 from pprint import pformat
 
@@ -20,9 +21,38 @@ class LossyStateGraph:
         for key, val in self.graph[src].neighbors.items():
             sum += val[0]
             if r < sum:
+                val[1] = True
                 return key
 
         return -1
+
+    def update(self):
+        self.drift_counter += 1
+        if self.drift_counter <= self.window_len:
+            return
+
+        self.drift_counter = 0
+
+        # lossy count
+        for node in self.graph:
+            if node is None:
+                continue
+
+            for key, val in list(node.neighbors.items()):
+                if val[1]:
+                    # is hit
+                    val[1] = False
+
+                    val[0] += 1
+                    node.total_weight += 1
+
+                else:
+                    val[0] -= 1
+                    node.total_weight -= 1
+
+                    if val[0] == 0:
+                        # remove edge
+                        del node.neighbors[key]
 
     def add_node(self, key):
         self.graph[key] = Node(key)
@@ -37,13 +67,8 @@ class LossyStateGraph:
         src_node.total_weight += 1
 
         if dest not in src_node.neighbors.keys():
-            src_node.neighbors[dest] = [0, 0]
-
-        self.graph[src].neighbors[dest][0] += 1
-        self.graph[src].neighbors[dest][1] = True
-
-    def remove_edge(self):
-        pass
+            src_node.neighbors[dest] = [0, False]
+        src_node.neighbors[dest][0] += 1
 
     def __str__(self):
         strs = []
@@ -63,20 +88,3 @@ class Node:
         self.key = key
         self.neighbors = dict() # <tree_id, [weight, is_hit]>
         self.total_weight = 0
-
-if __name__ == '__main__':
-    state_graph = LossyStateGraph(5, 5)
-
-    state_graph.add_edge(0, 1)
-    state_graph.add_edge(0, 4)
-    state_graph.add_edge(1, 2)
-    state_graph.add_edge(1, 3)
-    state_graph.add_edge(1, 4)
-    state_graph.add_edge(1, 4)
-    state_graph.add_edge(1, 4)
-    state_graph.add_edge(1, 4)
-    state_graph.add_edge(2, 3)
-    state_graph.add_edge(3, 4)
-
-    print(state_graph.get_next_tree_id(1))
-    print(str(state_graph))
