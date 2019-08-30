@@ -88,3 +88,52 @@ class Node:
         self.key = key
         self.neighbors = dict() # <tree_id, [weight, is_hit]>
         self.total_weight = 0
+
+if __name__ == '__main__':
+    random.seed(0)
+    state_graph = LossyStateGraph(5, 1)
+
+    state_graph.add_edge(0, 1)
+    state_graph.add_edge(0, 4)
+    state_graph.update()
+    print(str(state_graph))
+    print()
+
+    state_graph.add_edge(1, 2)
+    state_graph.add_edge(1, 3)
+    state_graph.add_edge(1, 4)
+    state_graph.add_edge(1, 4)
+    state_graph.add_edge(1, 4)
+    state_graph.add_edge(1, 4)
+
+    print("get next tree id for 1")
+    print(state_graph.get_next_tree_id(1))
+
+    print("Before update")
+    print(str(state_graph))
+    print()
+
+    state_graph.update()
+
+    print("After update")
+    print(str(state_graph))
+    print()
+
+    state_graph.add_edge(2, 3)
+    state_graph.add_edge(3, 4)
+    state_graph.update()
+    print(str(state_graph))
+
+    print("get next tree id for 2")
+    print(state_graph.get_next_tree_id(2))
+
+
+    print("Before update")
+    print(str(state_graph))
+    print()
+
+    state_graph.update()
+
+    print("After update")
+    print(str(state_graph))
+    print()
