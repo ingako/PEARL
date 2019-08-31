@@ -154,8 +154,8 @@ def adapt_state(drifted_tree_list,
                         AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
 
             else:
-                window_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
-                print(f"bg_tree window size: {window_size}")
+                prediction_win_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
+                print(f"bg_tree window size: {prediction_win_size}")
 
                 drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
                 print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
@@ -323,7 +323,7 @@ def evaluate():
     lru_states = LRU_state(capacity=repo_size, distance_threshold=100)
     lru_states.enqueue(cur_state)
 
-    state_graph = LossyStateGraph(repo_size)
+    state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
 
     tree_pool = [None] * args.tree_pool_size
     for i in range(0, args.num_trees):
@@ -380,6 +380,9 @@ if __name__ == '__main__':
                         dest="bg_kappa_threshold", default=0.00, type=float,
                         help="Kappa value that the background tree needs to outperform the "
                              "foreground drifted tree to prevent from false positive")
+    parser.add_argument("--lossy_window_size",
+                        dest="lossy_window_size", default=2, type=int,
+                        help="Window size for lossy count")
 
     args = parser.parse_args()
 

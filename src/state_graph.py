@@ -6,13 +6,13 @@ from pprint import pformat
 
 class LossyStateGraph:
 
-    def __init__(self, capacity, window_len):
+    def __init__(self, capacity, window_size):
         self.graph = [None] * capacity
         self.capacity = capacity
         self.is_stable = False
 
         self.drift_counter = 0
-        self.window_len = window_len
+        self.window_size = window_size
 
     def get_next_tree_id(self, src):
         r = randrange(self.graph[src].total_weight)
@@ -28,7 +28,7 @@ class LossyStateGraph:
 
     def update(self):
         self.drift_counter += 1
-        if self.drift_counter <= self.window_len:
+        if self.drift_counter <= self.window_size:
             return
 
         self.drift_counter = 0
