@@ -49,8 +49,9 @@ class TestStateGraph(unittest.TestCase):
         results.append(str(state_graph))
 
         actual_result = '\n'.join(results)
-        expected_result = """Node 0, total_weight=2
-{1: [1, False], 4: [1, False]}
+        expected_result = \
+"""Node 0, total_weight=2
+{1: [1, 0], 4: [1, 0]}
 Node 1, total_weight=0
 {}
 Node 4, total_weight=0
@@ -60,9 +61,9 @@ get next tree id for 1
 4
 Before update
 Node 0, total_weight=2
-{1: [1, False], 4: [1, False]}
+{1: [1, 0], 4: [1, 0]}
 Node 1, total_weight=6
-{2: [1, False], 3: [1, False], 4: [4, True]}
+{2: [1, 0], 3: [1, 0], 4: [4, 1]}
 Node 2, total_weight=0
 {}
 Node 3, total_weight=0
@@ -74,7 +75,7 @@ After update
 Node 0, total_weight=0
 {}
 Node 1, total_weight=5
-{4: [5, False]}
+{4: [5, 0]}
 Node 2, total_weight=0
 {}
 Node 3, total_weight=0
@@ -85,11 +86,11 @@ Node 4, total_weight=0
 Node 0, total_weight=0
 {}
 Node 1, total_weight=5
-{4: [5, False]}
+{4: [5, 0]}
 Node 2, total_weight=1
-{3: [1, False]}
+{3: [1, 0]}
 Node 3, total_weight=1
-{4: [1, False]}
+{4: [1, 0]}
 Node 4, total_weight=0
 {}
 get next tree id for 2
@@ -98,11 +99,11 @@ Before update
 Node 0, total_weight=0
 {}
 Node 1, total_weight=5
-{4: [5, False]}
+{4: [5, 0]}
 Node 2, total_weight=1
-{3: [1, True]}
+{3: [1, 1]}
 Node 3, total_weight=1
-{4: [1, False]}
+{4: [1, 0]}
 Node 4, total_weight=0
 {}
 
@@ -110,9 +111,9 @@ After update
 Node 0, total_weight=0
 {}
 Node 1, total_weight=4
-{4: [4, False]}
+{4: [4, 0]}
 Node 2, total_weight=2
-{3: [2, False]}
+{3: [2, 0]}
 Node 3, total_weight=0
 {}
 Node 4, total_weight=0

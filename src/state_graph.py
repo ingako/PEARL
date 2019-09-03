@@ -21,7 +21,7 @@ class LossyStateGraph:
         for key, val in self.graph[src].neighbors.items():
             cur_sum += val[0]
             if r < cur_sum:
-                val[1] = True
+                val[1] += 1
                 return key
 
         return -1
