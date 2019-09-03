@@ -16,11 +16,11 @@ class LossyStateGraph:
 
     def get_next_tree_id(self, src):
         r = randrange(self.graph[src].total_weight)
-        sum = 0
+        cur_sum = 0
 
         for key, val in self.graph[src].neighbors.items():
-            sum += val[0]
-            if r < sum:
+            cur_sum += val[0]
+            if r < cur_sum:
                 val[1] = True
                 return key
 
@@ -39,12 +39,9 @@ class LossyStateGraph:
                 continue
 
             for key, val in list(node.neighbors.items()):
-                if val[1]:
-                    # is hit
-                    val[1] = False
-
-                    val[0] += 1
-                    node.total_weight += 1
+                if val[1] > 0:
+                    val[0] += val[1]
+                    node.total_weight += val[1]
 
                 else:
                     val[0] -= 1
@@ -53,6 +50,10 @@ class LossyStateGraph:
                     if val[0] == 0:
                         # remove edge
                         del node.neighbors[key]
+
+                # reset the number of hits
+                val[1] = 0
+
 
     def add_node(self, key):
         self.graph[key] = Node(key)
@@ -67,7 +68,7 @@ class LossyStateGraph:
         src_node.total_weight += 1
 
         if dest not in src_node.neighbors.keys():
-            src_node.neighbors[dest] = [0, False]
+            src_node.neighbors[dest] = [0, 0]
         src_node.neighbors[dest][0] += 1
 
     def __str__(self):
@@ -86,5 +87,5 @@ class LossyStateGraph:
 class Node:
     def __init__(self, key):
         self.key = key
-        self.neighbors = dict() # <tree_id, [weight, is_hit]>
+        self.neighbors = dict() # <tree_id, [weight, num_hit]>
         self.total_weight = 0
