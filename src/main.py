@@ -135,7 +135,7 @@ def adapt_state(drifted_tree_list,
 
     for drifted_tree in drifted_tree_list:
         # TODO
-        if cur_tree_pool_size >= args.tree_pool_size:
+        if cur_tree_pool_size >= repo_size:
             print("early break")
             break
 
@@ -331,7 +331,7 @@ def evaluate():
 
     state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
 
-    tree_pool = [None] * args.tree_pool_size
+    tree_pool = [None] * repo_size
     for i in range(0, args.num_trees):
         tree_pool[i] = adaptive_trees[i]
 
@@ -354,9 +354,9 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
-    parser.add_argument("-p", "--pool",
-                        dest="tree_pool_size", default=180, type=int,
-                        help="number of trees in the online tree repository")
+    # parser.add_argument("-p", "--pool",
+    #                     dest="tree_pool_size", default=180, type=int,
+    #                     help="number of trees in the online tree repository")
     parser.add_argument("-w", "--warning",
                         dest="warning_delta", default=0.0001, type=float,
                         help="delta value for drift warning detector")
@@ -395,8 +395,9 @@ if __name__ == '__main__':
     print(f"num_trees: {args.num_trees}")
     print(f"warning_delta: {args.warning_delta}")
     print(f"drift_delta: {args.drift_delta}")
-    print(f"max_samples: {args.max_samples}")
+    # print(f"max_samples: {args.max_samples}")
     print(f"wait_samples: {args.wait_samples}")
+    print(f"sample_freq: {args.sample_freq}")
     print(f"kappa_window: {args.kappa_window}")
     print(f"random_state: {args.random_state}")
 
