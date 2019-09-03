@@ -95,8 +95,8 @@ def update_candidate_trees(candidate_trees,
     if len(closest_state) == 0:
         return
 
-    print(f"closest_state {closest_state}")
-    print(f"cur_state {cur_state}")
+    # print(f"closest_state {closest_state}")
+    # print(f"cur_state {cur_state}")
 
     for i in range(0, cur_tree_pool_size):
 
@@ -149,6 +149,8 @@ def adapt_state(drifted_tree_list,
             swap_tree.is_candidate = False
 
         if swap_tree is drifted_tree:
+            add_to_repo = True
+
             if drifted_tree.bg_adaptive_tree is None:
                     swap_tree = \
                         AdaptiveTree(tree=ARFHoeffdingTree(max_features=arf_max_features))
@@ -162,20 +164,24 @@ def adapt_state(drifted_tree_list,
                       f"swap_tree.kappa: {swap_tree.kappa}")
 
                 if drifted_tree.bg_adaptive_tree.kappa == -sys.maxsize:
-                    print("bg_adaptive_tree didn't fill the window")
+                    # add bg_adaptive_tree to the repo even if it didn't fill the window
                     swap_tree = drifted_tree.bg_adaptive_tree
 
                 elif drifted_tree.bg_adaptive_tree.kappa - swap_tree.kappa >= args.bg_kappa_threshold:
-
                     swap_tree = drifted_tree.bg_adaptive_tree
 
-            swap_tree.reset()
+                else:
+                    # false positive
+                    add_to_repo = False
 
-            # assign a new tree_pool_id for background tree
-            # and add background tree to tree_pool
-            swap_tree.tree_pool_id = cur_tree_pool_size
-            tree_pool[cur_tree_pool_size] = swap_tree
-            cur_tree_pool_size += 1
+            if add_to_repo:
+                swap_tree.reset()
+
+                # assign a new tree_pool_id for background tree
+                # and add background tree to tree_pool
+                swap_tree.tree_pool_id = cur_tree_pool_size
+                tree_pool[cur_tree_pool_size] = swap_tree
+                cur_tree_pool_size += 1
 
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
@@ -364,10 +370,10 @@ if __name__ == '__main__':
                         dest="wait_samples", default=100, type=int,
                         help="number of samples per evaluation")
     parser.add_argument("--sample_freq",
-                        dest="sample_freq", default=400, type=int,
+                        dest="sample_freq", default=1000, type=int,
                         help="log interval for performance")
     parser.add_argument("--kappa_window",
-                        dest="kappa_window", default=25, type=int,
+                        dest="kappa_window", default=50, type=int,
                         help="number of instances must be seen for calculating kappa")
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
@@ -397,7 +403,7 @@ if __name__ == '__main__':
     num_labels = 2
     num_features = 10
     arf_max_features = int(math.log2(num_features)) + 1
-    repo_size = args.num_trees * 4
+    repo_size = args.num_trees * 40
 
     np.random.seed(args.random_state)
 
