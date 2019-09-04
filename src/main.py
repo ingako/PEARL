@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import copy
-import csv
 import sys
 import math
 import argparse
@@ -59,33 +58,39 @@ def update_drift_detector(adaptive_tree, predicted_label, actual_label):
         adaptive_tree.drift_detector.add_element(1)
 
 def predict(X, y, adaptive_trees, should_vote):
-    votes = defaultdict(int)
-    for adaptive_tree in adaptive_trees:
-        predicted_label = adaptive_tree.tree.predict([X])[0]
+    predictions = []
 
-        adaptive_tree.predicted_labels.append(predicted_label) # for kappa calculation
+    for i in range(0, len(X)):
+        feature_row = X[i]
+        label = y[i]
+
+        votes = defaultdict(int)
+        for adaptive_tree in adaptive_trees:
+            predicted_label = adaptive_tree.tree.predict([feature_row])[0]
+
+            adaptive_tree.predicted_labels.append(predicted_label) # for kappa calculation
+            if should_vote:
+                update_drift_detector(adaptive_tree, predicted_label, label)
+
+            votes[predicted_label] += 1
+
+            # background tree needs to predict for performance measurement
+            if adaptive_tree.bg_adaptive_tree is not None:
+                predict([feature_row], [label], [adaptive_tree.bg_adaptive_tree], False)
+
         if should_vote:
-            update_drift_detector(adaptive_tree, predicted_label, y)
+            predictions.append(max(votes, key=votes.get))
 
-        votes[predicted_label] += 1
-
-        # background tree needs to predict for performance measurement
-        if adaptive_tree.bg_adaptive_tree is not None:
-            predict(X, y, [adaptive_tree.bg_adaptive_tree], False)
-
-    prediction = -sys.maxsize
-    if should_vote:
-        prediction = max(votes, key=votes.get)
-
-    return prediction
+    return predictions
 
 def partial_fit(X, y, adaptive_trees):
-    for adaptive_tree in adaptive_trees:
-        n = np.random.poisson(1)
-        for _ in range(0, n):
-            adaptive_tree.tree.partial_fit([X], [y])
-            if adaptive_tree.bg_adaptive_tree is not None:
-                adaptive_tree.bg_adaptive_tree.tree.partial_fit([X], [y])
+    for i in range(0, len(X)):
+        for adaptive_tree in adaptive_trees:
+            n = np.random.poisson(1)
+            for j in range(0, n):
+                adaptive_tree.tree.partial_fit([X[i]], [y[i]])
+                if adaptive_tree.bg_adaptive_tree is not None:
+                    adaptive_tree.bg_adaptive_tree.tree.partial_fit([X[i]], [y[i]])
 
 def update_candidate_trees(candidate_trees,
                            tree_pool,
@@ -195,7 +200,7 @@ def adapt_state(drifted_tree_list,
 
     return cur_tree_pool_size
 
-def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
+def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -209,22 +214,18 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
 
     cur_tree_pool_size = args.num_trees
 
-    with open("recur_hyperplane.csv") as f, open("results.csv", "w") as out:
-
-        reader = csv.reader(f, delimiter=',')
-        for count, line in enumerate(reader):
-
-            X = [float(v) for v in line[:-1]]
-            y = float(line[-1])
-            actual_labels.append(y)
+    with open('results.csv', 'w') as out:
+        for count in range(0, args.max_samples):
+            X, y = stream.next_sample(count)
+            actual_labels.append(y[0])
 
             # test
-            prediction = predict(X, y, adaptive_trees, should_vote=True)
+            prediction = predict(X, y, adaptive_trees, should_vote=True)[0]
 
             # test on candidate trees
             predict(X, y, candidate_trees, should_vote=False)
 
-            if prediction == y:
+            if prediction == y[0]:
                 correct += 1
 
             target_state = copy.deepcopy(cur_state)
@@ -320,6 +321,10 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
 def evaluate():
     fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
 
+    # prepare data
+    stream = prepare_data()
+    print(stream.get_data_info())
+
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
                                    tree=ARFHoeffdingTree(max_features=arf_max_features)
                       ) for i in range(0, args.num_trees)]
@@ -335,7 +340,8 @@ def evaluate():
     for i in range(0, args.num_trees):
         tree_pool[i] = adaptive_trees[i]
 
-    x_axis, accuracy_list = prequential_evaluation(adaptive_trees,
+    x_axis, accuracy_list = prequential_evaluation(stream,
+                                                   adaptive_trees,
                                                    lru_states,
                                                    state_graph,
                                                    cur_state,
@@ -364,7 +370,7 @@ if __name__ == '__main__':
                         dest="drift_delta", default=0.00001, type=float,
                         help="delta value for drift detector")
     parser.add_argument("--max_samples",
-                        dest="max_samples", default=20000, type=int,
+                        dest="max_samples", default=100000, type=int,
                         help="total number of samples")
     parser.add_argument("--wait_samples",
                         dest="wait_samples", default=100, type=int,
