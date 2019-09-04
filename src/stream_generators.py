@@ -71,27 +71,25 @@ def prepare_concept_drift_stream(stream_1, stream_2, drift_position, drift_width
     # stream.prepare_for_use()
     return stream
 
-if __name__ == '__main__':
-    max_samples = 100000
-    stable_period = 5000
+class StreamObject():
+    def __init__(self, streams):
+        self.stable_period = 5000
+        self.streams = streams
+        self.stream_idx = 0
+        self.cur_stream = streams[0]
 
-    stream_1, stream_2 = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.05)
-    drift_stream = prepare_concept_drift_stream(stream_1=stream_1,
-                                                stream_2=stream_2,
-                                                drift_position=stable_period,
-                                                drift_width=1)
+    def next_sample(self, count):
+        if count % self.stable_period == 0 and count != 0:
+            self.stream_idx = (self.stream_idx + 1) % len(self.streams)
+            self.cur_stream = self.streams[self.stream_idx]
 
-    stream_3, stream_4 = prepare_hyperplane_streams(noise_1=0.05, noise_2=0.05)
+        X, y = self.cur_stream.next_sample()
+        return X, y
 
-    stream = prepare_concept_drift_stream(stream_3, drift_stream, 0 , 1)
-    stream.prepare_for_use()
+    def get_data_info(self):
+        return self.cur_stream.get_data_info()
 
-    with open('recur_hyperplane.csv', 'w') as out:
-        for i in range(0, max_samples):
-            X, y = stream.next_sample()
-            features = ",".join(str(v) for v in X[0])
-            out.write(f"{features},{str(y[0])}\n")
-
+def prepare_data():
     # agrawal with 2 concepts
     stream_1, stream_2 = prepare_agrawal_streams(noise_1=0.05, noise_2=0.05, alt_func=4)
     drift_stream_1 = prepare_concept_drift_stream(stream_1=stream_1,
@@ -105,18 +103,6 @@ if __name__ == '__main__':
                                                   stream_2=stream_3,
                                                   drift_position=0,
                                                   drift_width=1000)
-
     drift_stream_2.prepare_for_use()
 
-    with open('recur_agrawal.csv', 'w') as out:
-        cur_stream = drift_stream_1
-        for count in range(0, max_samples):
-            if count % stable_period == stable_period and count != 0:
-                if cur_stream == drift_stream_1:
-                    cur_stream = drift_stream_2
-                else:
-                    cur_stream = drift_stream_1
-
-            X, y = cur_stream.next_sample()
-            features = ",".join(str(v) for v in X[0])
-            out.write(f"{features},{str(y[0])}\n")
+    return StreamObject([drift_stream_1, drift_stream_2])
