@@ -3,6 +3,7 @@
 import random
 from random import randrange
 from pprint import pformat
+from graphviz import Digraph
 
 class LossyStateGraph:
 
@@ -13,6 +14,7 @@ class LossyStateGraph:
 
         self.drift_counter = 0
         self.window_size = window_size
+        self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
         r = randrange(self.graph[src].total_weight)
@@ -70,6 +72,9 @@ class LossyStateGraph:
         if dest not in src_node.neighbors.keys():
             src_node.neighbors[dest] = [0, 0]
         src_node.neighbors[dest][0] += 1
+
+        self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
+        self.g.render(view=False)
 
     def __str__(self):
         strs = []
