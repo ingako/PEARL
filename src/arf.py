@@ -27,14 +27,12 @@ class AdaptiveTree(object):
         self.tree_pool_id = tree_pool_id
         self.fg_tree = fg_tree
         self.bg_tree = None
-        self.is_candidate = False
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
         self.kappa = -sys.maxsize
 
     def reset(self):
         self.bg_tree = None
-        self.is_candidate = False
         self.warning_detector.reset()
         self.drift_detector.reset()
         self.kappa = -sys.maxsize
@@ -96,8 +94,6 @@ def prequential_evaluation(stream, adaptive_trees):
             if prediction == y[0]:
                 correct += 1
 
-            drifted_tree_list = []
-
             for tree in adaptive_trees:
 
                 if tree.warning_detector.detected_change():
@@ -106,7 +102,6 @@ def prequential_evaluation(stream, adaptive_trees):
 
                 if tree.drift_detector.detected_change():
                     tree.drift_detector.reset()
-                    drifted_tree_list.append(tree)
 
                     if tree.bg_tree is None:
                         tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
@@ -128,6 +123,7 @@ def prequential_evaluation(stream, adaptive_trees):
 
                     print(f"{count},{window_accuracy}")
                     out.write(f"{count},{window_accuracy}\n")
+                    out.flush()
 
                     sample_counter = 0
                     window_accuracy = 0.0
@@ -171,7 +167,7 @@ if __name__ == '__main__':
                         dest="drift_delta", default=0.00001, type=float,
                         help="delta value for drift detector")
     parser.add_argument("--max_samples",
-                        dest="max_samples", default=100000, type=int,
+                        dest="max_samples", default=200000, type=int,
                         help="total number of samples")
     parser.add_argument("--wait_samples",
                         dest="wait_samples", default=100, type=int,
