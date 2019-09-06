@@ -21,21 +21,18 @@ matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
 class AdaptiveTree(object):
-    def __init__(self,
-                 tree_pool_id,
-                 fg_tree):
-        self.tree_pool_id = tree_pool_id
+    def __init__(self, fg_tree):
         self.fg_tree = fg_tree
         self.bg_tree = None
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
-        self.kappa = -sys.maxsize
+        # self.kappa = -sys.maxsize
 
-    def reset(self):
-        self.bg_tree = None
-        self.warning_detector.reset()
-        self.drift_detector.reset()
-        self.kappa = -sys.maxsize
+    # def reset(self):
+    #     self.bg_tree = None
+    #     self.warning_detector.reset()
+    #     self.drift_detector.reset()
+    #     self.kappa = -sys.maxsize
 
 def update_drift_detector(adaptive_tree, predicted_label, actual_label):
     if predicted_label == actual_label:
@@ -45,7 +42,7 @@ def update_drift_detector(adaptive_tree, predicted_label, actual_label):
         adaptive_tree.warning_detector.add_element(1)
         adaptive_tree.drift_detector.add_element(1)
 
-def predict(X, y, trees, should_vote):
+def predict(X, y, trees):
     predictions = []
 
     for i in range(0, len(X)):
@@ -55,26 +52,23 @@ def predict(X, y, trees, should_vote):
         votes = defaultdict(int)
         for tree in trees:
             predicted_label = tree.fg_tree.predict([feature_row])[0]
-
-            # tree.predicted_labels.append(predicted_label) # for kappa calculation
-            if should_vote:
-                update_drift_detector(tree, predicted_label, label)
-
             votes[predicted_label] += 1
 
-        if should_vote:
-            predictions.append(max(votes, key=votes.get))
+            update_drift_detector(tree, predicted_label, label)
+
+        predictions.append(max(votes, key=votes.get))
 
     return predictions
 
 def partial_fit(X, y, trees):
     for i in range(0, len(X)):
         for tree in trees:
-            n = np.random.poisson(1)
-            for j in range(0, n):
-                tree.fg_tree.partial_fit([X[i]], [y[i]])
+            k = np.random.poisson(1)
+            # for j in range(0, n):
+            if k > 0:
+                tree.fg_tree.partial_fit([X[i]], [y[i]], sample_weight=[k])
                 if tree.bg_tree is not None:
-                    tree.bg_tree.partial_fit([X[i]], [y[i]])
+                    tree.bg_tree.partial_fit([X[i]], [y[i]], sample_weight=[k])
 
 def prequential_evaluation(stream, adaptive_trees):
     correct = 0
@@ -89,25 +83,11 @@ def prequential_evaluation(stream, adaptive_trees):
             X, y = stream.next_sample(count)
 
             # test
-            prediction = predict(X, y, adaptive_trees, should_vote=True)[0]
+            prediction = predict(X, y, adaptive_trees)[0]
 
             if prediction == y[0]:
                 correct += 1
 
-            for tree in adaptive_trees:
-
-                if tree.warning_detector.detected_change():
-                    tree.warning_detector.reset()
-                    tree.bg_tree = ARFHoeffdingTree(max_features=arf_max_features)
-
-                if tree.drift_detector.detected_change():
-                    tree.drift_detector.reset()
-
-                    if tree.bg_tree is None:
-                        tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features)
-                    else:
-                        tree.fg_tree = tree.bg_tree
-                    tree.reset()
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
@@ -131,6 +111,38 @@ def prequential_evaluation(stream, adaptive_trees):
             # train
             partial_fit(X, y, adaptive_trees)
 
+            warning_list = []
+            drift_list = []
+            for i in range(0, len(adaptive_trees)):
+                tree = adaptive_trees[i]
+
+                if tree.warning_detector.detected_change():
+                    tree.warning_detector.reset()
+                    # tree.bg_tree = tree.fg_tree.new_instance()
+                    tree.bg_tree = ARFHoeffdingTree(max_features=arf_max_features,
+                                                    random_state=np.random)
+                    warning_list.append(i)
+
+                if tree.drift_detector.detected_change():
+                    tree.drift_detector.reset()
+
+                    if tree.bg_tree is None:
+                        # tree.fg_tree.reset()
+                        tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features,
+                                                        random_state=np.random)
+                    else:
+                        tree.fg_tree = tree.bg_tree
+                        tree.bg_tree = None
+                        tree.warning_detector.reset()
+
+                    drift_list.append(i)
+                    # tree.reset()
+
+            if len(warning_list) > 0:
+                print(f"{count}-warning:{warning_list}")
+            if len(drift_list) > 0:
+                print(f"{count}-drift:{drift_list}")
+
             # features = ",".join(str(v) for v in X[0])
             # data_out.write(f"{features},{str(y[0])}\n")
 
@@ -143,8 +155,8 @@ def evaluate():
     stream = prepare_data()
     print(stream.get_data_info())
 
-    adaptive_trees = [AdaptiveTree(tree_pool_id=i,
-                                   fg_tree=ARFHoeffdingTree(max_features=arf_max_features)
+    adaptive_trees = [AdaptiveTree(fg_tree=ARFHoeffdingTree(max_features=arf_max_features,
+                                                            random_state=np.random)
                       ) for i in range(0, args.num_trees)]
 
     x_axis, accuracy_list = prequential_evaluation(stream,
@@ -187,8 +199,9 @@ if __name__ == '__main__':
     print(f"wait_samples: {args.wait_samples}")
 
     num_labels = 2
-    num_features = 10
-    arf_max_features = int(math.log2(num_features)) + 1
+    num_features = 9
+    arf_max_features = round(math.sqrt(num_features))
+    print(f"max_features: {arf_max_features}")
     np.random.seed(args.random_state)
 
     evaluate()
