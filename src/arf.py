@@ -10,8 +10,6 @@ from collections import defaultdict, deque
 from stream_generators import *
 from LRU_state import *
 
-from sklearn.metrics import cohen_kappa_score
-
 from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
 
@@ -26,21 +24,14 @@ class AdaptiveTree(object):
         self.bg_tree = None
         self.warning_detector = ADWIN(args.warning_delta)
         self.drift_detector = ADWIN(args.drift_delta)
-        # self.kappa = -sys.maxsize
-
-    # def reset(self):
-    #     self.bg_tree = None
-    #     self.warning_detector.reset()
-    #     self.drift_detector.reset()
-    #     self.kappa = -sys.maxsize
 
 def update_drift_detector(adaptive_tree, predicted_label, actual_label):
-    if predicted_label == actual_label:
-        adaptive_tree.warning_detector.add_element(0)
-        adaptive_tree.drift_detector.add_element(0)
-    else:
+    if int(predicted_label) == int(actual_label):
         adaptive_tree.warning_detector.add_element(1)
         adaptive_tree.drift_detector.add_element(1)
+    else:
+        adaptive_tree.warning_detector.add_element(0)
+        adaptive_tree.drift_detector.add_element(0)
 
 def predict(X, y, trees):
     predictions = []
@@ -49,10 +40,19 @@ def predict(X, y, trees):
         feature_row = X[i]
         label = y[i]
 
-        votes = defaultdict(int)
+        # votes = defaultdict(int)
+        votes = {}
         for tree in trees:
-            predicted_label = tree.fg_tree.predict([feature_row])[0]
-            votes[predicted_label] += 1
+            predicted_label = int(tree.fg_tree.predict([feature_row])[0])
+            try:
+                votes[predicted_label] += 1
+            except KeyError:
+                votes[predicted_label] = 1
+            if False:
+            # if i == 0:
+                print(f"predicted: {predicted_label}, actual: {label}")
+                if predicted_label == label:
+                    print("true")
 
             update_drift_detector(tree, predicted_label, label)
 
@@ -85,12 +85,12 @@ def prequential_evaluation(stream, adaptive_trees):
             # test
             prediction = predict(X, y, adaptive_trees)[0]
 
-            if prediction == y[0]:
+            if int(prediction) == int(y[0]):
                 correct += 1
-
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
+                # print(correct)
                 correct = 0
 
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
@@ -108,40 +108,39 @@ def prequential_evaluation(stream, adaptive_trees):
                     sample_counter = 0
                     window_accuracy = 0.0
 
-            # train
-            partial_fit(X, y, adaptive_trees)
-
             warning_list = []
             drift_list = []
             for i in range(0, len(adaptive_trees)):
                 tree = adaptive_trees[i]
 
                 if tree.warning_detector.detected_change():
+                    tree.bg_tree = tree.fg_tree.new_instance()
                     tree.warning_detector.reset()
-                    # tree.bg_tree = tree.fg_tree.new_instance()
-                    tree.bg_tree = ARFHoeffdingTree(max_features=arf_max_features,
-                                                    random_state=np.random)
                     warning_list.append(i)
 
                 if tree.drift_detector.detected_change():
                     tree.drift_detector.reset()
 
                     if tree.bg_tree is None:
-                        # tree.fg_tree.reset()
-                        tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features,
-                                                        random_state=np.random)
+                        tree.fg_tree.reset()
+                        tree.warning_detector.reset()
+                        # tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features,
+                        #                                 random_state=np.random)
                     else:
                         tree.fg_tree = tree.bg_tree
                         tree.bg_tree = None
-                        tree.warning_detector.reset()
 
                     drift_list.append(i)
                     # tree.reset()
 
-            if len(warning_list) > 0:
-                print(f"{count}-warning:{warning_list}")
-            if len(drift_list) > 0:
-                print(f"{count}-drift:{drift_list}")
+            # if len(warning_list) > 0:
+            #     print(f"{count}-warning:{warning_list}")
+            # if len(drift_list) > 0:
+            #     print(f"{count}-drift:{drift_list}")
+
+            # train
+            partial_fit(X, y, adaptive_trees)
+
 
             # features = ",".join(str(v) for v in X[0])
             # data_out.write(f"{features},{str(y[0])}\n")
@@ -157,10 +156,9 @@ def evaluate():
 
     adaptive_trees = [AdaptiveTree(fg_tree=ARFHoeffdingTree(max_features=arf_max_features,
                                                             random_state=np.random)
-                      ) for i in range(0, args.num_trees)]
+                                  ) for i in range(0, args.num_trees)]
 
-    x_axis, accuracy_list = prequential_evaluation(stream,
-                                                   adaptive_trees)
+    x_axis, accuracy_list = prequential_evaluation(stream, adaptive_trees)
 
     ax[0, 0].plot(x_axis, accuracy_list)
     ax[0, 0].set_title("Accuracy")
