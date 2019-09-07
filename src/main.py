@@ -87,10 +87,9 @@ def partial_fit(X, y, adaptive_trees):
     for i in range(0, len(X)):
         for adaptive_tree in adaptive_trees:
             n = np.random.poisson(1)
-            for j in range(0, n):
-                adaptive_tree.tree.partial_fit([X[i]], [y[i]])
-                if adaptive_tree.bg_adaptive_tree is not None:
-                    adaptive_tree.bg_adaptive_tree.tree.partial_fit([X[i]], [y[i]])
+            adaptive_tree.tree.partial_fit([X[i]], [y[i]], sample_weight=[n])
+            if adaptive_tree.bg_adaptive_tree is not None:
+                adaptive_tree.bg_adaptive_tree.tree.partial_fit([X[i]], [y[i]], sample_weight=[n])
 
 def update_candidate_trees(candidate_trees,
                            tree_pool,
@@ -212,11 +211,12 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
     current_state = []
     candidate_trees = []
 
+
     cur_tree_pool_size = args.num_trees
 
     with open('results.csv', 'w') as out:
         for count in range(0, args.max_samples):
-            X, y = stream.next_sample(count)
+            X, y = stream.next_sample()
             actual_labels.append(y[0])
 
             # test
@@ -266,6 +266,8 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
+                    if count == 100000:
+                        state_graph.is_stable = True
                     if state_graph.is_stable:
                         for warning_tree_id in warning_tree_id_list:
                             next_id = state_graph.get_next_tree_id(warning_tree_id)
@@ -309,6 +311,7 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
 
                     print(f"{count},{window_accuracy}")
                     out.write(f"{count},{window_accuracy}\n")
+                    out.flush()
 
                     sample_counter = 0
                     window_accuracy = 0.0
@@ -316,6 +319,7 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
             # train
             partial_fit(X, y, adaptive_trees)
 
+    print(f"length of candidate_trees: {len(candidate_trees)}")
     return x_axis, accuracy_list
 
 def evaluate():
@@ -370,7 +374,7 @@ if __name__ == '__main__':
                         dest="drift_delta", default=0.00001, type=float,
                         help="delta value for drift detector")
     parser.add_argument("--max_samples",
-                        dest="max_samples", default=100000, type=int,
+                        dest="max_samples", default=200000, type=int,
                         help="total number of samples")
     parser.add_argument("--wait_samples",
                         dest="wait_samples", default=100, type=int,
@@ -393,7 +397,7 @@ if __name__ == '__main__':
                         help="Kappa value that the background tree needs to outperform the "
                              "foreground drifted tree to prevent from false positive")
     parser.add_argument("--lossy_window_size",
-                        dest="lossy_window_size", default=2, type=int,
+                        dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
 
     args = parser.parse_args()

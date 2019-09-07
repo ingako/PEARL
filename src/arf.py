@@ -27,18 +27,18 @@ class AdaptiveTree(object):
 
 def update_drift_detector(adaptive_tree, predicted_label, actual_label):
     if int(predicted_label) == int(actual_label):
-        adaptive_tree.warning_detector.add_element(1)
-        adaptive_tree.drift_detector.add_element(1)
-    else:
         adaptive_tree.warning_detector.add_element(0)
         adaptive_tree.drift_detector.add_element(0)
+    else:
+        adaptive_tree.warning_detector.add_element(1)
+        adaptive_tree.drift_detector.add_element(1)
 
 def predict(X, y, trees):
     predictions = []
 
     for i in range(0, len(X)):
         feature_row = X[i]
-        label = y[i]
+        label = int(y[i])
 
         # votes = defaultdict(int)
         votes = {}
@@ -80,7 +80,7 @@ def prequential_evaluation(stream, adaptive_trees):
 
     with open('results_arf.csv', 'w') as out:
         for count in range(0, args.max_samples):
-            X, y = stream.next_sample(count)
+            X, y = stream.next_sample()
 
             # test
             prediction = predict(X, y, adaptive_trees)[0]
@@ -124,14 +124,11 @@ def prequential_evaluation(stream, adaptive_trees):
                     if tree.bg_tree is None:
                         tree.fg_tree.reset()
                         tree.warning_detector.reset()
-                        # tree.fg_tree = ARFHoeffdingTree(max_features=arf_max_features,
-                        #                                 random_state=np.random)
                     else:
                         tree.fg_tree = tree.bg_tree
                         tree.bg_tree = None
 
                     drift_list.append(i)
-                    # tree.reset()
 
             # if len(warning_list) > 0:
             #     print(f"{count}-warning:{warning_list}")
@@ -140,7 +137,6 @@ def prequential_evaluation(stream, adaptive_trees):
 
             # train
             partial_fit(X, y, adaptive_trees)
-
 
             # features = ",".join(str(v) for v in X[0])
             # data_out.write(f"{features},{str(y[0])}\n")

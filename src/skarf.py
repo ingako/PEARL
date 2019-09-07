@@ -29,12 +29,13 @@ def evaluate():
     with open('results_skarf.csv', 'w') as out:
         for count in range(0, args.max_samples):
 
-            X, y = stream.next_sample(count)
+            X, y = stream.next_sample()
 
             # test
             prediction = learner.predict(X)[0]
 
-            if prediction == y[0]:
+            # print(f"prediction: {prediction}, actual: {y[0]}")
+            if int(prediction) == int(y[0]):
                 correct += 1
 
             if (count % args.wait_samples == 0) and (count != 0):

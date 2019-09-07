@@ -76,13 +76,15 @@ class StreamObject():
         self.stable_period = 5000
         self.streams = streams
         self.stream_idx = 0
+        self.count = 0
         self.cur_stream = streams[0]
 
-    def next_sample(self, count):
-        if count % self.stable_period == 0 and count != 0:
+    def next_sample(self):
+        if self.count % self.stable_period == 0 and self.count != 0:
             self.stream_idx = (self.stream_idx + 1) % len(self.streams)
             self.cur_stream = self.streams[self.stream_idx]
 
+        self.count += 1
         X, y = self.cur_stream.next_sample()
         return X, y
 
@@ -106,3 +108,13 @@ def prepare_data():
     drift_stream_2.prepare_for_use()
 
     return StreamObject([drift_stream_1, drift_stream_2])
+
+if __name__ == '__main__':
+    stream = prepare_data()
+    print(stream.get_data_info())
+    with open("recur_agrawal.csv", "w") as out:
+        for count in range(0, 200000):
+            X, y = stream.next_sample()
+            for row in X:
+                features = ",".join(str(v) for v in row)
+                out.write(f"{features},{str(y[0])}\n")
