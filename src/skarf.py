@@ -15,6 +15,8 @@ def evaluate():
                                    max_features=arf_max_features,
                                    disable_weighted_vote=True,
                                    lambda_value=1,
+                                   leaf_prediction='mc',
+                                   binary_split=True,
                                    warning_detection_method=ADWIN(0.0001),
                                    drift_detection_method=ADWIN(0.00001),
                                    random_state=np.random)
@@ -27,9 +29,14 @@ def evaluate():
     window_accuracy = 0.0
 
     with open('results_skarf.csv', 'w') as out:
-        for count in range(0, args.max_samples):
+        for count in range(0, 201): # args.max_samples):
 
             X, y = stream.next_sample()
+            X = X.astype(int)
+            y = y.astype(int)
+            if count == 0:
+                print(X)
+                print(y)
 
             # test
             prediction = learner.predict(X)[0]
@@ -40,6 +47,9 @@ def evaluate():
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
+                print(correct)
+                print(learner.ensemble[0].classifier.get_model_description())
+                print(learner.ensemble[0].classifier.get_model_measurements)
                 correct = 0
 
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
@@ -57,7 +67,7 @@ def evaluate():
                     sample_counter = 0
                     window_accuracy = 0.0
 
-            learner.partial_fit(X, y)
+            learner.partial_fit(X, y, count)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

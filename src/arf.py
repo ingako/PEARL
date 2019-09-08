@@ -43,7 +43,7 @@ def predict(X, y, trees):
         # votes = defaultdict(int)
         votes = {}
         for tree in trees:
-            predicted_label = int(tree.fg_tree.predict([feature_row])[0])
+            predicted_label = int(tree.fg_tree.predict(np.asarray([feature_row]))[0])
             try:
                 votes[predicted_label] += 1
             except KeyError:
@@ -66,9 +66,11 @@ def partial_fit(X, y, trees):
             k = np.random.poisson(1)
             # for j in range(0, n):
             if k > 0:
-                tree.fg_tree.partial_fit([X[i]], [y[i]], sample_weight=[k])
+                tree.fg_tree.partial_fit(np.asarray([X[i]]), np.asarray([y[i]]),
+                                         sample_weight=np.asarray([k]))
                 if tree.bg_tree is not None:
-                    tree.bg_tree.partial_fit([X[i]], [y[i]], sample_weight=[k])
+                    tree.bg_tree.partial_fit(np.asarray([X[i]]), np.asarray([y[i]]),
+                                             sample_weight=np.asarray([k]))
 
 def prequential_evaluation(stream, adaptive_trees):
     correct = 0
@@ -79,8 +81,13 @@ def prequential_evaluation(stream, adaptive_trees):
     window_accuracy = 0.0
 
     with open('results_arf.csv', 'w') as out:
-        for count in range(0, args.max_samples):
+        for count in range(0, 201): # args.max_samples):
             X, y = stream.next_sample()
+            X = X.astype(int)
+            y = y.astype(int)
+            if count == 0:
+                print(X)
+                print(y)
 
             # test
             prediction = predict(X, y, adaptive_trees)[0]
@@ -90,7 +97,9 @@ def prequential_evaluation(stream, adaptive_trees):
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
-                # print(correct)
+                print(correct)
+                print(adaptive_trees[0].fg_tree.get_model_description())
+                print(adaptive_trees[0].fg_tree.get_model_measurements)
                 correct = 0
 
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
@@ -120,6 +129,7 @@ def prequential_evaluation(stream, adaptive_trees):
 
                 if tree.drift_detector.detected_change():
                     tree.drift_detector.reset()
+                    print(f"{count}: replace bg tree")
 
                     if tree.bg_tree is None:
                         tree.fg_tree.reset()
@@ -151,15 +161,18 @@ def evaluate():
     print(stream.get_data_info())
 
     adaptive_trees = [AdaptiveTree(fg_tree=ARFHoeffdingTree(max_features=arf_max_features,
+                                                            leaf_prediction='mc',
+                                                            binary_split=True,
                                                             random_state=np.random)
                                   ) for i in range(0, args.num_trees)]
 
     x_axis, accuracy_list = prequential_evaluation(stream, adaptive_trees)
 
-    ax[0, 0].plot(x_axis, accuracy_list)
-    ax[0, 0].set_title("Accuracy")
-    plt.xlabel("no. of instances")
-    plt.show()
+    # plot accuracy
+    # ax[0, 0].plot(x_axis, accuracy_list)
+    # ax[0, 0].set_title("Accuracy")
+    # plt.xlabel("no. of instances")
+    # plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

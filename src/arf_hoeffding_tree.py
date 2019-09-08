@@ -1,5 +1,5 @@
 import numpy as np
-from skmultiflow.trees.hoeffding_tree import HoeffdingTree, MAJORITY_CLASS, NAIVE_BAYES
+from hoeffding_tree import HoeffdingTree, MAJORITY_CLASS, NAIVE_BAYES
 from skmultiflow.utils import check_random_state
 from skmultiflow.trees.nominal_attribute_class_observer import NominalAttributeClassObserver
 from skmultiflow.trees.numeric_attribute_class_observer_gaussian import NumericAttributeClassObserverGaussian
@@ -93,6 +93,7 @@ class ARFHoeffdingTree(HoeffdingTree):
         def __init__(self, initial_class_observations, max_features, random_state=None):
             """ RandomLearningNode class constructor. """
             super().__init__(initial_class_observations)
+            print("using random learning node")
 
             self.max_features = max_features
             self._attribute_observers = {}
@@ -116,6 +117,10 @@ class ARFHoeffdingTree(HoeffdingTree):
             """
             try:
                 self._observed_class_distribution[y] += weight
+                print(type(self._observed_class_distribution))
+                print(self._observed_class_distribution)
+                print(f"y:{y}")
+                print(weight)
             except KeyError:
                 self._observed_class_distribution[y] = weight
                 self._observed_class_distribution = dict(sorted(self._observed_class_distribution.items()))
@@ -284,6 +289,10 @@ class ARFHoeffdingTree(HoeffdingTree):
         self.remove_poor_attributes = False
         self.random_state = random_state
         self._random_state = check_random_state(self.random_state)
+        print(f"{self.max_features},{self.remove_poor_attributes},{self.random_state}")
+        print(f"{grace_period}, {split_criterion}, {tie_threshold}, {binary_split},"
+              f"{no_preprune}, {leaf_prediction}, {nb_threshold},"
+              f"{nominal_attributes}")
 
     def _new_learning_node(self, initial_class_observations=None):
         """Create a new learning node. The type of learning node depends on the tree configuration."""

@@ -8,7 +8,8 @@ from sklearn.preprocessing import normalize
 from skmultiflow.core import BaseSKMObject, ClassifierMixin, MetaEstimatorMixin
 from skmultiflow.drift_detection.base_drift_detector import BaseDriftDetector
 from skmultiflow.drift_detection import ADWIN
-from skmultiflow.trees.arf_hoeffding_tree import ARFHoeffdingTree
+# from skmultiflow.trees.arf_hoeffding_tree import ARFHoeffdingTree
+from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.metrics.measure_collection import ClassificationMeasurements
 from skmultiflow.utils import get_dimensions, normalize_values_in_dict, check_random_state, check_weights
 
@@ -195,7 +196,7 @@ class AdaptiveRandomForest(BaseSKMObject, ClassifierMixin, MetaEstimatorMixin):
         self.nb_threshold = nb_threshold
         self.nominal_attributes = nominal_attributes
 
-    def partial_fit(self, X, y, classes=None, sample_weight=None):
+    def partial_fit(self, X, y, count, classes=None, sample_weight=None):
         """ Partially (incrementally) fit the model.
 
         Parameters
@@ -232,11 +233,11 @@ class AdaptiveRandomForest(BaseSKMObject, ClassifierMixin, MetaEstimatorMixin):
             for i in range(row_cnt):
                 if weight[i] != 0.0:
                     self._train_weight_seen_by_model += weight[i]
-                    self._partial_fit(X[i], y[i], self.classes, weight[i])
+                    self._partial_fit(X[i], y[i], count, self.classes, weight[i])
 
         return self
 
-    def _partial_fit(self, X, y, classes=None, sample_weight=1.0):
+    def _partial_fit(self, X, y, count, classes=None, sample_weight=1.0):
         self.instances_seen += 1
 
         if self.ensemble is None:
@@ -247,7 +248,7 @@ class AdaptiveRandomForest(BaseSKMObject, ClassifierMixin, MetaEstimatorMixin):
             self.ensemble[i].evaluator.add_result(y_predicted, y, sample_weight)
             k = self._random_state.poisson(self.lambda_value)
             if k > 0:
-                self.ensemble[i].partial_fit(np.asarray([X]), np.asarray([y]),
+                self.ensemble[i].partial_fit(np.asarray([X]), np.asarray([y]), count,
                                              classes=classes,
                                              sample_weight=np.asarray([k]),
                                              instances_seen=self.instances_seen)
@@ -471,7 +472,7 @@ class ARFBaseLearner(BaseSKMObject):
             self.drift_detection.reset()
         self.evaluator = self.evaluator_method()
 
-    def partial_fit(self, X, y, classes, sample_weight, instances_seen):
+    def partial_fit(self, X, y, count, classes, sample_weight, instances_seen):
         self.classifier.partial_fit(X, y, classes=classes, sample_weight=sample_weight)
 
         if self.background_learner:
@@ -504,6 +505,7 @@ class ARFBaseLearner(BaseSKMObject):
 
             # Check if there was a change
             if self.drift_detection.detected_change():
+                print(f"{count}: detected change")
                 self.last_drift_on = instances_seen
                 self.nb_drifts_detected += 1
                 self.reset(instances_seen)
