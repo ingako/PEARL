@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-import copy
-import sys
 import math
 import argparse
 import numpy as np
-from collections import defaultdict, deque
 
 from stream_generators import *
-from LRU_state import *
 
 from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
@@ -48,11 +44,6 @@ def predict(X, y, trees):
                 votes[predicted_label] += 1
             except KeyError:
                 votes[predicted_label] = 1
-            if False:
-            # if i == 0:
-                print(f"predicted: {predicted_label}, actual: {label}")
-                if predicted_label == label:
-                    print("true")
 
             update_drift_detector(tree, predicted_label, label)
 
@@ -97,9 +88,9 @@ def prequential_evaluation(stream, adaptive_trees):
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
-                print(correct)
-                print(adaptive_trees[0].fg_tree.get_model_description())
-                print(adaptive_trees[0].fg_tree.get_model_measurements)
+                # print(correct)
+                # print(adaptive_trees[0].fg_tree.get_model_description())
+                # print(adaptive_trees[0].fg_tree.get_model_measurements)
                 correct = 0
 
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
