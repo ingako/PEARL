@@ -4,22 +4,20 @@ import copy
 import sys
 import math
 import argparse
-import numpy as np
 from collections import defaultdict, deque
 
-from stream_generators import *
-from LRU_state import *
-from state_graph import *
-
+import numpy as np
 from sklearn.metrics import cohen_kappa_score
-
-from arf_hoeffding_tree import ARFHoeffdingTree
 from skmultiflow.drift_detection.adwin import ADWIN
-
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
+
+from stream_generators import *
+from LRU_state import *
+from state_graph import *
+from arf_hoeffding_tree import ARFHoeffdingTree
 
 class AdaptiveTree(object):
     def __init__(self,
@@ -48,6 +46,7 @@ class AdaptiveTree(object):
         self.drift_detector.reset()
         self.predicted_labels.clear()
         self.kappa = -sys.maxsize
+
 
 def update_drift_detector(adaptive_tree, predicted_label, actual_label):
     if predicted_label == actual_label:
