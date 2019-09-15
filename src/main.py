@@ -114,7 +114,7 @@ def update_candidate_trees(candidate_trees,
             tree_pool[i].is_candidate = True
             candidate_trees.append(tree_pool[i])
 
-    print("candidate_trees", [c.tree_pool_id for c in candidate_trees])
+    # print("candidate_trees", [c.tree_pool_id for c in candidate_trees])
 
 def adapt_state(drifted_tree_list,
                 candidate_trees,
@@ -160,11 +160,11 @@ def adapt_state(drifted_tree_list,
 
             else:
                 prediction_win_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
-                print(f"bg_tree window size: {prediction_win_size}")
+                # print(f"bg_tree window size: {prediction_win_size}")
 
                 drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
-                print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
-                      f"swap_tree.kappa: {swap_tree.kappa}")
+                # print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
+                #       f"swap_tree.kappa: {swap_tree.kappa}")
 
                 if drifted_tree.bg_adaptive_tree.kappa == -sys.maxsize:
                     # add bg_adaptive_tree to the repo even if it didn't fill the window
@@ -250,7 +250,7 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
                     drifted_tree_list.append(tree)
                     drifted_tree_pos.append(i)
 
-                    if args.disable_state_adaption:
+                    if not args.enable_state_adaption:
                         if tree.bg_adaptive_tree is None:
                             tree.tree = ARFHoeffdingTree(max_features=arf_max_features)
                         else:
@@ -261,11 +261,11 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
                     warning_tree_id_list.append(tree.tree_pool_id)
                     target_state[tree.tree_pool_id] = '2'
 
-            if not args.disable_state_adaption:
+            if args.enable_state_adaption:
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
-                    if count == 100000:
+                    if args.enable_state_graph and count == 100000:
                         state_graph.is_stable = True
                     if state_graph.is_stable:
                         for warning_tree_id in warning_tree_id_list:
@@ -357,9 +357,6 @@ def evaluate():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--disable_state_adaption",
-                        dest="disable_state_adaption", default=False, type=bool,
-                        help="disable the state adaption algorithm")
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
@@ -398,6 +395,14 @@ if __name__ == '__main__':
     parser.add_argument("--lossy_window_size",
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
+    parser.add_argument("-s", "--enable_state_adaption",
+                        dest="enable_state_adaption", action="store_true",
+                        help="enable the state adaption algorithm")
+    parser.set_defaults(enable_state_adaption=False)
+    parser.add_argument("-g", "--enable_state_graph",
+                        dest="enable_state_graph", action="store_true",
+                        help="enable state transition graph")
+    parser.set_defaults(enable_state_graph=False)
 
     args = parser.parse_args()
 
@@ -409,6 +414,8 @@ if __name__ == '__main__':
     print(f"sample_freq: {args.sample_freq}")
     print(f"kappa_window: {args.kappa_window}")
     print(f"random_state: {args.random_state}")
+    print(f"enable_state_adaption: {args.enable_state_adaption}")
+    print(f"enable_state_graph: {args.enable_state_graph}")
 
     num_labels = 2
     num_features = 10
