@@ -210,10 +210,11 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
     current_state = []
     candidate_trees = []
 
-
     cur_tree_pool_size = args.num_trees
 
-    with open('results.csv', 'w') as out:
+    with open(metric_output_path, 'w') as out:
+        out.write("count,accuracy\n")
+
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
             actual_labels.append(y[0])
@@ -265,9 +266,10 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
-                    if args.enable_state_graph and count == 100000:
+                    if args.enable_state_graph and count >= 100000:
                         state_graph.is_stable = True
                     if state_graph.is_stable:
+                        print("use graph")
                         for warning_tree_id in warning_tree_id_list:
                             next_id = state_graph.get_next_tree_id(warning_tree_id)
                             if not tree_pool[next_id].is_candidate:
@@ -360,6 +362,9 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
+    parser.add_argument("-o", "--output",
+                        dest="metric_output_path", default="result", type=str,
+                        help="output path for metrics")
     # parser.add_argument("-p", "--pool",
     #                     dest="tree_pool_size", default=180, type=int,
     #                     help="number of trees in the online tree repository")
@@ -406,6 +411,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    metric_output_path = args.metric_output_path
+    if args.enable_state_adaption:
+        metric_output_path = f"{args.metric_output_path}-s"
+    if args.enable_state_graph:
+        metric_output_path = f"{args.metric_output_path}-g"
+    metric_output_path = f"{metric_output_path}.csv"
+
+    if args.enable_state_graph:
+        args.enable_state_adaption = True
+
+    print(f"metric_output_path: {metric_output_path}")
     print(f"num_trees: {args.num_trees}")
     print(f"warning_delta: {args.warning_delta}")
     print(f"drift_delta: {args.drift_delta}")
