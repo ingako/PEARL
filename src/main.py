@@ -140,7 +140,7 @@ def adapt_state(drifted_tree_list,
         # TODO
         if cur_tree_pool_size >= repo_size:
             print("early break")
-            break
+            exit()
 
         drifted_tree.update_kappa(actual_labels)
         swap_tree = drifted_tree
@@ -271,11 +271,19 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
                     if state_graph.is_stable:
                         print("use graph")
                         for warning_tree_id in warning_tree_id_list:
+                            print("finding next_id...")
                             next_id = state_graph.get_next_tree_id(warning_tree_id)
-                            if not tree_pool[next_id].is_candidate:
-                                candidate_trees.append(tree_pool[next_id])
+                            if next_id == -1:
+                                print(f"tree {warning_tree_id} does not have next id")
+                                state_graph.is_stable = False
 
-                    else:
+                            else:
+                                print("Next tree found, adding candidate tree...")
+                                if not tree_pool[next_id].is_candidate:
+                                    candidate_trees.append(tree_pool[next_id])
+                                    print("candidate tree added")
+
+                    if not state_graph.is_stable:
                         closest_state = lru_states.get_closest_state(target_state)
 
                         update_candidate_trees(candidate_trees=candidate_trees,

@@ -14,9 +14,12 @@ class LossyStateGraph:
 
         self.drift_counter = 0
         self.window_size = window_size
-        self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
+        # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
+        if self.graph[src].total_weight == 0:
+            return -1
+
         r = randrange(self.graph[src].total_weight)
         cur_sum = 0
 
@@ -73,8 +76,8 @@ class LossyStateGraph:
             src_node.neighbors[dest] = [0, 0]
         src_node.neighbors[dest][0] += 1
 
-        self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
-        self.g.render(view=False)
+        # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
+        # self.g.render(view=False)
 
     def __str__(self):
         strs = []
