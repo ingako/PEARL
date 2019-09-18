@@ -198,7 +198,7 @@ def adapt_state(drifted_tree_list,
 
     return cur_tree_pool_size
 
-def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
+def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -332,12 +332,7 @@ def prequential_evaluation(stream, adaptive_trees, lru_states, state_graph, cur_
     return x_axis, accuracy_list
 
 def evaluate():
-    fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
-
-    # prepare data
-    stream = RecurrentDriftStream()
-    stream.prepare_for_use()
-    print(stream.get_data_info())
+    # fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
 
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
                                    tree=ARFHoeffdingTree(max_features=arf_max_features)
@@ -354,17 +349,16 @@ def evaluate():
     for i in range(0, args.num_trees):
         tree_pool[i] = adaptive_trees[i]
 
-    x_axis, accuracy_list = prequential_evaluation(stream,
-                                                   adaptive_trees,
+    x_axis, accuracy_list = prequential_evaluation(adaptive_trees,
                                                    lru_states,
                                                    state_graph,
                                                    cur_state,
                                                    tree_pool)
 
-    ax[0, 0].plot(x_axis, accuracy_list)
-    ax[0, 0].set_title("Accuracy")
-    plt.xlabel("no. of instances")
-    plt.show()
+    # ax[0, 0].plot(x_axis, accuracy_list)
+    # ax[0, 0].set_title("Accuracy")
+    # plt.xlabel("no. of instances")
+    # plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -442,11 +436,15 @@ if __name__ == '__main__':
     print(f"enable_state_adaption: {args.enable_state_adaption}")
     print(f"enable_state_graph: {args.enable_state_graph}")
 
-    num_labels = 2
-    num_features = 10
-    arf_max_features = int(math.log2(num_features)) + 1
-    repo_size = args.num_trees * 40
+    # prepare data
+    stream = RecurrentDriftStream()
+    stream.prepare_for_use()
+    print(stream.get_data_info())
 
+    num_features = stream.n_features
+    arf_max_features = int(math.log2(num_features)) + 1
+
+    repo_size = args.num_trees * 40
     np.random.seed(args.random_state)
 
     evaluate()
