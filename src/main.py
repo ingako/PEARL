@@ -335,7 +335,8 @@ def evaluate():
     fig, ax = plt.subplots(2, 2, sharey=True, constrained_layout=True)
 
     # prepare data
-    stream = prepare_data()
+    stream = RecurrentDriftStream()
+    stream.prepare_for_use()
     print(stream.get_data_info())
 
     adaptive_trees = [AdaptiveTree(tree_pool_id=i,
