@@ -63,6 +63,9 @@ class LRU_state:
 
         return [i for i in closest_state]
 
+    def get_size(self):
+        return sys.getsizeof(self.state_dict)
+
     def __str__(self):
         return pprint.pformat(self.state_dict.items(), indent=4)
 

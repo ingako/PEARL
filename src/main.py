@@ -9,6 +9,8 @@ from collections import defaultdict, deque
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 from skmultiflow.drift_detection.adwin import ADWIN
+from skmultiflow.trees.arf_hoeffding_tree import ARFHoeffdingTree
+
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
@@ -17,7 +19,6 @@ plt.rcParams["figure.figsize"] = (20, 10)
 from stream_generators import *
 from LRU_state import *
 from state_graph import *
-from arf_hoeffding_tree import ARFHoeffdingTree
 
 class AdaptiveTree(object):
     def __init__(self,
@@ -213,7 +214,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
     cur_tree_pool_size = args.num_trees
 
     with open(metric_output_path, 'w') as out:
-        out.write("count,accuracy\n")
+        out.write("count,accuracy,memory\n")
 
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
@@ -266,7 +267,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
-                    if args.enable_state_graph and count >= 100000:
+                    if args.enable_state_graph and count >= 20000:
                         state_graph.is_stable = True
                     if state_graph.is_stable:
                         print("use graph")
@@ -318,8 +319,12 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                     x_axis.append(count)
                     accuracy_list.append(window_accuracy)
 
-                    print(f"{count},{window_accuracy}")
-                    out.write(f"{count},{window_accuracy}\n")
+                    if args.enable_state_adaption:
+                        memory_usage = lru_states.get_size()
+                    if args.enable_state_graph:
+                        memory_usage += state_graph.get_size()
+                    print(f"{count},{window_accuracy},{memory_usage}")
+                    out.write(f"{count},{window_accuracy},{memory_usage}\n")
                     out.flush()
 
                     sample_counter = 0

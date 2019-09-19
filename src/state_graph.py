@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import random
 from random import randrange
 from pprint import pformat
@@ -14,6 +15,7 @@ class LossyStateGraph:
 
         self.drift_counter = 0
         self.window_size = window_size
+
         # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
@@ -79,6 +81,18 @@ class LossyStateGraph:
         # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
         # self.g.render(view=False)
 
+    def get_size(self):
+        size = 0
+
+        if self.num_nodes == 0:
+            return size
+
+        for node in self.graph:
+            if not node:
+                continue
+            size += node.get_size()
+        return size
+
     def __str__(self):
         strs = []
         for i in range(0, self.capacity):
@@ -97,3 +111,6 @@ class Node:
         self.key = key
         self.neighbors = dict() # <tree_id, [weight, num_hit]>
         self.total_weight = 0
+
+    def get_size(self):
+        return sys.getsizeof(self.neighbors)
