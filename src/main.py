@@ -208,6 +208,9 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
     sample_counter = 0
     sample_counter_interval = 0
     window_accuracy = 0.0
+    window_kappa = 0.0
+    window_actual_labels = []
+    window_predicted_labels = []
 
     current_state = []
     candidate_trees = []
@@ -227,6 +230,8 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
             # test on candidate trees
             predict(X, y, candidate_trees, should_vote=False)
 
+            window_actual_labels.append(y[0])
+            window_predicted_labels.append(prediction)
             if prediction == y[0]:
                 correct += 1
 
@@ -314,6 +319,10 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
                     / (sample_counter + 1)
 
+                kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
+                window_kappa = (window_kappa * sample_counter + kappa) \
+                        / (sample_counter + 1)
+
                 sample_counter += 1
                 sample_counter_interval += args.wait_samples
                 correct = 0
@@ -327,14 +336,17 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                         memory_usage = lru_states.get_size()
                     if args.enable_state_graph:
                         memory_usage += state_graph.get_size()
-                    print(f"{count},{window_accuracy},{memory_usage}")
-                    out.write(f"{count},{window_accuracy},{memory_usage}\n")
+                    print(f"{count},{window_accuracy},{window_kappa},{memory_usage}")
+                    out.write(f"{count},{window_accuracy},{window_kappa},{memory_usage}\n")
                     out.flush()
 
                     sample_counter = 0
                     sample_counter_interval = 0
 
                     window_accuracy = 0.0
+                    window_kappa = 0.0
+                    window_actual_labels = []
+                    window_predicted_labels = []
 
             # train
             partial_fit(X, y, adaptive_trees)
