@@ -206,6 +206,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
     actual_labels = deque(maxlen=args.kappa_window) # a window of size arg.kappa_window
 
     sample_counter = 0
+    sample_counter_interval = 0
     window_accuracy = 0.0
 
     current_state = []
@@ -214,7 +215,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
     cur_tree_pool_size = args.num_trees
 
     with open(metric_output_path, 'w') as out:
-        out.write("count,accuracy,memory\n")
+        out.write("count,accuracy,kappa,memory\n")
 
         for count in range(0, args.max_samples):
             X, y = stream.next_sample()
@@ -309,16 +310,19 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
 
             if (count % args.wait_samples == 0) and (count != 0):
                 accuracy = correct / args.wait_samples
-                correct = 0
 
                 window_accuracy = (window_accuracy * sample_counter + accuracy) \
                     / (sample_counter + 1)
-                sample_counter += args.wait_samples
 
-                if sample_counter == args.sample_freq:
+                sample_counter += 1
+                sample_counter_interval += args.wait_samples
+                correct = 0
+
+                if sample_counter_interval == args.sample_freq:
                     x_axis.append(count)
                     accuracy_list.append(window_accuracy)
 
+                    memory_usage = 0
                     if args.enable_state_adaption:
                         memory_usage = lru_states.get_size()
                     if args.enable_state_graph:
@@ -328,6 +332,8 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                     out.flush()
 
                     sample_counter = 0
+                    sample_counter_interval = 0
+
                     window_accuracy = 0.0
 
             # train
