@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import numpy as np
+from skmultiflow.utils import check_random_state
 from skmultiflow.data import AGRAWALGenerator
 from skmultiflow.data import SEAGenerator
 from skmultiflow.data import SineGenerator
@@ -8,29 +10,66 @@ from skmultiflow.data import LEDGeneratorDrift
 from skmultiflow.data import MIXEDGenerator
 from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
-from skmultiflow.data.base_stream import Stream
 
-class RecurrentDriftStream(Stream):
-    def __init__(self, generator='agrawal', concepts=[0, 1]):
+class RecurrentDriftStream(ConceptDriftStream):
+    def __init__(self, generator='agrawal', concepts=[0, 4]):
         super().__init__()
-        self.stable_period = 5000
+        self.stable_period = 10000
         self.streams = []
         self.cur_stream = None
         self.stream_idx = 0
+        self.drift_stream_idx = 0
         self.count = 0
         self.n_feautres = 0
         self.generator = generator
         self.concepts = concepts
         self.random_state = 0
+        self._random_state = check_random_state(self.random_state)
+        self.width = 1000
+        self.position = 4000
 
     def next_sample(self, batch_size=1):
-        if self.count % self.stable_period == 0 and self.count != 0:
-            self.stream_idx = (self.stream_idx + 1) % len(self.streams)
-            self.cur_stream = self.streams[self.stream_idx]
+
+        """ Returns the next `batch_size` samples.
+
+        Parameters
+        ----------
+        batch_size: int
+            The number of samples to return.
+
+        Returns
+        -------
+        tuple or tuple list
+            Return a tuple with the features matrix
+            for the batch_size samples that were requested.
+
+        """
+        self.current_sample_x = np.zeros((batch_size, self.n_features))
+        self.current_sample_y = np.zeros((batch_size, self.n_targets))
+
+        for j in range(batch_size):
+            self.sample_idx += 1
+            x = -4.0 * float(self.sample_idx - self.position) / float(self.width)
+            probability_drift = 1.0 / (1.0 + np.exp(x))
+            if self._random_state.rand() > probability_drift:
+                X, y = self.cur_stream.next_sample()
+            else:
+                X, y = self.drift_stream.next_sample()
+            self.current_sample_x[j, :] = X
+            self.current_sample_y[j, :] = y
 
         self.count += 1
-        X, y = self.cur_stream.next_sample()
-        return X, y
+        if self.count % self.stable_period == 0 and self.count != 0:
+            self.sample_idx = 0
+            self.stream_idx = (self.stream_idx + 2) % len(self.streams)
+            self.drift_stream_idx = (self.stream_idx + 1) % len(self.streams)
+
+            print(f"swithing to concept {self.stream_idx} and {self.drift_stream_idx}")
+
+            self.cur_stream = self.streams[self.stream_idx]
+            self.drift_stream = self.streams[self.drift_stream_idx]
+
+        return self.current_sample_x, self.current_sample_y.flatten()
 
     def get_data_info(self):
         return self.cur_stream.get_data_info()
@@ -62,28 +101,10 @@ class RecurrentDriftStream(Stream):
                                         balance_classes = False)
             stream.prepare_for_use()
             self.streams.append(stream)
+
         self.cur_stream = self.streams[0]
+        self.drift_stream = self.streams[1]
         self.n_features = self.cur_stream.n_features
-
-    # def prepare_for_use(self):
-    #     stream_1, stream_2 = prepare_agrawal_streams(noise_1=0.05, noise_2=0.05, alt_func=4)
-    #     # agrawal with 2 concepts
-    #     drift_stream_1 = prepare_concept_drift_stream(stream_1=stream_1,
-    #                                                   stream_2=stream_2,
-    #                                                   drift_position=0,
-    #                                                   drift_width=1000)
-    #     drift_stream_1.prepare_for_use()
-
-    #     stream_3, stream_4 = prepare_agrawal_streams(noise_1=0.05, noise_2=0.05, alt_func=4, random_state=42)
-    #     drift_stream_2 = prepare_concept_drift_stream(stream_1=stream_4,
-    #                                                   stream_2=stream_3,
-    #                                                   drift_position=0,
-    #                                                   drift_width=1000)
-    #     drift_stream_2.prepare_for_use()
-
-    #     self.streams = [drift_stream_1, drift_stream_2]
-    #     self.cur_stream = self.streams[0]
-    #     self.n_features = self.cur_stream.n_features
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
