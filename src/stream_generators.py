@@ -19,8 +19,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.cur_stream = None
         self.stream_idx = 0
         self.drift_stream_idx = 0
-        self.count = 0
-        self.n_feautres = 0
+        self.sample_idx = 0
         self.generator = generator
         self.concepts = concepts
         self.random_state = 0
@@ -58,13 +57,10 @@ class RecurrentDriftStream(ConceptDriftStream):
             self.current_sample_x[j, :] = X
             self.current_sample_y[j, :] = y
 
-        self.count += 1
-        if self.count % self.stable_period == 0 and self.count != 0:
+        if self.sample_idx % self.stable_period == 0 and self.sample_idx != 0:
             self.sample_idx = 0
             self.stream_idx = (self.stream_idx + 2) % len(self.streams)
             self.drift_stream_idx = (self.stream_idx + 1) % len(self.streams)
-
-            print(f"swithing to concept {self.stream_idx} and {self.drift_stream_idx}")
 
             self.cur_stream = self.streams[self.stream_idx]
             self.drift_stream = self.streams[self.drift_stream_idx]
@@ -99,12 +95,28 @@ class RecurrentDriftStream(ConceptDriftStream):
                 stream = MIXEDGenerator(classification_function=concept,
                                         random_state=self.random_state,
                                         balance_classes = False)
+            else:
+                print(f"unknown stream generator {self.generator}")
+                exit()
             stream.prepare_for_use()
             self.streams.append(stream)
 
         self.cur_stream = self.streams[0]
         self.drift_stream = self.streams[1]
-        self.n_features = self.cur_stream.n_features
+
+        stream = self.cur_stream
+        self.n_samples = stream.n_samples
+        self.n_targets = stream.n_targets
+        self.n_features = stream.n_features
+        self.n_num_features = stream.n_num_features
+        self.n_cat_features = stream.n_cat_features
+        self.n_classes = stream.n_classes
+        self.cat_features_idx = stream.cat_features_idx
+        self.feature_names = stream.feature_names
+        self.target_names = stream.target_names
+        self.target_values = stream.target_values
+        self.n_targets = stream.n_targets
+        self.name = 'Drifting' + stream.name
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
