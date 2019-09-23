@@ -12,9 +12,9 @@ from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
 
 class RecurrentDriftStream(ConceptDriftStream):
-    def __init__(self, generator='agrawal', concepts=[0, 4]):
+    def __init__(self, generator='agrawal', concepts=[4, 0]):
         super().__init__()
-        self.stable_period = 10000
+        self.stable_period = 5000
         self.streams = []
         self.cur_stream = None
         self.stream_idx = 0
@@ -25,7 +25,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.random_state = 0
         self._random_state = check_random_state(self.random_state)
         self.width = 1000
-        self.position = 4000
+        self.position = 0
 
     def next_sample(self, batch_size=1):
 
@@ -59,7 +59,7 @@ class RecurrentDriftStream(ConceptDriftStream):
 
         if self.sample_idx % self.stable_period == 0 and self.sample_idx != 0:
             self.sample_idx = 0
-            self.stream_idx = (self.stream_idx + 2) % len(self.streams)
+            self.stream_idx = (self.stream_idx + 1) % len(self.streams)
             self.drift_stream_idx = (self.stream_idx + 1) % len(self.streams)
 
             self.cur_stream = self.streams[self.stream_idx]
