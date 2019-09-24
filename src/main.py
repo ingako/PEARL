@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["backend"] = "Qt4Agg"
 plt.rcParams["figure.figsize"] = (20, 10)
 
-from stream_generators import *
+from stream_generator import *
 from LRU_state import *
 from state_graph import *
 
@@ -273,7 +273,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
-                    if args.enable_state_graph and count >= 20000:
+                    if args.enable_state_graph and count >= 40000:
                         state_graph.is_stable = True
                     if state_graph.is_stable:
                         print("use graph")
@@ -460,7 +460,7 @@ if __name__ == '__main__':
     print(f"enable_state_graph: {args.enable_state_graph}")
 
     # prepare data
-    stream = RecurrentDriftStream()
+    stream = RecurrentDriftStream(concepts=[4,0,8])
     stream.prepare_for_use()
     print(stream.get_data_info())
 

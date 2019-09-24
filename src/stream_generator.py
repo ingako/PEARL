@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
+import math
+import random
 import numpy as np
+
 from skmultiflow.utils import check_random_state
 from skmultiflow.data import AGRAWALGenerator
 from skmultiflow.data import SEAGenerator
@@ -12,9 +15,10 @@ from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
 
 class RecurrentDriftStream(ConceptDriftStream):
-    def __init__(self, generator='agrawal', concepts=[4, 0]):
+    def __init__(self, generator='agrawal', concepts=[4, 0], lam=1.0):
         super().__init__()
-        self.stable_period = 5000
+
+        self.stable_period = 4000
         self.streams = []
         self.cur_stream = None
         self.stream_idx = 0
@@ -24,8 +28,12 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.concepts = concepts
         self.random_state = 0
         self._random_state = check_random_state(self.random_state)
-        self.width = 1000
+        self.width = 1
         self.position = 0
+
+        self.lam = lam
+        self.concept_probs = self.__get_poisson_probs(len(concepts))
+
 
     def next_sample(self, batch_size=1):
 
@@ -59,8 +67,14 @@ class RecurrentDriftStream(ConceptDriftStream):
 
         if self.sample_idx % self.stable_period == 0 and self.sample_idx != 0:
             self.sample_idx = 0
-            self.stream_idx = (self.stream_idx + 1) % len(self.streams)
-            self.drift_stream_idx = (self.stream_idx + 1) % len(self.streams)
+
+            # strict cyclic
+            # self.stream_idx = (self.stream_idx + 1) % len(self.streams)
+            # self.drift_stream_idx = (self.stream_idx + 1) % len(self.streams)
+
+            # finite poisson
+            self.stream_idx = self.drift_stream_idx
+            self.drift_stream_idx = self.__get_next_concept_idx()
 
             self.cur_stream = self.streams[self.stream_idx]
             self.drift_stream = self.streams[self.drift_stream_idx]
@@ -117,6 +131,27 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.target_values = stream.target_values
         self.n_targets = stream.n_targets
         self.name = 'Drifting' + stream.name
+
+    def __get_next_concept_idx(self):
+        r = random.uniform(0, 1)
+        cur_sum = 0
+
+        for idx, val in enumerate(self.concept_probs):
+            cur_sum += val
+            if r < cur_sum:
+                return idx
+
+    def __get_poisson_probs(self, num_concepts):
+        probs = [0] * num_concepts
+        for c in range(0, num_concepts):
+            probs[c] = self.__calc_poisson_prob(c)
+
+        norm_probs = [float(i)/sum(probs) for i in probs]
+        print(f"norm_probs: {norm_probs}")
+        return norm_probs
+
+    def __calc_poisson_prob(self, k):
+        return math.pow(self.lam, k) * math.exp(-self.lam) / math.factorial(k)
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
