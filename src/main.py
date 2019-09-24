@@ -5,6 +5,7 @@ import sys
 import math
 import argparse
 from collections import defaultdict, deque
+import random
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -130,7 +131,7 @@ def adapt_state(drifted_tree_list,
     if len(drifted_tree_list) == 0:
         return cur_tree_pool_size
 
-    print("Drifts detected. Adapting states for", [t.tree_pool_id for t in drifted_tree_list])
+    # print("Drifts detected. Adapting states for", [t.tree_pool_id for t in drifted_tree_list])
 
     # sort candidates by kappa
     for candidate_tree in candidate_trees:
@@ -152,8 +153,13 @@ def adapt_state(drifted_tree_list,
             swap_tree = candidate_trees.pop()
             swap_tree.is_candidate = False
 
+            global candidate_tree_count
+            candidate_tree_count += 1
+
         if swap_tree is drifted_tree:
             add_to_repo = True
+            global background_tree_count
+            background_tree_count += 1
 
             if drifted_tree.bg_adaptive_tree is None:
                     swap_tree = \
@@ -273,22 +279,31 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
 
-                    if args.enable_state_graph and count >= 40000:
+                    # if args.enable_state_graph and count >= 100000:
+                    global background_tree_count
+                    global candidate_tree_count
+                    total_tree_count = background_tree_count + candidate_tree_count
+                    reuse_rate = 0.0
+                    if total_tree_count != 0:
+                        reuse_rate = candidate_tree_count / total_tree_count
+                        print(f"reuse_rate: {reuse_rate}")
+                    if reuse_rate >= 0.8:
                         state_graph.is_stable = True
+
                     if state_graph.is_stable:
-                        print("use graph")
+                        # print("use graph")
                         for warning_tree_id in warning_tree_id_list:
-                            print("finding next_id...")
+                            # print("finding next_id...")
                             next_id = state_graph.get_next_tree_id(warning_tree_id)
                             if next_id == -1:
-                                print(f"tree {warning_tree_id} does not have next id")
+                                # print(f"tree {warning_tree_id} does not have next id")
                                 state_graph.is_stable = False
 
                             else:
-                                print("Next tree found, adding candidate tree...")
+                                # print("Next tree found, adding candidate tree...")
                                 if not tree_pool[next_id].is_candidate:
                                     candidate_trees.append(tree_pool[next_id])
-                                    print("candidate tree added")
+                                    # print("candidate tree added")
 
                     if not state_graph.is_stable:
                         closest_state = lru_states.get_closest_state(target_state)
@@ -469,5 +484,9 @@ if __name__ == '__main__':
 
     repo_size = args.num_trees * 40
     np.random.seed(args.random_state)
+    random.seed(0)
+
+    candidate_tree_count = 0
+    background_tree_count = 0
 
     evaluate()

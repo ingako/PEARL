@@ -65,7 +65,7 @@ class RecurrentDriftStream(ConceptDriftStream):
             self.current_sample_x[j, :] = X
             self.current_sample_y[j, :] = y
 
-        if self.sample_idx % self.stable_period == 0 and self.sample_idx != 0:
+        if self.sample_idx >= self.stable_period + self.width:
             self.sample_idx = 0
 
             # strict cyclic
