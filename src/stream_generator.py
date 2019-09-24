@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import math
-import random
 import numpy as np
 
 from skmultiflow.utils import check_random_state
@@ -18,7 +17,7 @@ class RecurrentDriftStream(ConceptDriftStream):
     def __init__(self, generator='agrawal', concepts=[4, 0], lam=1.0):
         super().__init__()
 
-        self.stable_period = 4000
+        self.stable_period = 3000
         self.streams = []
         self.cur_stream = None
         self.stream_idx = 0
@@ -29,7 +28,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.random_state = 0
         self._random_state = check_random_state(self.random_state)
         self.width = 1
-        self.position = 0
+        self.position = 3000
 
         self.lam = lam
         self.concept_probs = self.__get_poisson_probs(len(concepts))
@@ -133,7 +132,9 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.name = 'Drifting' + stream.name
 
     def __get_next_concept_idx(self):
-        r = random.uniform(0, 1)
+        # r = random.uniform(0, 1)
+        r = self._random_state.uniform(0, 1)
+        print(f"next_concept_idx={r}")
         cur_sum = 0
 
         for idx, val in enumerate(self.concept_probs):
