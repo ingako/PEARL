@@ -5,9 +5,9 @@ from collections import OrderedDict
 
 class LRU_state:
 
-    def __init__(self, capacity, distance_threshold):
+    def __init__(self, capacity, edit_distance_threshold):
         self.capacity = capacity
-        self.distance_threshold = distance_threshold
+        self.edit_distance_threshold = edit_distance_threshold
         self.state_dict = OrderedDict()
 
     def enqueue(self, state_list):
@@ -46,7 +46,7 @@ class LRU_state:
 
                 cur_edit_distance += 1
 
-                if cur_edit_distance > self.distance_threshold \
+                if cur_edit_distance > self.edit_distance_threshold \
                         or cur_edit_distance > min_edit_distance:
                     update_flag = False
                     break

@@ -378,7 +378,7 @@ def evaluate():
 
     cur_state = ['1' if i < args.num_trees else '0' for i in range(0, repo_size)]
 
-    lru_states = LRU_state(capacity=repo_size, distance_threshold=100)
+    lru_states = LRU_state(capacity=repo_size, edit_distance_threshold=args.edit_distance_threshold)
     lru_states.enqueue(cur_state)
 
     state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
@@ -438,6 +438,9 @@ if __name__ == '__main__':
                         dest="bg_kappa_threshold", default=0.00, type=float,
                         help="Kappa value that the background tree needs to outperform the "
                              "foreground drifted tree to prevent from false positive")
+    parser.add_argument("--edit_distance_threshold",
+                        dest="edit_distance_threshold", default=100, type=int,
+                        help="The maximum edit distance threshold")
     parser.add_argument("--lossy_window_size",
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
