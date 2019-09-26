@@ -6,6 +6,7 @@ import math
 import argparse
 from collections import defaultdict, deque
 import random
+import pathlib
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -267,7 +268,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
 
     cur_tree_pool_size = args.num_trees
 
-    with open(metric_output_path, 'w') as out:
+    with open(metric_output_file, 'w') as out:
         out.write("count,accuracy,kappa,memory\n")
 
         for count in range(0, args.max_samples):
@@ -422,10 +423,13 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
-    parser.add_argument("-o", "--output",
-                        dest="metric_output_path", default="result", type=str,
-                        help="output path for metrics")
-    # parser.add_argument("-p", "--pool",
+    parser.add_argument("-g", "--generator",
+                        dest="generator", default="agrawal", type=str,
+                        help="name of the synthetic data generator")
+    # parser.add_argument("-o", "--output",
+    #                     dest="metric_output_file", default="result", type=str,
+    #                     help="output path for metrics")
+    # parser.add_argument("--pool",
     #                     dest="tree_pool_size", default=180, type=int,
     #                     help="number of trees in the online tree repository")
     parser.add_argument("-w", "--warning",
@@ -454,7 +458,7 @@ if __name__ == '__main__':
                         dest="enable_state_adaption", action="store_true",
                         help="enable the state adaption algorithm")
     parser.set_defaults(enable_state_adaption=False)
-    parser.add_argument("-g", "--enable_state_graph",
+    parser.add_argument("-p", "--enable_state_graph",
                         dest="enable_state_graph", action="store_true",
                         help="enable state transition graph")
     parser.set_defaults(enable_state_graph=False)
@@ -480,37 +484,48 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    metric_output_path = args.metric_output_path
-    if args.enable_state_adaption:
-        metric_output_path = f"{args.metric_output_path}-s"
-    if args.enable_state_graph:
-        metric_output_path = f"{args.metric_output_path}-g"
-    metric_output_path = f"{metric_output_path}.csv"
-
     if args.enable_state_graph:
         args.enable_state_adaption = True
 
-    print(f"metric_output_path: {metric_output_path}")
-    print(f"num_trees: {args.num_trees}")
-    print(f"warning_delta: {args.warning_delta}")
-    print(f"drift_delta: {args.drift_delta}")
-    # print(f"max_samples: {args.max_samples}")
-    print(f"wait_samples: {args.wait_samples}")
-    print(f"sample_freq: {args.sample_freq}")
-    print(f"kappa_window: {args.kappa_window}")
-    print(f"random_state: {args.random_state}")
-    print(f"enable_state_adaption: {args.enable_state_adaption}")
-    print(f"enable_state_graph: {args.enable_state_graph}")
+    result_directory = f"{args.generator}/r{args.reuse_rate_threshold}" \
+                       f"-k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}"
+
+    pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
+
+    metric_output_file = "result"
+    if args.enable_state_graph:
+        metric_output_file = f"{metric_output_file}-parf"
+    elif args.enable_state_adaption:
+        metric_output_file = f"{metric_output_file}-sarf"
+
+    metric_output_file = f"{result_directory}/{metric_output_file}.csv"
+
+    configs = (
+        f"metric_output_file: {metric_output_file}\n"
+        f"warning_delta: {args.warning_delta}\n"
+        f"drift_delta: {args.drift_delta}\n"
+        f"max_samples: {args.max_samples}\n"
+        f"wait_samples: {args.wait_samples}\n"
+        f"sample_freq: {args.sample_freq}\n"
+        f"kappa_window: {args.kappa_window}\n"
+        f"random_state: {args.random_state}\n"
+        f"enable_state_adaption: {args.enable_state_adaption}\n"
+        f"enable_state_graph: {args.enable_state_graph}\n")
+
+    print(configs)
+    with open("{result_directory}", 'w') as out:
+        out.write(configs)
+        out.flush()
 
     # prepare data
-    stream = RecurrentDriftStream(concepts=[4,0,8])
+    stream = RecurrentDriftStream(generator=args.generator, concepts=[4,0,8])
     stream.prepare_for_use()
     print(stream.get_data_info())
 
     num_features = stream.n_features
     arf_max_features = int(math.log2(num_features)) + 1
 
-    repo_size = args.num_trees * 40
+    repo_size = args.num_trees * 80
     np.random.seed(args.random_state)
     random.seed(0)
 
