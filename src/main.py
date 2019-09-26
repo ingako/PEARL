@@ -137,7 +137,8 @@ def select_candidate_trees(count,
         reuse_rate = candidate_tree_count / total_tree_count
         print(f"reuse_rate: {reuse_rate}")
 
-    if reuse_rate >= 0.8:
+    # if args.enable_state_graph and count >= 100000:
+    if reuse_rate >= args.reuse_rate_threshold:
         state_graph.is_stable = True
 
     if state_graph.is_stable:
@@ -449,6 +450,15 @@ if __name__ == '__main__':
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
 
+    parser.add_argument("-s", "--enable_state_adaption",
+                        dest="enable_state_adaption", action="store_true",
+                        help="enable the state adaption algorithm")
+    parser.set_defaults(enable_state_adaption=False)
+    parser.add_argument("-g", "--enable_state_graph",
+                        dest="enable_state_graph", action="store_true",
+                        help="enable state transition graph")
+    parser.set_defaults(enable_state_graph=False)
+
     parser.add_argument("--cd_kappa_threshold",
                         dest="cd_kappa_threshold", default=0.2, type=float,
                         help="Kappa value that the candidate tree needs to outperform both"
@@ -463,14 +473,10 @@ if __name__ == '__main__':
     parser.add_argument("--lossy_window_size",
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
-    parser.add_argument("-s", "--enable_state_adaption",
-                        dest="enable_state_adaption", action="store_true",
-                        help="enable the state adaption algorithm")
-    parser.set_defaults(enable_state_adaption=False)
-    parser.add_argument("-g", "--enable_state_graph",
-                        dest="enable_state_graph", action="store_true",
-                        help="enable state transition graph")
-    parser.set_defaults(enable_state_graph=False)
+    parser.add_argument("--reuse_rate_threshold",
+                        dest="reuse_rate_threshold", default=0.5, type=float,
+                        help="The reuse rate threshold for switching from "
+                             "pattern matching to candidate_trees")
 
     args = parser.parse_args()
 
