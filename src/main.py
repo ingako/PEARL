@@ -118,6 +118,52 @@ def update_candidate_trees(candidate_trees,
 
     # print("candidate_trees", [c.tree_pool_id for c in candidate_trees])
 
+def select_candidate_trees(count,
+                           target_state,
+                           warning_tree_id_list,
+                           candidate_trees,
+                           tree_pool,
+                           lru_states,
+                           state_graph,
+                           cur_state,
+                           cur_tree_pool_size):
+
+    global background_tree_count
+    global candidate_tree_count
+
+    total_tree_count = background_tree_count + candidate_tree_count
+    reuse_rate = 0.0
+    if total_tree_count != 0:
+        reuse_rate = candidate_tree_count / total_tree_count
+        print(f"reuse_rate: {reuse_rate}")
+
+    if reuse_rate >= 0.8:
+        state_graph.is_stable = True
+
+    if state_graph.is_stable:
+        # print("use graph")
+        for warning_tree_id in warning_tree_id_list:
+            # print("finding next_id...")
+            next_id = state_graph.get_next_tree_id(warning_tree_id)
+            if next_id == -1:
+                # print(f"tree {warning_tree_id} does not have next id")
+                state_graph.is_stable = False
+
+            else:
+                # print("Next tree found, adding candidate tree...")
+                if not tree_pool[next_id].is_candidate:
+                    candidate_trees.append(tree_pool[next_id])
+                    # print("candidate tree added")
+
+    if not state_graph.is_stable:
+        closest_state = lru_states.get_closest_state(target_state)
+
+        update_candidate_trees(candidate_trees=candidate_trees,
+                               tree_pool=tree_pool,
+                               cur_state=cur_state,
+                               closest_state=closest_state,
+                               cur_tree_pool_size=cur_tree_pool_size)
+
 def adapt_state(drifted_tree_list,
                 candidate_trees,
                 tree_pool,
@@ -127,9 +173,6 @@ def adapt_state(drifted_tree_list,
                 adaptive_trees,
                 drifted_tree_pos,
                 actual_labels):
-
-    if len(drifted_tree_list) == 0:
-        return cur_tree_pool_size
 
     # print("Drifts detected. Adapting states for", [t.tree_pool_id for t in drifted_tree_list])
 
@@ -278,52 +321,27 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
             if args.enable_state_adaption:
                 # if warnings are detected, find closest state and update candidate_trees list
                 if len(warning_tree_id_list) > 0:
-
-                    # if args.enable_state_graph and count >= 100000:
-                    global background_tree_count
-                    global candidate_tree_count
-                    total_tree_count = background_tree_count + candidate_tree_count
-                    reuse_rate = 0.0
-                    if total_tree_count != 0:
-                        reuse_rate = candidate_tree_count / total_tree_count
-                        print(f"reuse_rate: {reuse_rate}")
-                    if reuse_rate >= 0.8:
-                        state_graph.is_stable = True
-
-                    if state_graph.is_stable:
-                        # print("use graph")
-                        for warning_tree_id in warning_tree_id_list:
-                            # print("finding next_id...")
-                            next_id = state_graph.get_next_tree_id(warning_tree_id)
-                            if next_id == -1:
-                                # print(f"tree {warning_tree_id} does not have next id")
-                                state_graph.is_stable = False
-
-                            else:
-                                # print("Next tree found, adding candidate tree...")
-                                if not tree_pool[next_id].is_candidate:
-                                    candidate_trees.append(tree_pool[next_id])
-                                    # print("candidate tree added")
-
-                    if not state_graph.is_stable:
-                        closest_state = lru_states.get_closest_state(target_state)
-
-                        update_candidate_trees(candidate_trees=candidate_trees,
-                                               tree_pool=tree_pool,
-                                               cur_state=cur_state,
-                                               closest_state=closest_state,
-                                               cur_tree_pool_size=cur_tree_pool_size)
+                    select_candidate_trees(count=count,
+                                           target_state=target_state,
+                                           warning_tree_id_list=warning_tree_id_list,
+                                           candidate_trees=candidate_trees,
+                                           tree_pool=tree_pool,
+                                           lru_states=lru_states,
+                                           state_graph=state_graph,
+                                           cur_state=cur_state,
+                                           cur_tree_pool_size=cur_tree_pool_size)
 
                 # if actual drifts are detected, swap trees and update cur_state
-                cur_tree_pool_size = adapt_state(drifted_tree_list=drifted_tree_list,
-                                                 candidate_trees=candidate_trees,
-                                                 tree_pool=tree_pool,
-                                                 state_graph=state_graph,
-                                                 cur_state=cur_state,
-                                                 cur_tree_pool_size=cur_tree_pool_size,
-                                                 adaptive_trees=adaptive_trees,
-                                                 drifted_tree_pos=drifted_tree_pos,
-                                                 actual_labels=actual_labels)
+                if len(drifted_tree_list) > 0:
+                    cur_tree_pool_size = adapt_state(drifted_tree_list=drifted_tree_list,
+                                                     candidate_trees=candidate_trees,
+                                                     tree_pool=tree_pool,
+                                                     state_graph=state_graph,
+                                                     cur_state=cur_state,
+                                                     cur_tree_pool_size=cur_tree_pool_size,
+                                                     adaptive_trees=adaptive_trees,
+                                                     drifted_tree_pos=drifted_tree_pos,
+                                                     actual_labels=actual_labels)
 
                 lru_states.enqueue(cur_state)
                 # print(f"Add state: {cur_state}")
@@ -430,6 +448,7 @@ if __name__ == '__main__':
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
+
     parser.add_argument("--cd_kappa_threshold",
                         dest="cd_kappa_threshold", default=0.2, type=float,
                         help="Kappa value that the candidate tree needs to outperform both"
