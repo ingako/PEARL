@@ -7,6 +7,7 @@ import argparse
 from collections import defaultdict, deque
 import random
 import pathlib
+import time
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -493,12 +494,16 @@ if __name__ == '__main__':
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
     metric_output_file = "result"
+    time_output_file = "time"
     if args.enable_state_graph:
         metric_output_file = f"{metric_output_file}-parf"
+        time_output_file = f"{time_output_file}-parf"
     elif args.enable_state_adaption:
         metric_output_file = f"{metric_output_file}-sarf"
+        time_output_file = f"{time_output_file}-sarf"
 
     metric_output_file = f"{result_directory}/{metric_output_file}.csv"
+    time_output_file = f"{result_directory}/{time_output_file}"
 
     configs = (
         f"metric_output_file: {metric_output_file}\n"
@@ -532,4 +537,9 @@ if __name__ == '__main__':
     candidate_tree_count = 0
     background_tree_count = 0
 
+    start = time.process_time()
     evaluate()
+    elapsed = time.process_time() - start
+
+    with open(f"{time_output_file}", 'w') as out:
+        out.write(str(elapsed) + '\n')
