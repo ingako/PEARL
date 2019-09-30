@@ -31,7 +31,8 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.position = 3000
 
         self.lam = lam
-        self.concept_probs = self.__get_poisson_probs(len(concepts))
+        self.concepts_probs = []
+        # self.concept_probs = self.__get_poisson_probs(len(concepts))
 
 
     def next_sample(self, batch_size=1):
@@ -84,6 +85,11 @@ class RecurrentDriftStream(ConceptDriftStream):
         return self.cur_stream.get_data_info()
 
     def prepare_for_use(self):
+        if self.generator in ['sea', 'sine']:
+            self.concepts = [v for v in range(0, 4)]
+        elif self.generator in ['stagger', 'mixed']:
+            self.concepts = [v for v in range(0, 3)]
+
         for concept in self.concepts:
             if self.generator == 'agrawal':
                 stream = AGRAWALGenerator(classification_function=concept,
@@ -130,6 +136,8 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.target_values = stream.target_values
         self.n_targets = stream.n_targets
         self.name = 'Drifting' + stream.name
+
+        self.concept_probs = self.__get_poisson_probs(len(self.concepts))
 
     def __get_next_concept_idx(self):
         # r = random.uniform(0, 1)

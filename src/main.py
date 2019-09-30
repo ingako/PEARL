@@ -137,7 +137,9 @@ def select_candidate_trees(count,
     reuse_rate = 0.0
     if total_tree_count != 0:
         reuse_rate = candidate_tree_count / total_tree_count
-        print(f"reuse_rate: {reuse_rate}")
+        with open(f"{result_directory}/reuse-rate.log", 'a') as out:
+            out.write(f"{reuse_rate}\n")
+            # print(f"reuse_rate: {reuse_rate}")
 
     # if args.enable_state_graph and count >= 100000:
     if reuse_rate >= args.reuse_rate_threshold:
@@ -518,7 +520,7 @@ if __name__ == '__main__':
         f"enable_state_graph: {args.enable_state_graph}\n")
 
     print(configs)
-    with open("{result_directory}", 'w') as out:
+    with open(f"{result_directory}/config", 'w') as out:
         out.write(configs)
         out.flush()
 
