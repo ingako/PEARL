@@ -25,17 +25,20 @@ for generator in generators:
 
             cur_param_dir = f"{cur_data_dir}/{param}"
 
-            arf_output  = f"{cur_param_dir}/result.csv"
+            arf_output  = f"{cur_data_dir}/result.csv"
             sarf_output = f"{cur_param_dir}/result-sarf.csv"
             parf_output = f"{cur_param_dir}/result-parf.csv"
 
             gain_output = f"{cur_param_dir}/gain.csv"
 
-            gain = 0
+            sarf_arf_gain = 0
+            parf_arf_gain = 0
+            parf_sarf_gain = 0
+
             with open(gain_output, "w") as out:
 
-                # arf_df = pd.read_csv(arf_output)
-                # arf_acc = arf_df["accuracy"]
+                arf_df = pd.read_csv(arf_output)
+                arf_acc = arf_df["accuracy"]
 
                 sarf_df = pd.read_csv(sarf_output)
                 sarf_acc = sarf_df["accuracy"]
@@ -49,10 +52,19 @@ for generator in generators:
 
                 end = min(len(sarf_acc), len(parf_acc))
                 for i in range(0, end):
-                    gain += parf_acc[i] - sarf_acc[i]
+                    sarf_arf_gain += sarf_acc[i] - arf_acc[i]
+                    parf_arf_gain += parf_acc[i] - arf_acc[i]
+                    parf_sarf_gain += parf_acc[i] - sarf_acc[i]
 
                     if i == (end - 1):
-                        gain_report_out.write(f"{param},{num_instances[i]},{gain}\n")
+                        gain_report_out.write(f"{param},{num_instances[i]},"
+                                              f"{sarf_arf_gain},"
+                                              f"{parf_arf_gain},"
+                                              f"{parf_sarf_gain}\n")
 
-                    out.write(f"{num_instances[i]},{gain}\n")
+                    out.write(f"{num_instances[i]},"
+                              f"{sarf_arf_gain},"
+                              f"{parf_arf_gain},"
+                              f"{parf_sarf_gain}\n")
+
                     out.flush()
