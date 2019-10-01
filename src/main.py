@@ -138,7 +138,7 @@ def select_candidate_trees(count,
     if total_tree_count != 0:
         reuse_rate = candidate_tree_count / total_tree_count
         with open(f"{result_directory}/reuse-rate.log", 'a') as out:
-            out.write(f"{reuse_rate}\n")
+            out.write(f"{background_tree_count},{candidate_tree_count},{reuse_rate}\n")
             # print(f"reuse_rate: {reuse_rate}")
 
     # if args.enable_state_graph and count >= 100000:
@@ -490,10 +490,6 @@ if __name__ == '__main__':
     if args.enable_state_graph:
         args.enable_state_adaption = True
 
-    result_directory = f"{args.generator}/r{args.reuse_rate_threshold}" \
-                       f"-k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}"
-
-    pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
     metric_output_file = "result"
     time_output_file = "time"
@@ -504,8 +500,16 @@ if __name__ == '__main__':
         metric_output_file = f"{metric_output_file}-sarf"
         time_output_file = f"{time_output_file}-sarf"
 
+    result_directory = args.generator
+    if args.enable_state_adaption:
+        result_directory = f"{args.generator}/r{args.reuse_rate_threshold}" \
+                       f"-k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}"
+
+    pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
+
     metric_output_file = f"{result_directory}/{metric_output_file}.csv"
     time_output_file = f"{result_directory}/{time_output_file}"
+
 
     configs = (
         f"metric_output_file: {metric_output_file}\n"
