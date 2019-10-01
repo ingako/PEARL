@@ -87,8 +87,12 @@ class RecurrentDriftStream(ConceptDriftStream):
     def prepare_for_use(self):
         if self.generator in ['sea', 'sine']:
             self.concepts = [v for v in range(0, 4)]
-        elif self.generator in ['stagger', 'mixed']:
+        elif self.generator in ['stagger']:
             self.concepts = [v for v in range(0, 3)]
+        elif self.generator in ['mixed']:
+            self.concepts = [v for v in range(0, 2)]
+        elif self.generator in ['led']:
+            self.concepts = [v for v in range(0, 7)]
 
         for concept in self.concepts:
             if self.generator == 'agrawal':
@@ -109,11 +113,15 @@ class RecurrentDriftStream(ConceptDriftStream):
             elif self.generator == 'stagger':
                 stream = STAGGERGenerator(classification_function=concept,
                                           random_state=self.random_state,
-                                          balance_classes = False)
+                                          balance_classes=False)
             elif self.generator == 'mixed':
                 stream = MIXEDGenerator(classification_function=concept,
                                         random_state=self.random_state,
-                                        balance_classes = False)
+                                        balance_classes=False)
+            elif self.generator == 'led':
+                stream = LEDGeneratorDrift(random_state=self.random_state,
+                                           has_noise=False,
+                                           n_drift_features=concept)
             else:
                 print(f"unknown stream generator {self.generator}")
                 exit()
