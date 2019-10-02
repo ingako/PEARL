@@ -130,21 +130,6 @@ def select_candidate_trees(count,
                            cur_state,
                            cur_tree_pool_size):
 
-    global background_tree_count
-    global candidate_tree_count
-
-    total_tree_count = background_tree_count + candidate_tree_count
-    reuse_rate = 0.0
-    if total_tree_count != 0:
-        reuse_rate = candidate_tree_count / total_tree_count
-        with open(f"{result_directory}/reuse-rate.log", 'a') as out:
-            out.write(f"{background_tree_count},{candidate_tree_count},{reuse_rate}\n")
-            # print(f"reuse_rate: {reuse_rate}")
-
-    # if args.enable_state_graph and count >= 100000:
-    if reuse_rate >= args.reuse_rate_threshold:
-        state_graph.is_stable = True
-
     if state_graph.is_stable:
         # print("use graph")
         for warning_tree_id in warning_tree_id_list:
@@ -168,6 +153,33 @@ def select_candidate_trees(count,
                                cur_state=cur_state,
                                closest_state=closest_state,
                                cur_tree_pool_size=cur_tree_pool_size)
+
+def update_reuse_rate(background_count, candidate_count, state_graph):
+    global background_reuse_total_count
+    global candidate_reuse_total_count
+    global background_reuse_window
+    global candidate_reuse_window
+
+    if len(background_reuse_window) >= 10000:
+        background_reuse_total_count -= background_reuse_window[0]
+        candidate_reuse_total_count -= candidate_reuse_window[0]
+
+    background_reuse_total_count += background_count
+    candidate_reuse_total_count += candidate_count
+
+    background_reuse_window.append(background_count)
+    candidate_reuse_window.append(candidate_count)
+
+    total_reuse_count = background_reuse_total_count + candidate_reuse_total_count
+    reuse_rate = 0.0
+    if total_reuse_count != 0:
+        reuse_rate = candidate_reuse_total_count / total_reuse_count
+
+    with open(f"{result_directory}/reuse-rate.log", 'a') as out:
+        out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
+
+    if reuse_rate >= args.reuse_rate_threshold:
+        state_graph.is_stable = True
 
 def adapt_state(drifted_tree_list,
                 candidate_trees,
@@ -195,19 +207,20 @@ def adapt_state(drifted_tree_list,
         drifted_tree.update_kappa(actual_labels)
         swap_tree = drifted_tree
 
+        background_count = 0
+        candidate_count = 0
+
         if len(candidate_trees) > 0 \
                 and candidate_trees[-1].kappa - drifted_tree.kappa >= args.cd_kappa_threshold:
             # swap drifted tree with the candidate tree
             swap_tree = candidate_trees.pop()
             swap_tree.is_candidate = False
 
-            global candidate_tree_count
-            candidate_tree_count += 1
+            candidate_count += 1
 
         if swap_tree is drifted_tree:
             add_to_repo = True
-            global background_tree_count
-            background_tree_count += 1
+            background_count += 1
 
             if drifted_tree.bg_adaptive_tree is None:
                     swap_tree = \
@@ -244,7 +257,9 @@ def adapt_state(drifted_tree_list,
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
 
-        state_graph.add_edge(drifted_tree.tree_pool_id, swap_tree.tree_pool_id)
+        if args.enable_state_graph:
+            update_reuse_rate(background_count, candidate_count, state_graph)
+            state_graph.add_edge(drifted_tree.tree_pool_id, swap_tree.tree_pool_id)
 
         # replace drifted tree with swap tree
         pos = drifted_tree_pos.pop()
@@ -481,7 +496,7 @@ if __name__ == '__main__':
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
     parser.add_argument("--reuse_rate_threshold",
-                        dest="reuse_rate_threshold", default=0.5, type=float,
+                        dest="reuse_rate_threshold", default=0.4, type=float,
                         help="The reuse rate threshold for switching from "
                              "pattern matching to candidate_trees")
 
@@ -540,13 +555,14 @@ if __name__ == '__main__':
     np.random.seed(args.random_state)
     random.seed(0)
 
-    candidate_tree_count = 0
-    background_tree_count = 0
-
+    background_reuse_total_count = 0
+    candidate_reuse_total_count = 0
+    background_reuse_window = deque(maxlen=10000)
+    candidate_reuse_window = deque(maxlen=10000)
 
     if args.enable_state_adaption:
         with open(f"{result_directory}/reuse-rate.log", 'w') as out:
-            out.write("background_tree_count,candidate_tree_count,reuse_rate\n")
+            out.write("background_window_count,candidate_window_count,reuse_rate\n")
 
     start = time.process_time()
     evaluate()
