@@ -508,7 +508,7 @@ if __name__ == '__main__':
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
     metric_output_file = f"{result_directory}/{metric_output_file}.csv"
-    time_output_file = f"{result_directory}/{time_output_file}"
+    time_output_file = f"{result_directory}/{time_output_file}.log"
 
 
     configs = (
@@ -542,6 +542,11 @@ if __name__ == '__main__':
 
     candidate_tree_count = 0
     background_tree_count = 0
+
+
+    if args.enable_state_adaption:
+        with open(f"{result_directory}/reuse-rate.log", 'w') as out:
+            out.write("background_tree_count,candidate_tree_count,reuse_rate\n")
 
     start = time.process_time()
     evaluate()
