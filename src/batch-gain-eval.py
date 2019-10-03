@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 base_dir = os.getcwd()
-generators = ["sea"]
+generators = ["agrawal"]
 
 for generator in generators:
 
@@ -16,10 +16,11 @@ for generator in generators:
 
     print(f"evaluating {generator}...")
     params = [f for f in os.listdir(cur_data_dir) if os.path.isdir(os.path.join(cur_data_dir, f))]
+    print("evaluating params...")
     print(params)
 
     with open(gain_report_path, "w") as gain_report_out:
-        gain_report_out.write("param,num_instances,gain\n")
+        gain_report_out.write("param,reuse-param,#instances,sarf-arf,parf-arf,parf-sarf\n")
 
         for param in params:
 
@@ -27,44 +28,52 @@ for generator in generators:
 
             arf_output  = f"{cur_data_dir}/result.csv"
             sarf_output = f"{cur_param_dir}/result-sarf.csv"
-            parf_output = f"{cur_param_dir}/result-parf.csv"
 
-            gain_output = f"{cur_param_dir}/gain.csv"
+            reuse_params = [f for f in os.listdir(cur_param_dir) if os.path.isdir(os.path.join(cur_param_dir, f))]
+            print("evaluating reuse params...")
+            print(reuse_params)
 
-            sarf_arf_gain = 0
-            parf_arf_gain = 0
-            parf_sarf_gain = 0
+            for reuse_param in reuse_params:
 
-            with open(gain_output, "w") as out:
+                cur_reuse_param_dir = f"{cur_param_dir}/{reuse_param}/"
+                parf_output = f"{cur_reuse_param_dir}/result-parf.csv"
 
-                arf_df = pd.read_csv(arf_output)
-                arf_acc = arf_df["accuracy"]
+                gain_output = f"{cur_reuse_param_dir}/gain.csv"
 
-                sarf_df = pd.read_csv(sarf_output)
-                sarf_acc = sarf_df["accuracy"]
+                sarf_arf_gain = 0
+                parf_arf_gain = 0
+                parf_sarf_gain = 0
 
-                parf_df = pd.read_csv(parf_output)
-                parf_acc = parf_df["accuracy"]
+                with open(gain_output, "w") as out:
 
-                num_instances = parf_df["count"]
+                    arf_df = pd.read_csv(arf_output)
+                    arf_acc = arf_df["accuracy"]
 
-                out.write("#count,gain\n")
+                    sarf_df = pd.read_csv(sarf_output)
+                    sarf_acc = sarf_df["accuracy"]
 
-                end = min(len(sarf_acc), len(parf_acc))
-                for i in range(0, end):
-                    sarf_arf_gain += sarf_acc[i] - arf_acc[i]
-                    parf_arf_gain += parf_acc[i] - arf_acc[i]
-                    parf_sarf_gain += parf_acc[i] - sarf_acc[i]
+                    parf_df = pd.read_csv(parf_output)
+                    parf_acc = parf_df["accuracy"]
 
-                    if i == (end - 1):
-                        gain_report_out.write(f"{param},{num_instances[i]},"
-                                              f"{sarf_arf_gain},"
-                                              f"{parf_arf_gain},"
-                                              f"{parf_sarf_gain}\n")
+                    num_instances = parf_df["count"]
 
-                    out.write(f"{num_instances[i]},"
-                              f"{sarf_arf_gain},"
-                              f"{parf_arf_gain},"
-                              f"{parf_sarf_gain}\n")
+                    out.write("#count,gain\n")
 
-                    out.flush()
+                    end = min(min(len(sarf_acc), len(parf_acc)), len(arf_acc))
+                    for i in range(0, end):
+                        sarf_arf_gain += sarf_acc[i] - arf_acc[i]
+                        parf_arf_gain += parf_acc[i] - arf_acc[i]
+                        parf_sarf_gain += parf_acc[i] - sarf_acc[i]
+
+                        if i == (end - 1):
+                            gain_report_out.write(f"{param},{reuse_param},{num_instances[i]},"
+                                                  f"{sarf_arf_gain},"
+                                                  f"{parf_arf_gain},"
+                                                  f"{parf_sarf_gain}\n")
+
+                        out.write(f"{num_instances[i]},"
+                                  f"{sarf_arf_gain},"
+                                  f"{parf_arf_gain},"
+                                  f"{parf_sarf_gain}\n")
+
+                        out.flush()
