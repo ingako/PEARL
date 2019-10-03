@@ -160,7 +160,7 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
     global background_reuse_window
     global candidate_reuse_window
 
-    if len(background_reuse_window) >= 10000:
+    if len(background_reuse_window) >= args.reuse_window_size:
         background_reuse_total_count -= background_reuse_window[0]
         candidate_reuse_total_count -= candidate_reuse_window[0]
 
@@ -499,6 +499,9 @@ if __name__ == '__main__':
                         dest="reuse_rate_threshold", default=0.4, type=float,
                         help="The reuse rate threshold for switching from "
                              "pattern matching to candidate_trees")
+    parser.add_argument("--reuse_window_size",
+                        dest="reuse_window_size", default=10000, type=int,
+                        help="Window size for calculating reuse rate")
 
     args = parser.parse_args()
 
@@ -562,8 +565,8 @@ if __name__ == '__main__':
 
     background_reuse_total_count = 0
     candidate_reuse_total_count = 0
-    background_reuse_window = deque(maxlen=10000)
-    candidate_reuse_window = deque(maxlen=10000)
+    background_reuse_window = deque(maxlen=args.reuse_window_size)
+    candidate_reuse_window = deque(maxlen=args.reuse_window_size)
 
     if args.enable_state_adaption:
         with open(f"{result_directory}/reuse-rate.log", 'w') as out:
