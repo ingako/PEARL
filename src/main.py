@@ -178,8 +178,11 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
     with open(f"{result_directory}/reuse-rate.log", 'a') as out:
         out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
 
-    if reuse_rate >= args.reuse_rate_threshold:
+    if reuse_rate >= args.reuse_rate_upper_bound:
         state_graph.is_stable = True
+
+    if reuse_rate < args.reuse_rate_lower_bound:
+        state_graph.is_stable = False
 
 def adapt_state(drifted_tree_list,
                 candidate_trees,
@@ -201,8 +204,7 @@ def adapt_state(drifted_tree_list,
     for drifted_tree in drifted_tree_list:
         # TODO
         if cur_tree_pool_size >= repo_size:
-            print("early break")
-            exit()
+            exit("repo exploded ＼(º □ º l|l)/")
 
         drifted_tree.update_kappa(actual_labels)
         swap_tree = drifted_tree
@@ -495,15 +497,22 @@ if __name__ == '__main__':
     parser.add_argument("--lossy_window_size",
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
-    parser.add_argument("--reuse_rate_threshold",
-                        dest="reuse_rate_threshold", default=0.4, type=float,
-                        help="The reuse rate threshold for switching from "
-                             "pattern matching to candidate_trees")
     parser.add_argument("--reuse_window_size",
                         dest="reuse_window_size", default=10000, type=int,
                         help="Window size for calculating reuse rate")
+    parser.add_argument("--reuse_rate_upper_bound",
+                        dest="reuse_rate_upper_bound", default=0.4, type=float,
+                        help="The reuse rate threshold for switching from "
+                             "pattern matching to graph transition")
+    parser.add_argument("--reuse_rate_lower_bound",
+                        dest="reuse_rate_lower_bound", default=0.1, type=float,
+                        help="The reuse rate threshold for switching from "
+                             "pattern matching to graph transition")
 
     args = parser.parse_args()
+
+    if args.reuse_rate_upper_bound < args.reuse_rate_lower_bound:
+        exit("error: reuse rate upper bound must be greater than the lower bound")
 
     if args.enable_state_graph:
         args.enable_state_adaption = True
@@ -516,7 +525,7 @@ if __name__ == '__main__':
     if args.enable_state_graph:
         result_directory = f"{args.generator}/" \
                            f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/" \
-                           f"r{args.reuse_rate_threshold}"
+                           f"r{args.reuse_rate_upper_bound}"
 
         metric_output_file = f"{metric_output_file}-parf"
         time_output_file = f"{time_output_file}-parf"
