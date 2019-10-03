@@ -506,19 +506,24 @@ if __name__ == '__main__':
         args.enable_state_adaption = True
 
 
+    result_directory = args.generator
     metric_output_file = "result"
     time_output_file = "time"
+
     if args.enable_state_graph:
+        result_directory = f"{args.generator}/" \
+                           f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/" \
+                           f"r{args.reuse_rate_threshold}"
+
         metric_output_file = f"{metric_output_file}-parf"
         time_output_file = f"{time_output_file}-parf"
+
     elif args.enable_state_adaption:
+        result_directory = f"{args.generator}/" \
+                           f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/"
+
         metric_output_file = f"{metric_output_file}-sarf"
         time_output_file = f"{time_output_file}-sarf"
-
-    result_directory = args.generator
-    if args.enable_state_adaption:
-        result_directory = f"{args.generator}/r{args.reuse_rate_threshold}" \
-                       f"-k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}"
 
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
