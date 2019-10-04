@@ -8,11 +8,13 @@ from collections import defaultdict, deque
 import random
 import pathlib
 import time
+import os.path
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 from skmultiflow.drift_detection.adwin import ADWIN
 from skmultiflow.trees.arf_hoeffding_tree import ARFHoeffdingTree
+from skmultiflow.data.file_stream import FileStream
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -204,7 +206,8 @@ def adapt_state(drifted_tree_list,
     for drifted_tree in drifted_tree_list:
         # TODO
         if cur_tree_pool_size >= repo_size:
-            exit("repo exploded ＼(º □ º l|l)/")
+            print("early break")
+            exit()
 
         drifted_tree.update_kappa(actual_labels)
         swap_tree = drifted_tree
@@ -512,11 +515,29 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.reuse_rate_upper_bound < args.reuse_rate_lower_bound:
-        exit("error: reuse rate upper bound must be greater than the lower bound")
+        exit("reuse rate upper bound must be greater than the lower bound")
 
     if args.enable_state_graph:
         args.enable_state_adaption = True
 
+    stream = None
+    potential_file = f"{args.generator}/{args.generator}.csv"
+
+    # prepare data
+    if os.path.isfile(potential_file):
+        print(f"preparing stream from file {potential_file}...")
+        stream = FileStream(potential_file)
+        stream.prepare_for_use()
+
+        args.max_samples = stream.n_remaining_samples()
+
+    else:
+        print(f"preparing stream from {args.generator} generator...")
+        concepts = [v for v in range(0, 10)]
+        # concepts = [4,0,8]
+        stream = RecurrentDriftStream(generator=args.generator, concepts=concepts)
+        stream.prepare_for_use()
+        print(stream.get_data_info())
 
     result_directory = args.generator
     metric_output_file = "result"
@@ -559,11 +580,6 @@ if __name__ == '__main__':
     with open(f"{result_directory}/config", 'w') as out:
         out.write(configs)
         out.flush()
-
-    # prepare data
-    stream = RecurrentDriftStream(generator=args.generator, concepts=[4,0,8])
-    stream.prepare_for_use()
-    print(stream.get_data_info())
 
     num_features = stream.n_features
     arf_max_features = int(math.log2(num_features)) + 1
