@@ -19,7 +19,7 @@ class LossyStateGraph:
         # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
-        if self.graph[src].total_weight == 0:
+        if not self.graph[src] or self.graph[src].total_weight == 0:
             return -1
 
         r = randrange(self.graph[src].total_weight)
@@ -83,9 +83,6 @@ class LossyStateGraph:
 
     def get_size(self):
         size = 0
-
-        if self.num_nodes == 0:
-            return size
 
         for node in self.graph:
             if not node:
