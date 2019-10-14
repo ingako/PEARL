@@ -501,7 +501,7 @@ if __name__ == '__main__':
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
     parser.add_argument("--reuse_window_size",
-                        dest="reuse_window_size", default=10000, type=int,
+                        dest="reuse_window_size", default=16, type=int,
                         help="Window size for calculating reuse rate")
     parser.add_argument("--reuse_rate_upper_bound",
                         dest="reuse_rate_upper_bound", default=0.4, type=float,
@@ -546,7 +546,9 @@ if __name__ == '__main__':
     if args.enable_state_graph:
         result_directory = f"{args.generator}/" \
                            f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/" \
-                           f"r{args.reuse_rate_upper_bound}"
+                           f"r{args.reuse_rate_upper_bound}-r{args.reuse_rate_lower_bound}-" \
+                           f"w{args.reuse_window_size}/" \
+                           f"lossy-{args.lossy_window_size}"
 
         metric_output_file = f"{metric_output_file}-parf"
         time_output_file = f"{time_output_file}-parf"
