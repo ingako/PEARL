@@ -560,8 +560,8 @@ if __name__ == '__main__':
 
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
-    metric_output_file = f"{result_directory}/{metric_output_file}.csv"
-    time_output_file = f"{result_directory}/{time_output_file}.log"
+    metric_output_file = f"{result_directory}/{metric_output_file}-{args.random_state}.csv"
+    time_output_file = f"{result_directory}/{time_output_file}-{args.random_state}.log"
 
 
     configs = (
@@ -584,7 +584,7 @@ if __name__ == '__main__':
     num_features = stream.n_features
     arf_max_features = int(math.log2(num_features)) + 1
 
-    repo_size = args.num_trees * 80
+    repo_size = args.num_trees * 160
     np.random.seed(args.random_state)
     random.seed(0)
 
