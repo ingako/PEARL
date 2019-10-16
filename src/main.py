@@ -262,14 +262,16 @@ def adapt_state(drifted_tree_list,
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
 
-        if args.enable_state_graph:
-            update_reuse_rate(background_count, candidate_count, state_graph)
+        if args.enable_state_graph and state_graph.is_stable:
             state_graph.add_edge(drifted_tree.tree_pool_id, swap_tree.tree_pool_id)
 
         # replace drifted tree with swap tree
         pos = drifted_tree_pos.pop()
         adaptive_trees[pos] = swap_tree
         drifted_tree.reset()
+
+    if args.enable_state_graph:
+        update_reuse_rate(background_count, candidate_count, state_graph)
 
     return cur_tree_pool_size
 
