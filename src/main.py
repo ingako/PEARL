@@ -179,6 +179,7 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
 
     with open(f"{result_directory}/reuse-rate.log", 'a') as out:
         out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
+        out.flush()
 
     if reuse_rate >= args.reuse_rate_upper_bound:
         state_graph.is_stable = True
