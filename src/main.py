@@ -181,7 +181,7 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
     if total_reuse_count != 0:
         reuse_rate = candidate_reuse_total_count / total_reuse_count
 
-    with open(f"{result_directory}/reuse-rate.log", 'a') as out:
+    with open(f"{result_directory}/reuse-rate-{args.random_state}.log", 'a') as out:
         out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
         out.flush()
 
@@ -275,7 +275,7 @@ def adapt_state(drifted_tree_list,
         adaptive_trees[pos] = swap_tree
         drifted_tree.reset()
 
-    if args.enable_state_graph:
+    if args.enable_state_adaption:
         update_reuse_rate(background_count, candidate_count, state_graph)
 
     return cur_tree_pool_size
