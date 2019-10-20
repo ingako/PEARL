@@ -14,7 +14,7 @@ from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
 
 class RecurrentDriftStream(ConceptDriftStream):
-    def __init__(self, generator='agrawal', concepts=[4, 0], lam=1.0):
+    def __init__(self, generator='agrawal', concepts=[4, 0, 8], lam=1.0, has_noise=False):
         super().__init__()
 
         self.stable_period = 3000
@@ -32,7 +32,11 @@ class RecurrentDriftStream(ConceptDriftStream):
 
         self.lam = lam
         self.concepts_probs = []
-        # self.concept_probs = self.__get_poisson_probs(len(concepts))
+
+        self.has_noise=has_noise
+        self.noises = [0.1, 0.2, 0.3, 0.4]
+        self.noise_probs = self.__get_poisson_probs(4)
+
 
 
     def next_sample(self, batch_size=1):
@@ -58,6 +62,7 @@ class RecurrentDriftStream(ConceptDriftStream):
             self.sample_idx += 1
             x = -4.0 * float(self.sample_idx - self.position) / float(self.width)
             probability_drift = 1.0 / (1.0 + np.exp(x))
+
             if self._random_state.rand() > probability_drift:
                 X, y = self.cur_stream.next_sample()
             else:
@@ -74,10 +79,16 @@ class RecurrentDriftStream(ConceptDriftStream):
 
             # finite poisson
             self.stream_idx = self.drift_stream_idx
-            self.drift_stream_idx = self.__get_next_concept_idx()
+            self.drift_stream_idx = self.__get_next_random_idx(self.concept_probs)
 
             self.cur_stream = self.streams[self.stream_idx]
             self.drift_stream = self.streams[self.drift_stream_idx]
+
+            # generate a random noise
+            if self.generator == 'agrawal':
+                self.noise_idx = self.__get_next_random_idx(self.noise_probs)
+                self.cur_stream.perturbation = self.noises[self.noise_idx]
+
 
         return self.current_sample_x, self.current_sample_y.flatten()
 
@@ -120,7 +131,7 @@ class RecurrentDriftStream(ConceptDriftStream):
                                         balance_classes=False)
             elif self.generator == 'led':
                 stream = LEDGeneratorDrift(random_state=self.random_state,
-                                           has_noise=False,
+                                           has_noise=True,
                                            n_drift_features=concept)
             else:
                 print(f"unknown stream generator {self.generator}")
@@ -143,25 +154,25 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.target_names = stream.target_names
         self.target_values = stream.target_values
         self.n_targets = stream.n_targets
-        self.name = 'Drifting' + stream.name
+        self.name = 'drifting' + stream.name
 
         self.concept_probs = self.__get_poisson_probs(len(self.concepts))
 
-    def __get_next_concept_idx(self):
+    def __get_next_random_idx(self, probs):
         # r = random.uniform(0, 1)
         r = self._random_state.uniform(0, 1)
-        print(f"next_concept_idx={r}")
+        # print(f"next_random_val={r}")
         cur_sum = 0
 
-        for idx, val in enumerate(self.concept_probs):
+        for idx, val in enumerate(probs):
             cur_sum += val
             if r < cur_sum:
                 return idx
 
-    def __get_poisson_probs(self, num_concepts):
-        probs = [0] * num_concepts
-        for c in range(0, num_concepts):
-            probs[c] = self.__calc_poisson_prob(c)
+    def __get_poisson_probs(self, num_events):
+        probs = [0] * num_events
+        for e in range(0, num_events):
+            probs[e] = self.__calc_poisson_prob(e)
 
         norm_probs = [float(i)/sum(probs) for i in probs]
         print(f"norm_probs: {norm_probs}")
@@ -172,7 +183,7 @@ class RecurrentDriftStream(ConceptDriftStream):
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
-    stream_1 = LEDGeneratorDrift(random_state=0,
+    stream_1 = ledgeneratorDrift(random_state=0,
                                  noise_percentage=noise_1,
                                  has_noise=False,
                                  n_drift_features=func)
