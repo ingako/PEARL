@@ -85,10 +85,9 @@ class RecurrentDriftStream(ConceptDriftStream):
             self.drift_stream = self.streams[self.drift_stream_idx]
 
             # generate a random noise
-            if self.generator == 'agrawal':
+            if self.has_noise and self.generator == 'agrawal':
                 self.noise_idx = self.__get_next_random_idx(self.noise_probs)
                 self.cur_stream.perturbation = self.noises[self.noise_idx]
-
 
         return self.current_sample_x, self.current_sample_y.flatten()
 
