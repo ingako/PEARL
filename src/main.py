@@ -181,7 +181,7 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
     if total_reuse_count != 0:
         reuse_rate = candidate_reuse_total_count / total_reuse_count
 
-    with open(f"{result_directory}/reuse-rate-{args.random_state}.log", 'a') as out:
+    with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'a') as out:
         out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
         out.flush()
 
@@ -483,6 +483,13 @@ if __name__ == '__main__':
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
+    parser.add_argument("--generator_seed",
+                        dest="generator_seed", default=0, type=int,
+                        help="Seed used for generating synthetic data")
+    parser.add_argument("--enable_generator_noise",
+                        dest="enable_generator_noise", action="store_true",
+                        help="Enable noise in synthetic data generator")
+    parser.set_defaults(enable_generator_noise=False)
 
     parser.add_argument("-s", "--enable_state_adaption",
                         dest="enable_state_adaption", action="store_true",
@@ -522,7 +529,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.reuse_rate_upper_bound < args.reuse_rate_lower_bound:
-        exit("reuse rate upper bound must be greater than the lower bound")
+        exit("reuse rate upper bound must be greater than or equal to the lower bound")
 
     if args.enable_state_graph:
         args.enable_state_adaption = True
@@ -540,18 +547,24 @@ if __name__ == '__main__':
 
     else:
         print(f"preparing stream from {args.generator} generator...")
-        concepts = [v for v in range(0, 10)]
-        # concepts = [4,0,8]
-        stream = RecurrentDriftStream(generator=args.generator, concepts=concepts)
+        # concepts = [v for v in range(0, 10)]
+        concepts = [4,0,8]
+        stream = RecurrentDriftStream(generator=args.generator,
+                                      concepts=concepts,
+                                      has_noise=args.enable_generator_noise,
+                                      random_state=args.generator_seed)
         stream.prepare_for_use()
         print(stream.get_data_info())
 
     result_directory = args.generator
+    if args.enable_generator_noise:
+        result_directory = f"{result_directory}-noise"
+
     metric_output_file = "result"
     time_output_file = "time"
 
     if args.enable_state_graph:
-        result_directory = f"{args.generator}/" \
+        result_directory = f"{result_directory}/" \
                            f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/" \
                            f"r{args.reuse_rate_upper_bound}-r{args.reuse_rate_lower_bound}-" \
                            f"w{args.reuse_window_size}/" \
@@ -561,7 +574,7 @@ if __name__ == '__main__':
         time_output_file = f"{time_output_file}-parf"
 
     elif args.enable_state_adaption:
-        result_directory = f"{args.generator}/" \
+        result_directory = f"{result_directory}/" \
                            f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/"
 
         metric_output_file = f"{metric_output_file}-sarf"
@@ -569,8 +582,8 @@ if __name__ == '__main__':
 
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
-    metric_output_file = f"{result_directory}/{metric_output_file}-{args.random_state}.csv"
-    time_output_file = f"{result_directory}/{time_output_file}-{args.random_state}.log"
+    metric_output_file = f"{result_directory}/{metric_output_file}-{args.generator_seed}.csv"
+    time_output_file = f"{result_directory}/{time_output_file}-{args.generator_seed}.log"
 
 
     configs = (
@@ -603,7 +616,7 @@ if __name__ == '__main__':
     candidate_reuse_window = deque(maxlen=args.reuse_window_size)
 
     if args.enable_state_adaption:
-        with open(f"{result_directory}/reuse-rate.log", 'w') as out:
+        with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'w') as out:
             out.write("background_window_count,candidate_window_count,reuse_rate\n")
 
     start = time.process_time()
