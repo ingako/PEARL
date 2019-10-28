@@ -46,21 +46,20 @@ class LossyStateGraph:
                 continue
 
             for key, val in list(node.neighbors.items()):
-                if val[1] > 0:
-                    val[0] += val[1]
-                    node.total_weight += val[1]
+                # increment freq by #hits
+                val[0] += val[1]
+                node.total_weight += val[1]
 
-                else:
-                    val[0] -= 1
-                    node.total_weight -= 1
-
-                    if val[0] == 0:
-                        # remove edge
-                        del node.neighbors[key]
-
-                # reset the number of hits
+                # reset #hits
                 val[1] = 0
 
+                # decrement freq by 1
+                val[0] -= 1
+                node.total_weight -= 1
+
+                if val[0] <= 0:
+                    # remove edge
+                    del node.neighbors[key]
 
     def add_node(self, key):
         self.graph[key] = Node(key)
