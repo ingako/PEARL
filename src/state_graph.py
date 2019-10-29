@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import sys
-import random
 from random import randrange
 from pprint import pformat
 from graphviz import Digraph
@@ -61,6 +60,16 @@ class LossyStateGraph:
                     # remove edge
                     del node.neighbors[key]
 
+                    self.graph[key].indegree -= 1
+                    self.__try_remove_node(key)
+
+            self.__try_remove_node(node.key)
+
+    def __try_remove_node(self, key):
+        node = self.graph[key]
+        if node.indegree == 0 and len(node.neighbors) == 0:
+            self.graph[node] = None
+
     def add_node(self, key):
         self.graph[key] = Node(key)
 
@@ -75,6 +84,8 @@ class LossyStateGraph:
 
         if dest not in src_node.neighbors.keys():
             src_node.neighbors[dest] = [0, 0]
+            self.graph[dest].indegree += 1
+
         src_node.neighbors[dest][0] += 1
 
         # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
@@ -106,6 +117,7 @@ class Node:
     def __init__(self, key):
         self.key = key
         self.neighbors = dict() # <tree_id, [weight, num_hit]>
+        self.indegree = 0
         self.total_weight = 0
 
     def get_size(self):
