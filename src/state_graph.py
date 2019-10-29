@@ -12,7 +12,7 @@ class LossyStateGraph:
         self.capacity = capacity
         self.is_stable = False
 
-        self.drift_counter = 0
+        self.drifted_tree_counter = 0
         self.window_size = window_size
 
         # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
@@ -32,12 +32,12 @@ class LossyStateGraph:
 
         return -1
 
-    def update(self):
-        self.drift_counter += 1
-        if self.drift_counter <= self.window_size:
+    def update(self, warning_tree_count):
+        self.drifted_tree_counter += warning_tree_count
+        if self.drifted_tree_counter < self.window_size:
             return
 
-        self.drift_counter = 0
+        self.drifted_tree_counter -= self.window_size
 
         # lossy count
         for node in self.graph:
@@ -58,17 +58,18 @@ class LossyStateGraph:
 
                 if val[0] <= 0:
                     # remove edge
-                    del node.neighbors[key]
-
                     self.graph[key].indegree -= 1
                     self.__try_remove_node(key)
+
+                    del node.neighbors[key]
 
             self.__try_remove_node(node.key)
 
     def __try_remove_node(self, key):
         node = self.graph[key]
+
         if node.indegree == 0 and len(node.neighbors) == 0:
-            self.graph[node] = None
+            self.graph[key] = None
 
     def add_node(self, key):
         self.graph[key] = Node(key)

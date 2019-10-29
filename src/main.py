@@ -135,8 +135,8 @@ def select_candidate_trees(count,
     if state_graph.is_stable:
         # print("use graph")
 
-        # may trigger lossy count
-        state_graph.update()
+        # try trigger lossy count
+        state_graph.update(len(warning_tree_id_list))
 
         for warning_tree_id in warning_tree_id_list:
             # print("finding next_id...")
