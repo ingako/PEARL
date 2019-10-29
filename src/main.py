@@ -185,11 +185,12 @@ def update_reuse_rate(background_count, candidate_count, state_graph):
         out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
         out.flush()
 
-    if reuse_rate >= args.reuse_rate_upper_bound:
-        state_graph.is_stable = True
+    if args.enable_state_graph:
+        if reuse_rate >= args.reuse_rate_upper_bound:
+            state_graph.is_stable = True
 
-    if reuse_rate < args.reuse_rate_lower_bound:
-        state_graph.is_stable = False
+        if reuse_rate < args.reuse_rate_lower_bound:
+            state_graph.is_stable = False
 
 def adapt_state(drifted_tree_list,
                 candidate_trees,
