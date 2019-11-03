@@ -54,6 +54,27 @@ class AdaptiveTree(object):
         self.kappa = -sys.maxsize
 
 
+class GraphSwitch:
+    def __init__(self, window_size, state_graph, reuse_rate):
+        self.window_size = window_size
+        self.candidate_tree_count = 0
+        self.state_graph = state_graph
+        self.reuse_rate = reuse_rate
+        self.window = deque(maxlen=window_size)
+
+    def update(self, value):
+        self.candidate_tree_count += value
+        if len(self.window) >= self.window_size:
+            self.candidate_tree_count -= self.window[0]
+        self.window.append(value)
+
+    def switch(self):
+        if self.candidate_tree_count / self.window_size >= self.reuse_rate:
+            self.state_graph.is_stable = True
+        else:
+            self.state_graph.is_stable = False
+
+
 def update_drift_detector(adaptive_tree, predicted_label, actual_label):
     if predicted_label == actual_label:
         adaptive_tree.warning_detector.add_element(0)
@@ -196,6 +217,7 @@ def adapt_state(drifted_tree_list,
                 candidate_trees,
                 tree_pool,
                 state_graph,
+                graph_switch,
                 cur_state,
                 cur_tree_pool_size,
                 adaptive_trees,
@@ -227,11 +249,15 @@ def adapt_state(drifted_tree_list,
             swap_tree = candidate_trees.pop()
             swap_tree.is_candidate = False
 
-            candidate_count += 1
+            # candidate_count += 1
+            if args.enable_state_graph:
+                graph_switch.update(1)
 
         if swap_tree is drifted_tree:
             add_to_repo = True
-            background_count += 1
+            # background_count += 1
+            if args.enable_state_graph:
+                graph_switch.update(0)
 
             if drifted_tree.bg_adaptive_tree is None:
                     swap_tree = \
@@ -276,12 +302,19 @@ def adapt_state(drifted_tree_list,
         adaptive_trees[pos] = swap_tree
         drifted_tree.reset()
 
-    if args.enable_state_adaption:
-        update_reuse_rate(background_count, candidate_count, state_graph)
+    if args.enable_state_graph:
+        graph_switch.switch()
+    # if args.enable_state_adaption:
+        # update_reuse_rate(background_count, candidate_count, state_graph)
 
     return cur_tree_pool_size
 
-def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, tree_pool):
+def prequential_evaluation(adaptive_trees,
+                           lru_states,
+                           state_graph,
+                           graph_switch,
+                           cur_state,
+                           tree_pool):
     correct = 0
     x_axis = []
     accuracy_list = []
@@ -370,6 +403,7 @@ def prequential_evaluation(adaptive_trees, lru_states, state_graph, cur_state, t
                                                      candidate_trees=candidate_trees,
                                                      tree_pool=tree_pool,
                                                      state_graph=state_graph,
+                                                     graph_switch=graph_switch,
                                                      cur_state=cur_state,
                                                      cur_tree_pool_size=cur_tree_pool_size,
                                                      adaptive_trees=adaptive_trees,
@@ -434,6 +468,10 @@ def evaluate():
 
     state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
 
+    graph_switch = GraphSwitch(window_size=args.reuse_window_size,
+                               state_graph=state_graph,
+                               reuse_rate=args.reuse_rate_upper_bound)
+
     tree_pool = [None] * repo_size
     for i in range(0, args.num_trees):
         tree_pool[i] = adaptive_trees[i]
@@ -441,6 +479,7 @@ def evaluate():
     x_axis, accuracy_list = prequential_evaluation(adaptive_trees,
                                                    lru_states,
                                                    state_graph,
+                                                   graph_switch,
                                                    cur_state,
                                                    tree_pool)
 
