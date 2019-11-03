@@ -58,18 +58,31 @@ class GraphSwitch:
     def __init__(self, window_size, state_graph, reuse_rate):
         self.window_size = window_size
         self.candidate_tree_count = 0
+        self.total_tree_count = 0
         self.state_graph = state_graph
         self.reuse_rate = reuse_rate
-        self.window = deque(maxlen=window_size)
+        if window_size > 0:
+            self.window = deque(maxlen=window_size)
 
     def update(self, value):
         self.candidate_tree_count += value
+        self.total_tree_count += 1
+
+        if self.window_size <= 0:
+            return
+
         if len(self.window) >= self.window_size:
             self.candidate_tree_count -= self.window[0]
         self.window.append(value)
 
     def switch(self):
-        if self.candidate_tree_count / self.window_size >= self.reuse_rate:
+        cur_reuse_rate = 0
+        if self.window_size <= 0:
+            cur_reuse_rate = self.candidate_tree_count / self.total_tree_count
+        else:
+            cur_reuse_rate = self.candidate_tree_count / self.window_size
+
+        if cur_reuse_rate >= self.reuse_rate:
             self.state_graph.is_stable = True
         else:
             self.state_graph.is_stable = False
@@ -555,7 +568,7 @@ if __name__ == '__main__':
                         dest="lossy_window_size", default=5, type=int,
                         help="Window size for lossy count")
     parser.add_argument("--reuse_window_size",
-                        dest="reuse_window_size", default=16, type=int,
+                        dest="reuse_window_size", default=0, type=int,
                         help="Window size for calculating reuse rate")
     parser.add_argument("--reuse_rate_upper_bound",
                         dest="reuse_rate_upper_bound", default=0.4, type=float,
@@ -652,8 +665,8 @@ if __name__ == '__main__':
 
     background_reuse_total_count = 0
     candidate_reuse_total_count = 0
-    background_reuse_window = deque(maxlen=args.reuse_window_size)
-    candidate_reuse_window = deque(maxlen=args.reuse_window_size)
+    # background_reuse_window = deque(maxlen=args.reuse_window_size)
+    # candidate_reuse_window = deque(maxlen=args.reuse_window_size)
 
     if args.enable_state_adaption:
         with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'w') as out:
