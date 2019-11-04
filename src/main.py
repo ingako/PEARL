@@ -24,7 +24,6 @@ plt.rcParams["figure.figsize"] = (20, 10)
 from stream_generator import *
 from LRU_state import *
 from state_graph import *
-from lossy_state_graph import *
 
 class AdaptiveTree(object):
     def __init__(self,
@@ -480,10 +479,7 @@ def evaluate():
     lru_states = LRU_state(capacity=repo_size, edit_distance_threshold=args.edit_distance_threshold)
     lru_states.enqueue(cur_state)
 
-    if args.lossy_window_size == 0:
-        state_graph = StateGraph(repo_size)
-    else:
-        state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
+    state_graph = LossyStateGraph(repo_size, args.lossy_window_size)
 
     graph_switch = GraphSwitch(window_size=args.reuse_window_size,
                                state_graph=state_graph,
@@ -592,7 +588,7 @@ if __name__ == '__main__':
         args.enable_state_adaption = True
 
     stream = None
-    potential_file = f"{args.generator}/{args.generator}.csv"
+    potential_file = f"{args.generator}/{args.generator}-{args.generator_seed}.csv"
 
     # prepare data
     if os.path.isfile(potential_file):

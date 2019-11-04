@@ -3,13 +3,19 @@
 import sys
 from random import randrange
 from pprint import pformat
+from graphviz import Digraph
 
-class StateGraph:
+class LossyStateGraph:
 
-    def __init__(self, capacity):
+    def __init__(self, capacity, window_size):
         self.graph = [None] * capacity
         self.capacity = capacity
         self.is_stable = False
+
+        self.drifted_tree_counter = 0
+        self.window_size = window_size
+
+        # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
         cur_node = self.graph[src]
@@ -29,7 +35,36 @@ class StateGraph:
         return -1
 
     def update(self, warning_tree_count):
-        pass
+        self.drifted_tree_counter += warning_tree_count
+        if self.drifted_tree_counter < self.window_size:
+            return
+
+        self.drifted_tree_counter -= self.window_size
+
+        # lossy count
+        for node in self.graph:
+            if node is None:
+                continue
+
+            for nei_key in list(node.neighbors):
+                # decrement freq by 1
+                node.neighbors[nei_key] -= 1
+                node.total_weight -= 1
+
+                if node.neighbors[nei_key] == 0:
+                    # remove edge
+                    self.graph[nei_key].indegree -= 1
+                    self.__try_remove_node(nei_key)
+
+                    del node.neighbors[nei_key]
+
+            self.__try_remove_node(node.key)
+
+    def __try_remove_node(self, key):
+        node = self.graph[key]
+
+        if node.indegree == 0 and len(node.neighbors) == 0:
+            self.graph[key] = None
 
     def add_node(self, key):
         self.graph[key] = Node(key)
@@ -45,8 +80,12 @@ class StateGraph:
 
         if dest not in src_node.neighbors.keys():
             src_node.neighbors[dest] = 0
+            self.graph[dest].indegree += 1
 
         src_node.neighbors[dest] += 1
+
+        # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
+        # self.g.render(view=False)
 
     def get_size(self):
         size = 0
@@ -74,6 +113,7 @@ class Node:
     def __init__(self, key):
         self.key = key
         self.neighbors = dict() # <tree_id, weight>
+        self.indegree = 0
         self.total_weight = 0
 
     def get_size(self):
