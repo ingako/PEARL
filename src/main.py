@@ -307,7 +307,7 @@ def adapt_state(drifted_tree_list,
         cur_state[drifted_tree.tree_pool_id] = '0'
         cur_state[swap_tree.tree_pool_id] = '1'
 
-        if args.enable_state_graph and state_graph.is_stable:
+        if args.enable_state_graph:
             state_graph.add_edge(drifted_tree.tree_pool_id, swap_tree.tree_pool_id)
 
         # replace drifted tree with swap tree
