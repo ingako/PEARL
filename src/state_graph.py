@@ -3,19 +3,13 @@
 import sys
 from random import randrange
 from pprint import pformat
-from graphviz import Digraph
 
-class LossyStateGraph:
+class StateGraph:
 
-    def __init__(self, capacity, window_size):
+    def __init__(self, capacity):
         self.graph = [None] * capacity
         self.capacity = capacity
         self.is_stable = False
-
-        self.drifted_tree_counter = 0
-        self.window_size = window_size
-
-        # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
         cur_node = self.graph[src]
@@ -25,52 +19,17 @@ class LossyStateGraph:
         r = randrange(cur_node.total_weight)
         cur_sum = 0
 
-        for key, val in cur_node.neighbors.items():
-            cur_sum += val[0]
+        for key in cur_node.neighbors:
+            cur_sum += cur_node.neighbors[key]
             if r < cur_sum:
-                val[1] += 1
+                cur_node.neighbors[key] += 1
+                cur_node.total_weight += 1
                 return key
 
         return -1
 
     def update(self, warning_tree_count):
-        self.drifted_tree_counter += warning_tree_count
-        if self.drifted_tree_counter < self.window_size:
-            return
-
-        self.drifted_tree_counter -= self.window_size
-
-        # lossy count
-        for node in self.graph:
-            if node is None:
-                continue
-
-            for nei_key, val in list(node.neighbors.items()):
-                # increment freq by #hits
-                val[0] += val[1]
-                node.total_weight += val[1]
-
-                # reset #hits
-                val[1] = 0
-
-                # decrement freq by 1
-                val[0] -= 1
-                node.total_weight -= 1
-
-                if val[0] <= 0:
-                    # remove edge
-                    self.graph[nei_key].indegree -= 1
-                    self.__try_remove_node(nei_key)
-
-                    del node.neighbors[nei_key]
-
-            self.__try_remove_node(node.key)
-
-    def __try_remove_node(self, key):
-        node = self.graph[key]
-
-        if node.indegree == 0 and len(node.neighbors) == 0:
-            self.graph[key] = None
+        pass
 
     def add_node(self, key):
         self.graph[key] = Node(key)
@@ -82,16 +41,12 @@ class LossyStateGraph:
             self.add_node(dest)
 
         src_node = self.graph[src]
+        src_node.total_weight += 1
 
         if dest not in src_node.neighbors.keys():
-            src_node.neighbors[dest] = [0, 0]
-            self.graph[dest].indegree += 1
+            src_node.neighbors[dest] = 0
 
-        # update #hits
-        src_node.neighbors[dest][1] += 1
-
-        # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
-        # self.g.render(view=False)
+        src_node.neighbors[dest] += 1
 
     def get_size(self):
         size = 0
@@ -118,8 +73,7 @@ class LossyStateGraph:
 class Node:
     def __init__(self, key):
         self.key = key
-        self.neighbors = dict() # <tree_id, [weight, num_hit]>
-        self.indegree = 0
+        self.neighbors = dict() # <tree_id, weight>
         self.total_weight = 0
 
     def get_size(self):
