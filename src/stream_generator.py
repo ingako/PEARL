@@ -14,7 +14,15 @@ from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
 
 class RecurrentDriftStream(ConceptDriftStream):
-    def __init__(self, generator='agrawal', concepts=[4, 0, 8], lam=1.0, has_noise=False):
+    def __init__(self,
+                 generator='agrawal',
+                 concepts=[4, 0, 8],
+                 lam=1.0,
+                 has_noise=False,
+                 all_concepts=[4, 0, 8, 6, 2, 1, 3, 5, 7, 9],
+                 concept_shift_step=-1,
+                 random_state=0):
+
         super().__init__()
 
         self.stable_period = 3000
@@ -25,7 +33,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.sample_idx = 0
         self.generator = generator
         self.concepts = concepts
-        self.random_state = 0
+        self.random_state = random_state
         self._random_state = check_random_state(self.random_state)
         self.width = 1
         self.position = 3000
@@ -37,7 +45,11 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.noises = [0.1, 0.2, 0.3, 0.4]
         self.noise_probs = self.__get_poisson_probs(4)
 
-
+        self.concept_shift_idx = len(concepts)
+        self.concept_shift_step = concept_shift_step
+        self.concept_shift_sample_interval = self.stable_period * 10
+        self.all_concepts = all_concepts
+        self.total_sample_idx = 0
 
     def next_sample(self, batch_size=1):
 
@@ -84,10 +96,13 @@ class RecurrentDriftStream(ConceptDriftStream):
             self.cur_stream = self.streams[self.stream_idx]
             self.drift_stream = self.streams[self.drift_stream_idx]
 
-            # generate a random noise
+            # generate random noise
             if self.has_noise and self.generator == 'agrawal':
                 self.noise_idx = self.__get_next_random_idx(self.noise_probs)
                 self.cur_stream.perturbation = self.noises[self.noise_idx]
+
+        self.total_sample_idx += batch_size
+        self.__concept_shift()
 
         return self.current_sample_x, self.current_sample_y.flatten()
 
@@ -179,6 +194,19 @@ class RecurrentDriftStream(ConceptDriftStream):
 
     def __calc_poisson_prob(self, k):
         return math.pow(self.lam, k) * math.exp(-self.lam) / math.factorial(k)
+
+    def __concept_shift(self):
+        if self.concept_shift_step <= 0:
+            return
+
+        if not self.total_sample_idx == 0 \
+                and self.total_sample_idx % self.concept_shift_sample_interval == 0:
+            # concept shift
+            for i in range(self.concept_shift_step):
+                self.concepts.pop(0)
+
+                self.concepts.append(self.all_concepts[self.concept_shift_idx])
+                self.concept_shift_idx = (self.concept_shift_idx + 1) % len(self.all_concepts)
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
