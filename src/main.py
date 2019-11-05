@@ -657,7 +657,7 @@ if __name__ == '__main__':
         out.flush()
 
     num_features = stream.n_features
-    arf_max_features = int(math.log2(num_features)) + 1
+    arf_max_features = int(math.sqrt(num_features)) + 1
 
     repo_size = args.num_trees * 160
     np.random.seed(args.random_state)
