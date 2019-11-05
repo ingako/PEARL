@@ -45,7 +45,6 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.noises = [0.1, 0.2, 0.3, 0.4]
         self.noise_probs = self.__get_poisson_probs(4)
 
-        self.concept_shift_idx = len(concepts)
         self.concept_shift_step = concept_shift_step
         self.concept_shift_sample_interval = self.stable_period * 10
         self.all_concepts = all_concepts
@@ -119,39 +118,50 @@ class RecurrentDriftStream(ConceptDriftStream):
         elif self.generator in ['led']:
             self.concepts = [v for v in range(0, 7)]
 
-        for concept in self.concepts:
-            if self.generator == 'agrawal':
+        if self.concept_shift_step > 0:
+            for concept in self.all_concepts:
                 stream = AGRAWALGenerator(classification_function=concept,
                                           random_state=self.random_state,
                                           balance_classes=False,
                                           perturbation=0.05)
-            elif self.generator == 'sea':
-                stream = SEAGenerator(classification_function=concept,
-                                      random_state=self.random_state,
-                                      balance_classes=False,
-                                      noise_percentage=0.05)
-            elif self.generator == 'sine':
-                stream = SineGenerator(classification_function=concept,
-                                       random_state=self.random_state,
-                                       balance_classes=False,
-                                       has_noise=False)
-            elif self.generator == 'stagger':
-                stream = STAGGERGenerator(classification_function=concept,
+                stream.prepare_for_use()
+                self.streams.append(stream)
+        else:
+
+            for concept in self.concepts:
+                if self.generator == 'agrawal':
+                    stream = AGRAWALGenerator(classification_function=concept,
+                                              random_state=self.random_state,
+                                              balance_classes=False,
+                                              perturbation=0.05)
+                elif self.generator == 'sea':
+                    stream = SEAGenerator(classification_function=concept,
                                           random_state=self.random_state,
-                                          balance_classes=False)
-            elif self.generator == 'mixed':
-                stream = MIXEDGenerator(classification_function=concept,
-                                        random_state=self.random_state,
-                                        balance_classes=False)
-            elif self.generator == 'led':
-                stream = LEDGeneratorDrift(random_state=self.random_state,
-                                           has_noise=True,
-                                           n_drift_features=concept)
-            else:
-                print(f"unknown stream generator {self.generator}")
-                exit()
-            stream.prepare_for_use()
-            self.streams.append(stream)
+                                          balance_classes=False,
+                                          noise_percentage=0.05)
+                elif self.generator == 'sine':
+                    stream = SineGenerator(classification_function=concept,
+                                           random_state=self.random_state,
+                                           balance_classes=False,
+                                           has_noise=False)
+                elif self.generator == 'stagger':
+                    stream = STAGGERGenerator(classification_function=concept,
+                                              random_state=self.random_state,
+                                              balance_classes=False)
+                elif self.generator == 'mixed':
+                    stream = MIXEDGenerator(classification_function=concept,
+                                            random_state=self.random_state,
+                                            balance_classes=False)
+                elif self.generator == 'led':
+                    stream = LEDGeneratorDrift(random_state=self.random_state,
+                                               has_noise=True,
+                                               n_drift_features=concept)
+                else:
+                    print(f"unknown stream generator {self.generator}")
+                    exit()
+
+                stream.prepare_for_use()
+                self.streams.append(stream)
 
         self.cur_stream = self.streams[0]
         self.drift_stream = self.streams[1]
@@ -203,10 +213,8 @@ class RecurrentDriftStream(ConceptDriftStream):
                 and self.total_sample_idx % self.concept_shift_sample_interval == 0:
             # concept shift
             for i in range(self.concept_shift_step):
-                self.concepts.pop(0)
-
-                self.concepts.append(self.all_concepts[self.concept_shift_idx])
-                self.concept_shift_idx = (self.concept_shift_idx + 1) % len(self.all_concepts)
+                stream = self.streams.pop(0)
+                self.streams.append(stream)
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
