@@ -17,6 +17,7 @@ class RecurrentDriftStream(ConceptDriftStream):
     def __init__(self,
                  generator='agrawal',
                  concepts=[4, 0, 8],
+                 width=1,
                  lam=1.0,
                  has_noise=False,
                  all_concepts=[4, 0, 8, 6, 2, 1, 3, 5, 7, 9],
@@ -35,7 +36,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.concepts = concepts
         self.random_state = random_state
         self._random_state = check_random_state(self.random_state)
-        self.width = 1
+        self.width = width
         self.position = 3000
 
         self.lam = lam
@@ -46,7 +47,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.noise_probs = self.__get_poisson_probs(4)
 
         self.concept_shift_step = concept_shift_step
-        self.concept_shift_sample_interval = self.stable_period * 10
+        self.concept_shift_sample_interval = self.stable_period * 20
         self.all_concepts = all_concepts
         self.total_sample_idx = 0
 
