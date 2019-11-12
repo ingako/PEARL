@@ -22,6 +22,7 @@ class RecurrentDriftStream(ConceptDriftStream):
                  has_noise=False,
                  all_concepts=[4, 0, 8, 6, 2, 1, 3, 5, 7, 9],
                  concept_shift_step=-1,
+                 concept_shift_sample_interval=200000,
                  random_state=0):
 
         super().__init__()
@@ -47,7 +48,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.noise_probs = self.__get_poisson_probs(4)
 
         self.concept_shift_step = concept_shift_step
-        self.concept_shift_sample_interval = self.stable_period * 20
+        self.concept_shift_sample_interval = concept_shift_sample_interval
         self.all_concepts = all_concepts
         self.total_sample_idx = 0
 
@@ -181,6 +182,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.n_targets = stream.n_targets
         self.name = 'drifting' + stream.name
 
+        print(f"len: {len(self.concepts)}")
         self.concept_probs = self.__get_poisson_probs(len(self.concepts))
 
     def __get_next_random_idx(self, probs):
