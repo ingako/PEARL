@@ -45,7 +45,6 @@ def get_kappa(output, is_moa=False):
         kappa_mean = np.mean(kappa) * 100
         kappa_stdev = np.std(kappa) * 100
 
-
     return f'{kappa_mean:.2f}\pm{kappa_stdev:.2f}'
 
 
@@ -67,8 +66,10 @@ for idx, dataset in enumerate(datasets):
 
     config = configs[dataset]
 
-    # ecpf results
+    # arf results
     arf_output = f'{cur_data_dir}/result-0.csv'
+
+    # ecpf results
     ecpf_ht_output = f'{cur_data_dir}/result-ecpf-ht.csv'
     ecpf_arf_output = f'{cur_data_dir}/result-ecpf-arf.csv'
 
@@ -79,10 +80,12 @@ for idx, dataset in enumerate(datasets):
     #               f'r{config.reuse_rate}-r{config.reuse_rate}-w{config.reuse_window_size}' \
     #               f'/lossy-{config.lossy_window}/result-parf-0.csv'
 
+    results[idx].append(get_acc(arf_output, is_moa=False))
     results[idx].append(get_acc(ecpf_ht_output, is_moa=True))
     results[idx].append(get_acc(ecpf_arf_output, is_moa=True))
     results[idx].append(get_acc(sarf_output, is_moa=False))
 
+    results[idx].append(get_kappa(arf_output, is_moa=False))
     results[idx].append(get_kappa(ecpf_ht_output, is_moa=True))
     results[idx].append(get_kappa(ecpf_arf_output, is_moa=True))
     results[idx].append(get_kappa(sarf_output, is_moa=False))
