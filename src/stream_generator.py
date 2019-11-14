@@ -22,7 +22,7 @@ class RecurrentDriftStream(ConceptDriftStream):
                  has_noise=False,
                  all_concepts=[4, 0, 8, 6, 2, 1, 3, 5, 7, 9],
                  concept_shift_step=-1,
-                 concept_shift_sample_interval=200000,
+                 concept_shift_sample_intervals=[200000, 250000, 300000],
                  random_state=0):
 
         super().__init__()
@@ -48,7 +48,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.noise_probs = self.__get_poisson_probs(4)
 
         self.concept_shift_step = concept_shift_step
-        self.concept_shift_sample_interval = concept_shift_sample_interval
+        self.concept_shift_sample_intervals = concept_shift_sample_intervals
         self.all_concepts = all_concepts
         self.total_sample_idx = 0
 
@@ -213,11 +213,17 @@ class RecurrentDriftStream(ConceptDriftStream):
             return
 
         if not self.total_sample_idx == 0 \
-                and self.total_sample_idx % self.concept_shift_sample_interval == 0:
-            # concept shift
-            for i in range(self.concept_shift_step):
-                stream = self.streams.pop(0)
-                self.streams.append(stream)
+                and self.total_sample_idx % self.concept_shift_sample_intervals[0] == 0:
+            interval = self.concept_shift_sample_intervals.pop(0)
+            self.concept_shift_sample_intervals.append(interval)
+
+        else:
+            return
+
+        # concept shift
+        for i in range(self.concept_shift_step):
+            stream = self.streams.pop(0)
+            self.streams.append(stream)
 
 
 def prepare_led_streams(noise_1 = 0.1, noise_2 = 0.1, func=0, alt_func=0):
