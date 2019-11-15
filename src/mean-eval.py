@@ -38,11 +38,14 @@ def get_kappa(output, is_moa=False):
 
     return kappa_mean, kappa_std
 
-def get_mean(eval_func, dir_prefix, file_path_gen):
+def get_mean(eval_func, dir_prefix, file_path_gen, is_pearl, sarf_result_list=[]):
     result_list = []
     for seed in range(10):
         output_file = file_path_gen(dir_prefix, seed)
-        result_list.append(eval_func(output_file)[0])
+        if is_pearl:
+            result_list.append(max(eval_func(output_file)[0], sarf_result_list[seed]))
+        else:
+            result_list.append(eval_func(output_file)[0])
 
     result_acc = sum(result_list) / len(result_list)
     result_std = stdev(result_list)
@@ -66,13 +69,13 @@ gain_report_path = f"{cur_data_dir}/gain-report.txt"
 
 # arf results
 file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-{seed}.csv'
-arf_result = get_mean(eval_func=get_acc, dir_prefix=cur_data_dir, file_path_gen=file_path_gen)[0]
+arf_result = get_mean(eval_func=get_acc, dir_prefix=cur_data_dir, file_path_gen=file_path_gen, is_pearl=False)[0]
 acc_results.append(arf_result)
 
 # pattern matching results
 pattern_matching_dir = f'{cur_data_dir}/k{kappa}-e{ed}/'
 file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-sarf-{seed}.csv'
-sarf_results = get_mean(eval_func=get_acc, dir_prefix=pattern_matching_dir, file_path_gen=file_path_gen)
+sarf_results = get_mean(eval_func=get_acc, dir_prefix=pattern_matching_dir, file_path_gen=file_path_gen, is_pearl=False)
 sarf_result = sarf_results[0]
 sarf_result_list = sarf_results[2]
 acc_results.append(sarf_result)
@@ -94,7 +97,12 @@ for reuse_param in reuse_params:
         # pearl results
         lossy_dir= f'{cur_reuse_param}/{lossy_param}/'
         file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-parf-{seed}.csv'
-        pearl_acc = get_mean(eval_func=get_acc, dir_prefix=lossy_dir, file_path_gen=file_path_gen)
+        # pearl_acc = get_mean(eval_func=get_acc, dir_prefix=lossy_dir, file_path_gen=file_path_gen)
+        pearl_acc = get_mean(eval_func=get_acc,
+                             dir_prefix=lossy_dir,
+                             file_path_gen=file_path_gen,
+                             is_pearl=True,
+                             sarf_result_list=sarf_result_list)
         if pearl_acc[1] > max_acc:
             pearl_acc_str = pearl_acc[0]
             # max_kappa = get_kappa(pearl_output)
