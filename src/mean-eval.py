@@ -46,7 +46,7 @@ def get_mean(eval_func, dir_prefix, file_path_gen):
 
     result_acc = sum(result_list) / len(result_list)
     result_std = stdev(result_list)
-    return f'${result_acc:.2f}\pm{result_std:.2f}$'
+    return f'${result_acc:.2f}\pm{result_std:.2f}$', result_acc, result_list
 
 def is_empty_file(fpath):
     return False if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else True
@@ -56,16 +56,50 @@ base_dir = os.getcwd()
 dataset='agrawal-6-gradual'
 kappa=0.2
 ed=90
-reuse_rate=0.6
-reuse_window_size=0
+# reuse_rate=0.6
+# reuse_window_size=0
 
-results = []
+acc_results = []
 
 cur_data_dir = f"{base_dir}/{dataset}"
 gain_report_path = f"{cur_data_dir}/gain-report.txt"
 
 # arf results
-# arf_output = f'{cur_data_dir}/result-{seed}.csv'
 file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-{seed}.csv'
-arf_result = get_mean(get_acc, cur_data_dir, file_path_gen)
-print(arf_result)
+arf_result = get_mean(eval_func=get_acc, dir_prefix=cur_data_dir, file_path_gen=file_path_gen)[0]
+acc_results.append(arf_result)
+
+# pattern matching results
+pattern_matching_dir = f'{cur_data_dir}/k{kappa}-e{ed}/'
+file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-sarf-{seed}.csv'
+sarf_results = get_mean(eval_func=get_acc, dir_prefix=pattern_matching_dir, file_path_gen=file_path_gen)
+sarf_result = sarf_results[0]
+sarf_result_list = sarf_results[2]
+acc_results.append(sarf_result)
+
+pearl_acc_str = ''
+max_acc = 0
+max_kappa = 0
+memory = 0
+time = 0
+
+reuse_params = [f for f in os.listdir(pattern_matching_dir) if os.path.isdir(os.path.join(pattern_matching_dir, f))]
+for reuse_param in reuse_params:
+    cur_reuse_param = f"{pattern_matching_dir}/{reuse_param}"
+
+    lossy_params = [f for f in os.listdir(cur_reuse_param) if os.path.isdir(os.path.join(cur_reuse_param, f))]
+
+    for lossy_param in lossy_params:
+
+        # pearl results
+        lossy_dir= f'{cur_reuse_param}/{lossy_param}/'
+        file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-parf-{seed}.csv'
+        pearl_acc = get_mean(eval_func=get_acc, dir_prefix=lossy_dir, file_path_gen=file_path_gen)
+        if pearl_acc[1] > max_acc:
+            pearl_acc_str = pearl_acc[0]
+            # max_kappa = get_kappa(pearl_output)
+
+acc_results.append(pearl_acc_str)
+
+acc_result_str = ' & '.join([str(v) for v in acc_results])
+print(f'{acc_result_str} \\\\ ')
