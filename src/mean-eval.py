@@ -38,6 +38,15 @@ def get_kappa(output, is_moa=False):
 
     return kappa_mean, kappa_std
 
+def get_mem(output):
+    df = pd.read_csv(output)
+    return df["memory"].iloc[-1] / 1024, 0
+
+def get_time(output):
+    f = open(output,'r')
+    result = float(f.readlines()[0][:-1]) / 60
+    return result , 0
+
 def get_mean(eval_func, dir_prefix, file_path_gen, is_pearl, sarf_result_list=[]):
     result_list = []
     for seed in range(10):
@@ -56,26 +65,36 @@ def is_empty_file(fpath):
 
 base_dir = os.getcwd()
 
+# dataset='agrawal-gradual'
+# kappa=0.2
+# ed=110
+
 dataset='agrawal-6-gradual'
 kappa=0.2
 ed=90
-# reuse_rate=0.6
-# reuse_window_size=0
 
-for cur_eval_func in [get_acc, get_kappa]:
+for cur_eval_func in [get_acc, get_kappa, get_mem, get_time]:
     acc_results = []
 
     cur_data_dir = f"{base_dir}/{dataset}"
     gain_report_path = f"{cur_data_dir}/gain-report.txt"
 
     # arf results
-    file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-{seed}.csv'
+    if cur_eval_func == get_time:
+        file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/time-{seed}.log'
+    else:
+        file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-{seed}.csv'
     arf_result = get_mean(eval_func=cur_eval_func, dir_prefix=cur_data_dir, file_path_gen=file_path_gen, is_pearl=False)[0]
     acc_results.append(arf_result)
 
     # pattern matching results
     pattern_matching_dir = f'{cur_data_dir}/k{kappa}-e{ed}/'
-    file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-sarf-{seed}.csv'
+
+    if cur_eval_func == get_time:
+        file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/time-sarf-{seed}.log'
+    else:
+        file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-sarf-{seed}.csv'
+
     sarf_results = get_mean(eval_func=cur_eval_func, dir_prefix=pattern_matching_dir, file_path_gen=file_path_gen, is_pearl=False)
     sarf_result = sarf_results[0]
     sarf_result_list = sarf_results[2]
@@ -96,7 +115,11 @@ for cur_eval_func in [get_acc, get_kappa]:
 
             # pearl results
             lossy_dir= f'{cur_reuse_param}/{lossy_param}/'
-            file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-parf-{seed}.csv'
+
+            if cur_eval_func == get_time:
+                file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/time-parf-{seed}.log'
+            else:
+                file_path_gen = lambda dir_prefix, seed : f'{dir_prefix}/result-parf-{seed}.csv'
             pearl_acc = get_mean(eval_func=cur_eval_func,
                                  dir_prefix=lossy_dir,
                                  file_path_gen=file_path_gen,
