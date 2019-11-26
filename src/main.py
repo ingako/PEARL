@@ -9,6 +9,7 @@ import random
 import pathlib
 import time
 import os.path
+import logging
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -168,7 +169,8 @@ def select_candidate_trees(count,
 
     if args.enable_state_graph:
         # try trigger lossy counting
-        state_graph.update(len(warning_tree_id_list))
+        if state_graph.update(len(warning_tree_id_list)):
+            logger.info(f"{count},lossy counting triggered")
 
     if state_graph.is_stable:
         for warning_tree_id in warning_tree_id_list:
@@ -185,6 +187,9 @@ def select_candidate_trees(count,
                     # print("candidate tree added")
 
     if not state_graph.is_stable:
+        logger.info(f"{count},pattern matching")
+
+        # trigger pattern matching
         closest_state = lru_states.get_closest_state(target_state)
 
         update_candidate_trees(candidate_trees=candidate_trees,
@@ -192,6 +197,8 @@ def select_candidate_trees(count,
                                cur_state=cur_state,
                                closest_state=closest_state,
                                cur_tree_pool_size=cur_tree_pool_size)
+    else:
+        logger.info(f"{count},graph transition")
 
 def update_reuse_rate(background_count, candidate_count, state_graph):
     global background_reuse_total_count
@@ -595,7 +602,8 @@ if __name__ == '__main__':
         stream = FileStream(potential_file)
         stream.prepare_for_use()
 
-        args.max_samples = stream.n_remaining_samples()
+        # args.max_samples = stream.n_remaining_samples()
+        args.max_samples = min(args.max_samples, stream.n_remaining_samples())
 
     else:
         print(f"preparing stream from {args.generator} generator...")
@@ -670,6 +678,14 @@ if __name__ == '__main__':
     if args.enable_state_adaption:
         with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'w') as out:
             out.write("background_window_count,candidate_window_count,reuse_rate\n")
+
+    logging.basicConfig(filename=f'{result_directory}/processes-{args.generator_seed}.info',
+                        format='%(message)s',
+                        filemode='w')
+
+    logger = logging.getLogger()
+
+    logger.setLevel(logging.DEBUG)
 
     start = time.process_time()
     evaluate()
