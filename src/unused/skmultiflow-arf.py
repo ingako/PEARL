@@ -9,7 +9,7 @@ from skmultiflow.drift_detection.adwin import ADWIN
 
 def evaluate():
     stream = RecurrentDriftStream()
-    stream.prepare_for_use() 
+    stream.prepare_for_use()
     print(stream.get_data_info())
 
     learner = AdaptiveRandomForest(n_estimators=args.num_trees,
