@@ -45,6 +45,13 @@ def get_time(output):
 
 base_dir = os.getcwd()
 
+dataset='agrawal-3'
+kappa=0.2
+ed=110
+reuse_rate = 0.4
+reuse_window_size=0
+no_lossy_win = 100000000
+
 # dataset='agrawal-gradual'
 # kappa=0.2
 # ed=110
@@ -53,12 +60,12 @@ base_dir = os.getcwd()
 # kappa=0.2
 # ed=90
 
-dataset = 'agrawal-6-shift-66'
-kappa = 0.1
-ed = 90
-reuse_rate = 0.6
-reuse_window_size = 600
-no_lossy_win = 100000000
+# dataset = 'agrawal-6-shift-66'
+# kappa = 0.1
+# ed = 90
+# reuse_rate = 0.6
+# reuse_window_size = 600
+# no_lossy_win = 100000000
 
 no_lossy_results = []
 no_lossy_kappa_results = []
