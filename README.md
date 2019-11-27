@@ -35,9 +35,11 @@ The original datasets are available on MOA and Kaggle, see references in the pap
 
 ##### Real World Dataset
 
-The results have already been included in the according data folders under `/data/[real-world-data-name]/`.  
+The running scripts for PEARL is at `run/run-real-world.sh`
 
 ECPF compatible with [MOA version 2019.05.0](https://github.com/Waikato/moa/tree/2019.05.0) is available [here](https://github.com/ingako/CPF).
 The MOA runner script for ECPF is available at `eval/ecpf-runner.sh`.
 
 The evaluation scripts are at `eval/mean-eval-real-world.py` and `eval/gain-eval-real-world.py`.
+The evaluation results have already been included in the according data folders under `/data/[real-world-data-name]/`.  
+

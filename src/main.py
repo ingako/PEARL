@@ -594,7 +594,7 @@ if __name__ == '__main__':
         args.enable_state_adaption = True
 
     stream = None
-    potential_file = f"{args.generator}/{args.generator}-{args.generator_seed}.csv"
+    potential_file = f"../data/{args.generator}/{args.generator}-{args.generator_seed}.csv"
 
     # prepare data
     if os.path.isfile(potential_file):
