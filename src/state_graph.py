@@ -3,7 +3,7 @@
 import sys
 from random import randrange
 from pprint import pformat
-from graphviz import Digraph
+# from graphviz import Digraph
 
 class LossyStateGraph:
 
