@@ -80,7 +80,7 @@ ed=110
 # kappa=0.2
 # ed=90
 
-cur_data_dir = f"{base_dir}/{dataset}"
+cur_data_dir = f"{base_dir}/../data/{dataset}"
 
 # arf results
 arf_acc_results = []
