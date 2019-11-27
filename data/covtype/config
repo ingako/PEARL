@@ -1,0 +1,10 @@
+metric_output_file: covtype/result.csv
+warning_delta: 0.0001
+drift_delta: 1e-05
+max_samples: 581012
+wait_samples: 100
+sample_freq: 1000
+kappa_window: 50
+random_state: 0
+enable_state_adaption: False
+enable_state_graph: False
