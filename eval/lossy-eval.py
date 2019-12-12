@@ -77,7 +77,7 @@ lossy_kappa_results = []
 lossy_time_results = []
 lossy_mem_results = []
 
-cur_data_dir = f"{base_dir}/{dataset}"
+cur_data_dir = f"{base_dir}/../data/{dataset}"
 
 for seed in range(10):
 

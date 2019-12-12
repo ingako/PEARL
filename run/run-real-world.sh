@@ -18,7 +18,7 @@ for i in ${!generators[@]} ; do
     	> logs/$generator-s-$kappa-$ed.out 2>&1 &"
     echo $cmd_str
 
-    ./main.py --max_samples $MAX_SAMPLES --generator $generator -s \
+    ../src/main.py --max_samples $MAX_SAMPLES --generator $generator -s \
     	--cd_kappa_threshold $kappa --edit_distance_threshold $ed \
     	> logs/$generator-s-$kappa-$ed.out 2>&1 &
 
