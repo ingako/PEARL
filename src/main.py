@@ -594,7 +594,8 @@ if __name__ == '__main__':
         args.enable_state_adaption = True
 
     stream = None
-    potential_file = f"../data/{args.generator}/{args.generator}-{args.generator_seed}.csv"
+    potential_file = f"../data/{args.generator}/{args.generator}.csv"
+    potential_pre_gen_file = f"../data/{args.generator}/{args.generator}-{args.generator_seed}.csv"
 
     # prepare data
     if os.path.isfile(potential_file):
@@ -602,12 +603,17 @@ if __name__ == '__main__':
         stream = FileStream(potential_file)
         stream.prepare_for_use()
 
-        # args.max_samples = stream.n_remaining_samples()
+        args.max_samples = min(args.max_samples, stream.n_remaining_samples())
+
+    elif os.path.isfile(potential_pre_gen_file):
+        print(f"preparing stream from file {potential_pre_gen_file}...")
+        stream = FileStream(potential_pre_gen_file)
+        stream.prepare_for_use()
+
         args.max_samples = min(args.max_samples, stream.n_remaining_samples())
 
     else:
         print(f"preparing stream from {args.generator} generator...")
-        # concepts = [v for v in range(0, 10)]
         concepts = [4,0,8]
         stream = RecurrentDriftStream(generator=args.generator,
                                       concepts=concepts,
