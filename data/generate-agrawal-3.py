@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
-from stream_generator import *
+import sys
+
+path = r'../'
+if path not in sys.path:
+    sys.path.append(path)
+
+from src.stream_generator import RecurrentDriftStream
 
 max_samples = 400001
 
