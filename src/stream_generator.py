@@ -16,6 +16,8 @@ from skmultiflow.data import ConceptDriftStream
 class RecurrentDriftStream(ConceptDriftStream):
     def __init__(self,
                  generator='agrawal',
+                 stable_period=3000,
+                 position=3000,
                  concepts=[4, 0, 8],
                  width=1,
                  lam=1.0,
@@ -23,29 +25,40 @@ class RecurrentDriftStream(ConceptDriftStream):
                  all_concepts=[4, 0, 8, 6, 2, 1, 3, 5, 7, 9],
                  concept_shift_step=-1,
                  concept_shift_sample_intervals=[200000, 250000, 300000],
+                 stable_period_lam=-1,
+                 stable_period_start=1000,
+                 stable_period_base=200,
                  random_state=0):
 
         super().__init__()
 
-        self.stable_period = 3000
         self.streams = []
         self.cur_stream = None
         self.stream_idx = 0
         self.drift_stream_idx = 0
         self.sample_idx = 0
+
         self.generator = generator
+        self.stable_period = stable_period
+        self.position = position
         self.concepts = concepts
         self.random_state = random_state
         self._random_state = check_random_state(self.random_state)
         self.width = width
-        self.position = 3000
 
         self.lam = lam
         self.concepts_probs = []
 
-        self.has_noise=has_noise
+        self.has_noise = has_noise
         self.noises = [0.1, 0.2, 0.3, 0.4]
-        self.noise_probs = self.__get_poisson_probs(4)
+        self.noise_probs = self.__get_poisson_probs(4, self.lam)
+
+        self.stable_period_lam = stable_period_lam
+        self.stable_period_start = stable_period_start
+        self.stable_period_base  = stable_period_base
+        self.stable_period_probs = \
+                self.__get_poisson_probs(20, self.stable_period_lam)
+        print(f"stable_period_probs: {self.stable_period_probs}")
 
         self.concept_shift_step = concept_shift_step
         self.concept_shift_sample_intervals = concept_shift_sample_intervals
@@ -96,6 +109,13 @@ class RecurrentDriftStream(ConceptDriftStream):
 
             self.cur_stream = self.streams[self.stream_idx]
             self.drift_stream = self.streams[self.drift_stream_idx]
+
+            if self.stable_period_lam > 0:
+                self.stable_period = self.stable_period_start \
+                        + self.stable_period_base \
+                        * self.__get_next_random_idx(self.stable_period_probs)
+                self.position = self.stable_period
+                print(self.position)
 
             # generate random noise
             if self.has_noise and self.generator == 'agrawal':
@@ -183,7 +203,8 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.name = 'drifting' + stream.name
 
         print(f"len: {len(self.concepts)}")
-        self.concept_probs = self.__get_poisson_probs(len(self.concepts))
+        self.concept_probs = \
+                self.__get_poisson_probs(len(self.concepts), self.lam)
 
     def __get_next_random_idx(self, probs):
         # r = random.uniform(0, 1)
@@ -196,17 +217,17 @@ class RecurrentDriftStream(ConceptDriftStream):
             if r < cur_sum:
                 return idx
 
-    def __get_poisson_probs(self, num_events):
+    def __get_poisson_probs(self, num_events, lam):
         probs = [0] * num_events
         for e in range(0, num_events):
-            probs[e] = self.__calc_poisson_prob(e)
+            probs[e] = self.__calc_poisson_prob(e, lam)
 
         norm_probs = [float(i)/sum(probs) for i in probs]
         print(f"norm_probs: {norm_probs}")
         return norm_probs
 
-    def __calc_poisson_prob(self, k):
-        return math.pow(self.lam, k) * math.exp(-self.lam) / math.factorial(k)
+    def __calc_poisson_prob(self, k, lam):
+        return math.pow(lam, k) * math.exp(-lam) / math.factorial(k)
 
     def __concept_shift(self):
         if self.concept_shift_step <= 0:
