@@ -2,6 +2,7 @@
 
 import math
 import numpy as np
+import logging
 
 from skmultiflow.utils import check_random_state
 from skmultiflow.data import AGRAWALGenerator
@@ -28,6 +29,7 @@ class RecurrentDriftStream(ConceptDriftStream):
                  stable_period_lam=-1,
                  stable_period_start=1000,
                  stable_period_base=200,
+                 stable_period_logger=None,
                  random_state=0):
 
         super().__init__()
@@ -58,6 +60,7 @@ class RecurrentDriftStream(ConceptDriftStream):
         self.stable_period_base  = stable_period_base
         self.stable_period_probs = \
                 self.__get_poisson_probs(20, self.stable_period_lam)
+        self.stable_period_logger = stable_period_logger
         print(f"stable_period_probs: {self.stable_period_probs}")
 
         self.concept_shift_step = concept_shift_step
@@ -116,6 +119,9 @@ class RecurrentDriftStream(ConceptDriftStream):
                         * self.__get_next_random_idx(self.stable_period_probs)
                 self.position = self.stable_period
                 print(self.position)
+
+                if self.stable_period_logger is not None:
+                    self.stable_period_logger.info(str(self.stable_period))
 
             # generate random noise
             if self.has_noise and self.generator == 'agrawal':
