@@ -211,46 +211,12 @@ class Pearl:
         else:
             logger.info(f"{count},graph transition")
     
-    def update_reuse_rate(self, background_count, candidate_count):
-        global background_reuse_total_count
-        global candidate_reuse_total_count
-        global background_reuse_window
-        global candidate_reuse_window
-    
-        if len(background_reuse_window) >= args.reuse_window_size:
-            background_reuse_total_count -= background_reuse_window[0]
-            candidate_reuse_total_count -= candidate_reuse_window[0]
-    
-        background_reuse_total_count += background_count
-        candidate_reuse_total_count += candidate_count
-    
-        background_reuse_window.append(background_count)
-        candidate_reuse_window.append(candidate_count)
-    
-        total_reuse_count = background_reuse_total_count + candidate_reuse_total_count
-        reuse_rate = 0.0
-        if total_reuse_count != 0:
-            reuse_rate = candidate_reuse_total_count / total_reuse_count
-    
-        with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'a') as out:
-            out.write(f"{background_reuse_total_count},{candidate_reuse_total_count},{reuse_rate}\n")
-            out.flush()
-    
-        if args.enable_state_graph:
-            if reuse_rate >= args.reuse_rate_upper_bound:
-                self.state_graph.is_stable = True
-    
-            if reuse_rate < args.reuse_rate_lower_bound:
-                self.state_graph.is_stable = False
-    
     def adapt_state(self,
                     drifted_tree_list,
                     candidate_trees,
                     cur_tree_pool_size,
                     drifted_tree_pos,
                     actual_labels):
-    
-        # print("Drifts detected. Adapting states for", [t.tree_pool_id for t in drifted_tree_list])
     
         # sort candidates by kappa
         for candidate_tree in candidate_trees:
@@ -330,8 +296,6 @@ class Pearl:
     
         if args.enable_state_graph:
             self.graph_switch.switch()
-        # if args.enable_state_adaption:
-            # update_reuse_rate(background_count, candidate_count, state_graph)
     
         return cur_tree_pool_size
     
@@ -423,7 +387,6 @@ class Pearl:
                                                               actual_labels=actual_labels)
     
                     self.lru_states.enqueue(self.cur_state)
-                    # print(f"Add state: {cur_state}")
     
                 if (count % args.wait_samples == 0) and (count != 0):
                     accuracy = correct / args.wait_samples
@@ -633,11 +596,6 @@ if __name__ == '__main__':
     repo_size = args.num_trees * 160
     np.random.seed(args.random_state)
     random.seed(0)
-
-    background_reuse_total_count = 0
-    candidate_reuse_total_count = 0
-    # background_reuse_window = deque(maxlen=args.reuse_window_size)
-    # candidate_reuse_window = deque(maxlen=args.reuse_window_size)
 
     if args.enable_state_adaption:
         with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'w') as out:
