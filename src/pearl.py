@@ -128,7 +128,9 @@ class Pearl:
         self.graph_switch = GraphSwitch(window_size=reuse_window_size,
                                    state_graph=self.state_graph,
                                    reuse_rate=reuse_rate_upper_bound)
-    
+
+        self.cur_tree_pool_size = num_trees
+
         self.tree_pool = [None] * repo_size
         for i in range(0, num_trees):
             self.tree_pool[i] = self.adaptive_trees[i]
@@ -177,12 +179,11 @@ class Pearl:
     
     def update_candidate_trees(self,
                                candidate_trees,
-                               closest_state,
-                               cur_tree_pool_size):
+                               closest_state):
         if len(closest_state) == 0:
             return
     
-        for i in range(0, cur_tree_pool_size):
+        for i in range(0, self.cur_tree_pool_size):
     
             if self.cur_state[i] == '0' \
                     and closest_state[i] == '1' \
@@ -199,8 +200,7 @@ class Pearl:
                                count,
                                target_state,
                                warning_tree_id_list,
-                               candidate_trees,
-                               cur_tree_pool_size):
+                               candidate_trees):
     
         if self.enable_state_graph:
             # try trigger lossy counting
@@ -225,15 +225,13 @@ class Pearl:
             closest_state = self.lru_states.get_closest_state(target_state)
     
             self.update_candidate_trees(candidate_trees=candidate_trees,
-                                        closest_state=closest_state,
-                                        cur_tree_pool_size=cur_tree_pool_size)
+                                        closest_state=closest_state)
         else:
             self.logger.info(f"{count},graph transition")
     
     def adapt_state(self,
                     drifted_tree_list,
                     candidate_trees,
-                    cur_tree_pool_size,
                     drifted_tree_pos,
                     actual_labels):
     
@@ -244,7 +242,7 @@ class Pearl:
     
         for drifted_tree in drifted_tree_list:
             # TODO
-            if cur_tree_pool_size >= self.repo_size:
+            if self.cur_tree_pool_size >= self.repo_size:
                 print("early break")
                 exit()
     
@@ -298,9 +296,9 @@ class Pearl:
     
                     # assign a new tree_pool_id for background tree
                     # and add background tree to tree_pool
-                    swap_tree.tree_pool_id = cur_tree_pool_size
-                    self.tree_pool[cur_tree_pool_size] = swap_tree
-                    cur_tree_pool_size += 1
+                    swap_tree.tree_pool_id = self.cur_tree_pool_size
+                    self.tree_pool[self.cur_tree_pool_size] = swap_tree
+                    self.cur_tree_pool_size += 1
     
             self.cur_state[drifted_tree.tree_pool_id] = '0'
             self.cur_state[swap_tree.tree_pool_id] = '1'
@@ -315,143 +313,3 @@ class Pearl:
     
         if self.enable_state_graph:
             self.graph_switch.switch()
-    
-        return cur_tree_pool_size
-    
-    def prequential_evaluation(self,
-                               stream,
-                               max_samples,
-                               wait_samples,
-                               sample_freq,
-                               metric_output_file):
-        correct = 0
-        x_axis = []
-        accuracy_list = []
-        actual_labels = deque(maxlen=self.kappa_window) # a window of size kappa_window
-    
-        sample_counter = 0
-        sample_counter_interval = 0
-        window_accuracy = 0.0
-        window_kappa = 0.0
-        window_actual_labels = []
-        window_predicted_labels = []
-    
-        current_state = []
-        candidate_trees = []
-    
-        cur_tree_pool_size = self.num_trees
-    
-        with open(metric_output_file, 'w') as out:
-            out.write("count,accuracy,kappa,memory\n")
-    
-            for count in range(0, max_samples):
-                X, y = stream.next_sample()
-                actual_labels.append(y[0])
-    
-                # test
-                prediction = self.predict(X, y, self.adaptive_trees, should_vote=True)[0]
-    
-                # test on candidate trees
-                self.predict(X, y, candidate_trees, should_vote=False)
-    
-                window_actual_labels.append(y[0])
-                window_predicted_labels.append(prediction)
-                if prediction == y[0]:
-                    correct += 1
-    
-                target_state = copy.deepcopy(self.cur_state)
-    
-                warning_tree_id_list = []
-                drifted_tree_list = []
-                drifted_tree_pos = []
-    
-                for i in range(0, self.num_trees):
-    
-                    tree = self.adaptive_trees[i]
-                    warning_detected_only = False
-                    if tree.warning_detector.detected_change():
-                        warning_detected_only = True
-                        tree.warning_detector.reset()
-    
-                        tree.bg_adaptive_tree = \
-                            AdaptiveTree(tree=ARFHoeffdingTree(max_features=self.arf_max_features),
-                                         kappa_window=self.kappa_window,
-                                         warning_delta=self.warning_delta,
-                                         drift_delta=self.drift_delta)
-    
-                    if tree.drift_detector.detected_change():
-                        warning_detected_only = False
-                        tree.drift_detector.reset()
-                        drifted_tree_list.append(tree)
-                        drifted_tree_pos.append(i)
-    
-                        if not self.enable_state_adaption:
-                            if tree.bg_adaptive_tree is None:
-                                tree.tree = ARFHoeffdingTree(max_features=self.arf_max_features)
-                            else:
-                                tree.tree = tree.bg_adaptive_tree.tree
-                            tree.reset()
-    
-                    if warning_detected_only:
-                        warning_tree_id_list.append(tree.tree_pool_id)
-                        target_state[tree.tree_pool_id] = '2'
-    
-                if self.enable_state_adaption:
-                    # if warnings are detected, find closest state and update candidate_trees list
-                    if len(warning_tree_id_list) > 0:
-                        self.select_candidate_trees(count=count,
-                                                    target_state=target_state,
-                                                    warning_tree_id_list=warning_tree_id_list,
-                                                    candidate_trees=candidate_trees,
-                                                    cur_tree_pool_size=cur_tree_pool_size)
-    
-                    # if actual drifts are detected, swap trees and update cur_state
-                    if len(drifted_tree_list) > 0:
-                        cur_tree_pool_size = self.adapt_state(drifted_tree_list=drifted_tree_list,
-                                                              candidate_trees=candidate_trees,
-                                                              cur_tree_pool_size=cur_tree_pool_size,
-                                                              drifted_tree_pos=drifted_tree_pos,
-                                                              actual_labels=actual_labels)
-    
-                    self.lru_states.enqueue(self.cur_state)
-    
-                if (count % wait_samples == 0) and (count != 0):
-                    accuracy = correct / wait_samples
-    
-                    window_accuracy = (window_accuracy * sample_counter + accuracy) \
-                        / (sample_counter + 1)
-    
-                    kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
-                    window_kappa = (window_kappa * sample_counter + kappa) \
-                            / (sample_counter + 1)
-    
-                    sample_counter += 1
-                    sample_counter_interval += wait_samples
-                    correct = 0
-    
-                    if sample_counter_interval == sample_freq:
-                        x_axis.append(count)
-                        accuracy_list.append(window_accuracy)
-    
-                        memory_usage = 0
-                        if self.enable_state_adaption:
-                            memory_usage = self.lru_states.get_size()
-                        if self.enable_state_graph:
-                            memory_usage += self.state_graph.get_size()
-                        print(f"{count},{window_accuracy},{window_kappa},{memory_usage}")
-                        out.write(f"{count},{window_accuracy},{window_kappa},{memory_usage}\n")
-                        out.flush()
-    
-                        sample_counter = 0
-                        sample_counter_interval = 0
-    
-                        window_accuracy = 0.0
-                        window_kappa = 0.0
-                        window_actual_labels = []
-                        window_predicted_labels = []
-    
-                # train
-                self.partial_fit(X, y)
-    
-        print(f"length of candidate_trees: {len(candidate_trees)}")
-

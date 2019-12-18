@@ -11,6 +11,7 @@ import os.path
 import numpy as np
 from skmultiflow.data.file_stream import FileStream
 
+from evaluator import Evaluator
 from pearl import Pearl
 
 if __name__ == '__main__':
@@ -208,11 +209,12 @@ if __name__ == '__main__':
                   logger=logger)
 
     start = time.process_time()
-    pearl.prequential_evaluation(stream=stream,
-                                 max_samples=args.max_samples,
-                                 wait_samples=args.wait_samples,
-                                 sample_freq=args.sample_freq,
-                                 metric_output_file=metric_output_file)
+    Evaluator.prequential_evaluation(classifier=pearl,
+				     stream=stream,
+                                     max_samples=args.max_samples,
+                                     wait_samples=args.wait_samples,
+                                     sample_freq=args.sample_freq,
+                                     metric_output_file=metric_output_file)
     elapsed = time.process_time() - start
 
     with open(f"{time_output_file}", 'w') as out:
