@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
     start = time.process_time()
     Evaluator.prequential_evaluation(classifier=pearl,
-				     stream=stream,
+                                     stream=stream,
                                      max_samples=args.max_samples,
                                      wait_samples=args.wait_samples,
                                      sample_freq=args.sample_freq,
