@@ -21,9 +21,6 @@ if __name__ == '__main__':
     parser.add_argument("-g", "--generator",
                         dest="generator", default="agrawal", type=str,
                         help="name of the synthetic data generator")
-    # parser.add_argument("-o", "--output",
-    #                     dest="metric_output_file", default="result", type=str,
-    #                     help="output path for metrics")
     # parser.add_argument("--pool",
     #                     dest="tree_pool_size", default=180, type=int,
     #                     help="number of trees in the online tree repository")

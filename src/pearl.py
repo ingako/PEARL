@@ -182,9 +182,6 @@ class Pearl:
         if len(closest_state) == 0:
             return
     
-        # print(f"closest_state {closest_state}")
-        # print(f"cur_state {cur_state}")
-    
         for i in range(0, cur_tree_pool_size):
     
             if self.cur_state[i] == '0' \
@@ -197,8 +194,6 @@ class Pearl:
     
                 self.tree_pool[i].is_candidate = True
                 candidate_trees.append(self.tree_pool[i])
-    
-        # print("candidate_trees", [c.tree_pool_id for c in candidate_trees])
     
     def select_candidate_trees(self,
                                count,
@@ -214,17 +209,14 @@ class Pearl:
     
         if self.state_graph.is_stable:
             for warning_tree_id in warning_tree_id_list:
-                # print("finding next_id...")
+
                 next_id = self.state_graph.get_next_tree_id(warning_tree_id)
                 if next_id == -1:
-                    # print(f"tree {warning_tree_id} does not have next id")
                     self.state_graph.is_stable = False
     
                 else:
-                    # print("Next tree found, adding candidate tree...")
                     if not self.tree_pool[next_id].is_candidate:
                         candidate_trees.append(self.tree_pool[next_id])
-                        # print("candidate tree added")
     
         if not self.state_graph.is_stable:
             self.logger.info(f"{count},pattern matching")
@@ -287,11 +279,8 @@ class Pearl:
     
                 else:
                     prediction_win_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
-                    # print(f"bg_tree window size: {prediction_win_size}")
     
                     drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
-                    # print(f"bg_tree kappa: {drifted_tree.bg_adaptive_tree.kappa} "
-                    #       f"swap_tree.kappa: {swap_tree.kappa}")
     
                     if drifted_tree.bg_adaptive_tree.kappa == -sys.maxsize:
                         # add bg_adaptive_tree to the repo even if it didn't fill the window

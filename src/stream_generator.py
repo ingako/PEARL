@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import math
 import numpy as np
 import logging
@@ -213,9 +211,7 @@ class RecurrentDriftStream(ConceptDriftStream):
                 self.__get_poisson_probs(len(self.concepts), self.lam)
 
     def __get_next_random_idx(self, probs):
-        # r = random.uniform(0, 1)
         r = self._random_state.uniform(0, 1)
-        # print(f"next_random_val={r}")
         cur_sum = 0
 
         for idx, val in enumerate(probs):

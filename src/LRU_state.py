@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import sys, pprint
 from collections import OrderedDict
 
@@ -17,7 +15,6 @@ class LRU_state:
         state = ''.join(state_list)
 
         if state not in self.state_dict:
-            # print(f"Add state: {state}")
             self.state_dict[state] = 0
         self.state_dict[state] += 1
         self.state_dict.move_to_end(state)

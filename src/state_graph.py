@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-
 import sys
 from random import randrange
 from pprint import pformat
-# from graphviz import Digraph
 
 class LossyStateGraph:
 
@@ -14,8 +11,6 @@ class LossyStateGraph:
 
         self.drifted_tree_counter = 0
         self.window_size = window_size
-
-        # self.g = Digraph('G', filename='state_transition', engine='sfdp', format='svg')
 
     def get_next_tree_id(self, src):
         cur_node = self.graph[src]
@@ -83,9 +78,6 @@ class LossyStateGraph:
             self.graph[dest].indegree += 1
 
         src_node.neighbors[dest] += 1
-
-        # self.g.edge(str(src), str(dest), label=str(src_node.neighbors[dest][0]))
-        # self.g.render(view=False)
 
     def get_size(self):
         size = 0
