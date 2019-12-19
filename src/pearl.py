@@ -300,6 +300,16 @@ class Pearl:
 
             self.lru_states.enqueue(self.cur_state)
 
+    def get_size(self):
+        memory_usage = 0
+
+        if self.enable_state_adaption:
+            memory_usage = self.lru_states.get_size()
+        if self.enable_state_graph:
+            memory_usage += self.state_graph.get_size()
+
+        return memory_usage
+
 
 class AdaptiveTree(object):
     def __init__(self,

@@ -37,7 +37,7 @@ class Evaluator:
                 # test
                 prediction = classifier.predict(X, y, classifier.adaptive_trees, should_vote=True)[0]
 
-		# test on candidate trees
+                # test on candidate trees
                 classifier.predict(X, y, classifier.candidate_trees, should_vote=False)
 
                 window_actual_labels.append(y[0])
@@ -65,11 +65,8 @@ class Evaluator:
                         x_axis.append(count)
                         accuracy_list.append(window_accuracy)
     
-                        memory_usage = 0
-                        if classifier.enable_state_adaption:
-                            memory_usage = classifier.lru_states.get_size()
-                        if classifier.enable_state_graph:
-                            memory_usage += classifier.state_graph.get_size()
+                        memory_usage = classifier.get_size()
+
                         print(f"{count},{window_accuracy},{window_kappa},{memory_usage}")
                         out.write(f"{count},{window_accuracy},{window_kappa},{memory_usage}\n")
                         out.flush()
