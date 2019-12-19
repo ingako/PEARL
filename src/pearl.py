@@ -12,72 +12,6 @@ from stream_generator import RecurrentDriftStream
 from LRU_state import LRU_state
 from state_graph import LossyStateGraph
 
-class AdaptiveTree(object):
-    def __init__(self,
-                 tree,
-                 kappa_window,
-                 warning_delta,
-                 drift_delta,
-                 tree_pool_id=-1):
-        self.tree_pool_id = tree_pool_id
-        self.tree = tree
-        self.bg_adaptive_tree = None
-        self.is_candidate = False
-        self.warning_detector = ADWIN(warning_delta)
-        self.drift_detector = ADWIN(drift_delta)
-        self.predicted_labels = deque(maxlen=kappa_window)
-        self.kappa = -sys.maxsize
-        self.kappa_window = kappa_window
-
-    def update_kappa(self, actual_labels):
-        if len(self.predicted_labels) < self.kappa_window:
-            self.kappa = -sys.maxsize
-        else:
-            self.kappa = cohen_kappa_score(actual_labels, self.predicted_labels)
-        return self.kappa
-
-    def reset(self):
-        self.bg_adaptive_tree = None
-        self.is_candidate = False
-        self.warning_detector.reset()
-        self.drift_detector.reset()
-        self.predicted_labels.clear()
-        self.kappa = -sys.maxsize
-
-
-class GraphSwitch:
-    def __init__(self, window_size, state_graph, reuse_rate):
-        self.window_size = window_size
-        self.candidate_tree_count = 0
-        self.total_tree_count = 0
-        self.state_graph = state_graph
-        self.reuse_rate = reuse_rate
-        if window_size > 0:
-            self.window = deque(maxlen=window_size)
-
-    def update(self, value):
-        self.candidate_tree_count += value
-        self.total_tree_count += 1
-
-        if self.window_size <= 0:
-            return
-
-        if len(self.window) >= self.window_size:
-            self.candidate_tree_count -= self.window[0]
-        self.window.append(value)
-
-    def switch(self):
-        cur_reuse_rate = 0
-        if self.window_size <= 0:
-            cur_reuse_rate = self.candidate_tree_count / self.total_tree_count
-        else:
-            cur_reuse_rate = self.candidate_tree_count / self.window_size
-
-        if cur_reuse_rate >= self.reuse_rate:
-            self.state_graph.is_stable = True
-        else:
-            self.state_graph.is_stable = False
-
 class Pearl:
 
     def __init__(self,
@@ -365,3 +299,70 @@ class Pearl:
                                  actual_labels=actual_labels)
 
             self.lru_states.enqueue(self.cur_state)
+
+
+class AdaptiveTree(object):
+    def __init__(self,
+                 tree,
+                 kappa_window,
+                 warning_delta,
+                 drift_delta,
+                 tree_pool_id=-1):
+        self.tree_pool_id = tree_pool_id
+        self.tree = tree
+        self.bg_adaptive_tree = None
+        self.is_candidate = False
+        self.warning_detector = ADWIN(warning_delta)
+        self.drift_detector = ADWIN(drift_delta)
+        self.predicted_labels = deque(maxlen=kappa_window)
+        self.kappa = -sys.maxsize
+        self.kappa_window = kappa_window
+
+    def update_kappa(self, actual_labels):
+        if len(self.predicted_labels) < self.kappa_window:
+            self.kappa = -sys.maxsize
+        else:
+            self.kappa = cohen_kappa_score(actual_labels, self.predicted_labels)
+        return self.kappa
+
+    def reset(self):
+        self.bg_adaptive_tree = None
+        self.is_candidate = False
+        self.warning_detector.reset()
+        self.drift_detector.reset()
+        self.predicted_labels.clear()
+        self.kappa = -sys.maxsize
+
+
+class GraphSwitch:
+    def __init__(self, window_size, state_graph, reuse_rate):
+        self.window_size = window_size
+        self.candidate_tree_count = 0
+        self.total_tree_count = 0
+        self.state_graph = state_graph
+        self.reuse_rate = reuse_rate
+        if window_size > 0:
+            self.window = deque(maxlen=window_size)
+
+    def update(self, value):
+        self.candidate_tree_count += value
+        self.total_tree_count += 1
+
+        if self.window_size <= 0:
+            return
+
+        if len(self.window) >= self.window_size:
+            self.candidate_tree_count -= self.window[0]
+        self.window.append(value)
+
+    def switch(self):
+        cur_reuse_rate = 0
+        if self.window_size <= 0:
+            cur_reuse_rate = self.candidate_tree_count / self.total_tree_count
+        else:
+            cur_reuse_rate = self.candidate_tree_count / self.window_size
+
+        if cur_reuse_rate >= self.reuse_rate:
+            self.state_graph.is_stable = True
+        else:
+            self.state_graph.is_stable = False
