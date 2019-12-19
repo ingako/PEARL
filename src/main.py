@@ -14,6 +14,18 @@ from skmultiflow.data.file_stream import FileStream
 from evaluator import Evaluator
 from pearl import Pearl
 
+formatter = logging.Formatter('%(message)s')
+
+def setup_logger(name, log_file, level=logging.INFO):
+    handler = logging.FileHandler(log_file, mode='w')
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+
+    return logger
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--tree",
@@ -184,13 +196,8 @@ if __name__ == '__main__':
         with open(f"{result_directory}/reuse-rate-{args.generator_seed}.log", 'w') as out:
             out.write("background_window_count,candidate_window_count,reuse_rate\n")
 
-    logging.basicConfig(filename=f'{result_directory}/processes-{args.generator_seed}.info',
-                        format='%(message)s',
-                        filemode='w')
-
-    logger = logging.getLogger()
-
-    logger.setLevel(logging.DEBUG)
+    metrics_logger = setup_logger('metrics', metric_output_file)
+    process_logger = setup_logger('process', f'{result_directory}/processes-{args.generator_seed}.info')
 
     pearl = Pearl(num_trees=args.num_trees,
                   repo_size=repo_size,
@@ -206,7 +213,7 @@ if __name__ == '__main__':
                   arf_max_features=arf_max_features,
                   enable_state_adaption=args.enable_state_adaption,
                   enable_state_graph=args.enable_state_graph,
-                  logger=logger)
+                  logger=process_logger)
 
     start = time.process_time()
     Evaluator.prequential_evaluation(classifier=pearl,
@@ -214,7 +221,7 @@ if __name__ == '__main__':
                                      max_samples=args.max_samples,
                                      wait_samples=args.wait_samples,
                                      sample_freq=args.sample_freq,
-                                     metric_output_file=metric_output_file)
+                                     metrics_logger=metrics_logger)
     elapsed = time.process_time() - start
 
     with open(f"{time_output_file}", 'w') as out:
