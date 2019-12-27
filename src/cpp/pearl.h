@@ -1,5 +1,8 @@
+#include <deque>
 #include <pybind11/pybind11.h>
+
 #include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
+#include "code/src/learners/Classifiers/Trees/ADWIN.h"
 
 namespace py = pybind11;
 
@@ -53,13 +56,20 @@ class pearl {
             void update_kappa(int actual_labels);
             void reset();
 
-         private:
-             HT::HoeffdingTree* tree;
-             int tree_pool_id;
-             int kappa_window_size;
-             double warning_delta;
-             double drift_delta;
+        private:
+            HT::HoeffdingTree* tree;
+            int tree_pool_id;
+            int kappa_window_size;
+            double warning_delta;
+            double drift_delta;
 
+            double kappa = INT_MIN;
+            bool is_candidate = false;
+
+            pearl::adaptive_tree* bg_adaptive_tree;
+            HT::ADWIN* warning_detector;
+            HT::ADWIN* drift_detector;
+            deque<int> predicted_labels;
     };
 
 };
