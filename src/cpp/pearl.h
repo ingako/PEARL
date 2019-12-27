@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
 
 namespace py = pybind11;
 
@@ -24,6 +25,8 @@ class pearl {
         void set_num_trees(int num_trees_);
         int get_num_trees() const;
 
+        int predict(int X, int y);
+
     private:
 
         int num_trees;
@@ -39,6 +42,25 @@ class pearl {
         double warning_delta;
         double drift_delta;
         bool enable_state_adaption;
+
+    class adaptive_tree {
+        public:
+            adaptive_tree(int tree_pool_id,
+                          int kappa_window_size,
+                          double warning_delta,
+                          double drift_delta);
+
+            void update_kappa(int actual_labels);
+            void reset();
+
+         private:
+             HT::HoeffdingTree* tree;
+             int tree_pool_id;
+             int kappa_window_size;
+             double warning_delta;
+             double drift_delta;
+
+    };
 
 };
 
