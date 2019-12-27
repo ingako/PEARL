@@ -4,7 +4,7 @@ from collections import deque
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
-class Evaluator: 
+class Evaluator:
 
     @staticmethod
     def prequential_evaluation(classifier,
@@ -17,16 +17,16 @@ class Evaluator:
         x_axis = []
         accuracy_list = []
         actual_labels = deque(maxlen=classifier.kappa_window) # a window of size kappa_window
-    
+
         sample_counter = 0
         sample_counter_interval = 0
         window_accuracy = 0.0
         window_kappa = 0.0
         window_actual_labels = []
         window_predicted_labels = []
-    
+
         current_state = []
-    
+
         metrics_logger.info("count,accuracy,kappa,memory")
 
         for count in range(0, max_samples):
@@ -34,10 +34,7 @@ class Evaluator:
             actual_labels.append(y[0])
 
             # test
-            prediction = classifier.predict(X, y, classifier.adaptive_trees, should_vote=True)[0]
-
-            # test on candidate trees
-            classifier.predict(X, y, classifier.candidate_trees, should_vote=False)
+            prediction = classifier.predict(X, y)[0]
 
             window_actual_labels.append(y[0])
             window_predicted_labels.append(prediction)

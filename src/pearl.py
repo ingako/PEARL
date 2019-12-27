@@ -78,7 +78,13 @@ class Pearl:
             adaptive_tree.warning_detector.add_element(1)
             adaptive_tree.drift_detector.add_element(1)
 
-    def predict(self, X, y, adaptive_trees, should_vote):
+    def predict(self, X, y):
+        # test on candidate trees
+        self.__predict(X, y, self.candidate_trees, should_vote=False)
+
+        return self.__predict(X, y, self.adaptive_trees, should_vote=True)
+
+    def __predict(self, X, y, adaptive_trees, should_vote):
         predictions = []
 
         for i in range(0, len(X)):
@@ -97,7 +103,7 @@ class Pearl:
 
                 # background tree needs to predict for performance measurement
                 if adaptive_tree.bg_adaptive_tree is not None:
-                    self.predict([feature_row], [label], [adaptive_tree.bg_adaptive_tree], False)
+                    self.__predict([feature_row], [label], [adaptive_tree.bg_adaptive_tree], False)
 
             if should_vote:
                 predictions.append(max(votes, key=votes.get))
