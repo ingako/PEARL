@@ -6,15 +6,45 @@
 
 namespace py = pybind11;
 
-using std::string;
+using std::unique_ptr;
+using std::make_unique;
+using std::vector;
 
 class pearl {
+
+    class adaptive_tree {
+        public:
+            adaptive_tree(int tree_pool_id,
+                          int kappa_window_size,
+                          double warning_delta,
+                          double drift_delta);
+
+            void update_kappa(int actual_labels);
+            void reset();
+
+        private:
+            int tree_pool_id;
+            int kappa_window_size;
+            double warning_delta;
+            double drift_delta;
+
+            double kappa = INT_MIN;
+            bool is_candidate = false;
+
+            unique_ptr<HT::HoeffdingTree> tree;
+            unique_ptr<adaptive_tree> bg_adaptive_tree;
+            unique_ptr<HT::ADWIN> warning_detector;
+            unique_ptr<HT::ADWIN> drift_detector;
+
+            deque<int> predicted_labels;
+    };
+
 
     public:
         pearl(int num_trees,
               int repo_size,
               int edit_distance_threshold,
-              int kappa_window,
+              int kappa_window_size,
               int lossy_window_size,
               int reuse_window_size,
               int arf_max_features,
@@ -35,7 +65,7 @@ class pearl {
         int num_trees;
         int repo_size;
         int edit_distance_threshold;
-        int kappa_window;
+        int kappa_window_size;
         int lossy_window_size;
         int reuse_window_size;
         int arf_max_features;
@@ -46,31 +76,7 @@ class pearl {
         double drift_delta;
         bool enable_state_adaption;
 
-    class adaptive_tree {
-        public:
-            adaptive_tree(int tree_pool_id,
-                          int kappa_window_size,
-                          double warning_delta,
-                          double drift_delta);
-
-            void update_kappa(int actual_labels);
-            void reset();
-
-        private:
-            HT::HoeffdingTree* tree;
-            int tree_pool_id;
-            int kappa_window_size;
-            double warning_delta;
-            double drift_delta;
-
-            double kappa = INT_MIN;
-            bool is_candidate = false;
-
-            pearl::adaptive_tree* bg_adaptive_tree;
-            HT::ADWIN* warning_detector;
-            HT::ADWIN* drift_detector;
-            deque<int> predicted_labels;
-    };
+        vector<adaptive_tree*> adaptive_trees;
 
 };
 

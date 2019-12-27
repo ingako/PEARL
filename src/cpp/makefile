@@ -50,7 +50,7 @@ code/src/tasks/Task.cpp \
 code/src/main.cpp
 
 
-sourcefiles = $(sourcefiles_core) 
+sourcefiles = $(sourcefiles_core)
 
 targetfile = streamdm-cpp
 
@@ -61,8 +61,8 @@ includepath = -Icode/src/core -Icode/src/learners  -Icode/src \
     -Icode/src/learners/Classifiers/Meta/ \
     -Icode/src/learners/Classifiers/Functions/ \
     -Icode/src/evaluation/ \
-    -Icode/src/streams/ 
-    
+    -Icode/src/streams/
+
 
 glog = -lglog -lpthread
 
@@ -72,9 +72,9 @@ log4cpp = -llog4cpp -lpthread
 
 debug = -g
 
-warning = -Wall -Wno-sign-compare -Wno-nonnull -Wno-unused-variable  
+warning = -Wall -Wno-sign-compare -Wno-nonnull -Wno-unused-variable
 
-flags = -std=c++11 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE64 -O3 -DUNIX  $(debug)  
+flags = -std=c++14 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE64 -O3 -DUNIX  $(debug)
 
 all:
 	g++ -shared -fPIC `python3 -m pybind11 --includes` pearl.cpp $(sourcefiles) $(includepath) $(log4cpp) $(flags) -o pearl`python3-config --extension-suffix`

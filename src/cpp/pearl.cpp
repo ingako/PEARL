@@ -3,7 +3,7 @@
 pearl::pearl(int num_trees,
              int repo_size,
              int edit_distance_threshold,
-             int kappa_window,
+             int kappa_window_size,
              int lossy_window_size,
              int reuse_window_size,
              int arf_max_features,
@@ -16,7 +16,7 @@ pearl::pearl(int num_trees,
     num_trees(num_trees),
     repo_size(repo_size),
     edit_distance_threshold(edit_distance_threshold),
-    kappa_window(kappa_window),
+    kappa_window_size(kappa_window_size),
     lossy_window_size(lossy_window_size),
     reuse_window_size(reuse_window_size),
     arf_max_features(arf_max_features),
@@ -27,7 +27,13 @@ pearl::pearl(int num_trees,
     drift_delta(drift_delta),
     enable_state_adaption(enable_state_adaption) {
 
-    pearl::adaptive_tree* at = new pearl::adaptive_tree(1, 1, 1.0, 1.0);
+    for (int i = 0; i < num_trees; i++) {
+        adaptive_tree* tree = new adaptive_tree(i,
+                                                kappa_window_size,
+                                                warning_delta,
+                                                drift_delta);
+        adaptive_trees.push_back(tree);
+    }
 
 }
 
@@ -48,7 +54,10 @@ pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
     warning_delta(warning_delta),
     drift_delta(drift_delta) {
 
-    tree = new HT::HoeffdingTree();
+    tree = make_unique<HT::HoeffdingTree>();
+    warning_detector = make_unique<HT::ADWIN>(warning_delta);
+    drift_detector = make_unique<HT::ADWIN>(drift_delta);
+
     std::cout << "success" << std::endl;
 }
 
