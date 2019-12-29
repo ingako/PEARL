@@ -46,8 +46,7 @@ code/src/learners/Classifiers/Trees/HTNode.cpp \
 code/src/learners/Classifiers/Trees/InstanceConditionalTest.cpp \
 code/src/tasks/EvaluatePrequential.cpp \
 code/src/tasks/EvaluateHoldOut.cpp \
-code/src/tasks/Task.cpp \
-code/src/main.cpp
+code/src/tasks/Task.cpp
 
 
 sourcefiles = $(sourcefiles_core)
@@ -78,6 +77,9 @@ flags = -std=c++14 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE64 -O
 
 all:
 	g++ -shared -fPIC `python3 -m pybind11 --includes` pearl.cpp $(sourcefiles) $(includepath) $(log4cpp) $(flags) -o pearl`python3-config --extension-suffix`
+
+nopybind:
+	g++ $(sourcefiles) $(includepath) $(log4cpp) $(flags) pearl.cpp main.cpp -o main -D NOPYBIND
 
 clean:
 	rm *.so
