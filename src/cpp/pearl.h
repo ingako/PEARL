@@ -1,11 +1,21 @@
-#include <deque>
-#include <pybind11/pybind11.h>
+#ifndef __PEARL_H__
+#define __PEARL_H__
 
+#include <deque>
+#include <memory>
+#include <string>
+#include <climits>
+
+#include "code/src/streams/ArffReader.h"
 #include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
 #include "code/src/learners/Classifiers/Trees/ADWIN.h"
 
+#ifndef NOPYBIND
+#include <pybind11/pybind11.h>
 namespace py = pybind11;
+#endif
 
+using std::string;
 using std::unique_ptr;
 using std::make_unique;
 using std::vector;
@@ -58,7 +68,10 @@ class pearl {
         void set_num_trees(int num_trees_);
         int get_num_trees() const;
 
-        int predict(int X, int y);
+        bool init_data_source(const string& filename);
+
+        int predict(string instance);
+        void partial_fit(string instance);
 
     private:
 
@@ -80,6 +93,8 @@ class pearl {
 
 };
 
+#ifndef NOPYBIND
+
 PYBIND11_MODULE(pearl, m) {
     m.doc() = "PEARL's implementation in C++"; // module docstring
 
@@ -98,9 +113,14 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       bool>())
         .def_property("num_trees", &pearl::get_num_trees, &pearl::set_num_trees)
+        .def("init_data_source", &pearl::init_data_source)
         .def("__repr__",
             [](const pearl &p) {
                 return "<pearl.pearl has " + std::to_string(p.get_num_trees()) + " trees>";
             }
          );
 }
+
+#endif
+
+#endif
