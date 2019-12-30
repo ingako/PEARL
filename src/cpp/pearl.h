@@ -15,6 +15,8 @@
 namespace py = pybind11;
 #endif
 
+#define LOG(x) std::cout << (x) << std::endl
+
 using std::string;
 using std::unique_ptr;
 using std::make_unique;
@@ -32,6 +34,8 @@ class pearl {
             void update_kappa(int actual_labels);
             void reset();
 
+            unique_ptr<HT::HoeffdingTree> tree;
+
         private:
             int tree_pool_id;
             int kappa_window_size;
@@ -41,7 +45,6 @@ class pearl {
             double kappa = INT_MIN;
             bool is_candidate = false;
 
-            unique_ptr<HT::HoeffdingTree> tree;
             unique_ptr<adaptive_tree> bg_adaptive_tree;
             unique_ptr<HT::ADWIN> warning_detector;
             unique_ptr<HT::ADWIN> drift_detector;
@@ -69,8 +72,10 @@ class pearl {
         int get_num_trees() const;
 
         bool init_data_source(const string& filename);
+        bool get_next_instance();
 
-        int predict(string instance);
+        bool process();
+        int predict(Instance& instance);
         void partial_fit(string instance);
 
     private:
@@ -89,6 +94,8 @@ class pearl {
         double drift_delta;
         bool enable_state_adaption;
 
+        Instance* instance;
+        Reader* reader = nullptr;
         vector<adaptive_tree*> adaptive_trees;
 
 };
@@ -114,6 +121,8 @@ PYBIND11_MODULE(pearl, m) {
                       bool>())
         .def_property("num_trees", &pearl::get_num_trees, &pearl::set_num_trees)
         .def("init_data_source", &pearl::init_data_source)
+        .def("get_next_instance", &pearl::get_next_instance)
+        .def("process", &pearl::process)
         .def("__repr__",
             [](const pearl &p) {
                 return "<pearl.pearl has " + std::to_string(p.get_num_trees()) + " trees>";
