@@ -34,7 +34,52 @@ pearl::pearl(int num_trees,
                                                 drift_delta);
         adaptive_trees.push_back(tree);
     }
+}
 
+bool pearl::init_data_source(const string& filename) {
+
+    std::cout << "Initializing data source..." << std::endl;
+
+    reader = new ArffReader();
+
+    if (!reader->setFile(filename)) {
+        std::cout << "Failed to open file: " << filename << std::endl;
+        exit(1);
+    }
+
+    return true;
+}
+
+bool pearl::process() {
+    int result = this->predict(*instance);
+    LOG(result);
+    return true;
+}
+
+int pearl::predict(Instance& instance) {
+    double numberClasses = instance.getNumberClasses();
+    double* classPredictions = adaptive_trees[0]->tree->getPrediction(instance);
+    int result = 0;
+    double max = classPredictions[0];
+
+    // Find class label with the highest probability
+    for (int i = 1; i < numberClasses; i++) {
+        if (max < classPredictions[i]) {
+            max = classPredictions[i];
+            result = i;
+        }
+    }
+
+    return result;
+}
+
+bool pearl::get_next_instance() {
+    if (!reader->hasNextInstance()) {
+        return false;
+    }
+
+    instance = reader->nextInstance();
+    return true;
 }
 
 void pearl::set_num_trees(int num_trees_) {
@@ -45,6 +90,7 @@ int pearl::get_num_trees() const {
     return num_trees;
 }
 
+// class adaptive_tree
 pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
                                     int kappa_window_size,
                                     double warning_delta,
@@ -58,7 +104,7 @@ pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
 
-    std::cout << "success" << std::endl;
+    std::cout << "init an adaptive tree" << std::endl;
 }
 
 void pearl::adaptive_tree::update_kappa(int actual_labels) {
