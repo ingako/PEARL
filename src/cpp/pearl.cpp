@@ -51,9 +51,20 @@ bool pearl::init_data_source(const string& filename) {
 }
 
 bool pearl::process() {
-    int result = this->predict(*instance);
-    LOG(result);
-    return true;
+    int predicted_label = this->predict(*instance);
+    int actual_label = instance->getLabel();
+
+    int num_classes = instance->getNumberClasses();
+
+    if (actual_label != predicted_label) {
+        LOG("wrong prediction");
+    } else {
+        LOG("correct prediction");
+    }
+
+    adaptive_trees[0]->tree->train(*instance);
+
+    return actual_label == predicted_label;
 }
 
 int pearl::predict(Instance& instance) {
