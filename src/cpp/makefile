@@ -84,9 +84,10 @@ build: streamDM.a
 streamDM.a:
 	g++ -c -fPIC $(sourcefiles) $(includepath) $(flags)
 	ar rcs streamDM.a *.o
+	rm *.o
 
 nopybind:
 	g++ $(sourcefiles) $(includepath) $(log4cpp) $(flags) pearl.cpp main.cpp -o main -D NOPYBIND
 
 clean:
-	rm -f *.so *.o *.a
+	rm -f *.so *.o

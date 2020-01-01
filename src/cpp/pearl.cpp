@@ -28,22 +28,26 @@ pearl::pearl(int num_trees,
     enable_state_adaption(enable_state_adaption) {
 
     for (int i = 0; i < num_trees; i++) {
-        adaptive_tree* tree = new adaptive_tree(i,
-                                                kappa_window_size,
-                                                warning_delta,
-                                                drift_delta);
-        adaptive_trees.push_back(tree);
+        unique_ptr<adaptive_tree> tree = make_adaptive_tree(i);
+        adaptive_trees.push_back(move(tree));
     }
+}
+
+unique_ptr<pearl::adaptive_tree> pearl::make_adaptive_tree(int tree_pool_id) {
+    return make_unique<adaptive_tree>(tree_pool_id,
+                                      kappa_window_size,
+                                      warning_delta,
+                                      drift_delta);
 }
 
 bool pearl::init_data_source(const string& filename) {
 
-    std::cout << "Initializing data source..." << std::endl;
+    LOG("Initializing data source...");
 
     reader = new ArffReader();
 
     if (!reader->setFile(filename)) {
-        std::cout << "Failed to open file: " << filename << std::endl;
+        LOG("Failed to open file: ");
         exit(1);
     }
 
@@ -51,20 +55,30 @@ bool pearl::init_data_source(const string& filename) {
 }
 
 bool pearl::process() {
-    int predicted_label = this->predict(*instance);
+    int result;
     int actual_label = instance->getLabel();
 
-    int num_classes = instance->getNumberClasses();
+    for (int i = 0; i < num_trees; i++) {
+        int predicted_label = this->predict(*instance);
 
-    if (actual_label != predicted_label) {
-        LOG("wrong prediction");
-    } else {
-        LOG("correct prediction");
+        int num_classes = instance->getNumberClasses();
+
+        result = (int)(actual_label == predicted_label);
+
+        // detect warning
+        if (detect_change(result, adaptive_trees[i]->warning_detector)) {
+            adaptive_trees[i]->bg_adaptive_tree = make_adaptive_tree(-1);
+        }
+
+        // detect drift
+        if (detect_change(result, adaptive_trees[i]->drift_detector)) {
+            adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
+        }
+
+        adaptive_trees[i]->train(*instance);
     }
 
-    adaptive_trees[0]->tree->train(*instance);
-
-    return actual_label == predicted_label;
+    return result;
 }
 
 int pearl::predict(Instance& instance) {
@@ -83,6 +97,21 @@ int pearl::predict(Instance& instance) {
 
     return result;
 }
+
+bool pearl::detect_change(int error_count,
+                          unique_ptr<HT::ADWIN>& detector) {
+
+    double old_error = detector->getEstimation();
+    bool error_change = detector->setInput(error_count);
+
+    if (error_change && old_error > detector->getEstimation()) {
+        // error is decreasing
+        return false;
+    }
+
+    return true;
+}
+
 
 bool pearl::get_next_instance() {
     if (!reader->hasNextInstance()) {
@@ -116,6 +145,14 @@ pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
 
     std::cout << "init an adaptive tree" << std::endl;
+}
+
+void pearl::adaptive_tree::train(Instance& instance) {
+    tree->train(instance);
+
+    if (bg_adaptive_tree) {
+        bg_adaptive_tree->train(instance);
+    }
 }
 
 void pearl::adaptive_tree::update_kappa(int actual_labels) {

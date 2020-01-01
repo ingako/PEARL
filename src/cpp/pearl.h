@@ -20,6 +20,7 @@ namespace py = pybind11;
 using std::string;
 using std::unique_ptr;
 using std::make_unique;
+using std::move;
 using std::vector;
 
 class pearl {
@@ -31,10 +32,14 @@ class pearl {
                           double warning_delta,
                           double drift_delta);
 
+            void train(Instance& instance);
             void update_kappa(int actual_labels);
             void reset();
 
             unique_ptr<HT::HoeffdingTree> tree;
+            unique_ptr<adaptive_tree> bg_adaptive_tree;
+            unique_ptr<HT::ADWIN> warning_detector;
+            unique_ptr<HT::ADWIN> drift_detector;
 
         private:
             int tree_pool_id;
@@ -45,13 +50,8 @@ class pearl {
             double kappa = INT_MIN;
             bool is_candidate = false;
 
-            unique_ptr<adaptive_tree> bg_adaptive_tree;
-            unique_ptr<HT::ADWIN> warning_detector;
-            unique_ptr<HT::ADWIN> drift_detector;
-
             deque<int> predicted_labels;
     };
-
 
     public:
         pearl(int num_trees,
@@ -96,7 +96,10 @@ class pearl {
 
         Instance* instance;
         Reader* reader = nullptr;
-        vector<adaptive_tree*> adaptive_trees;
+        vector<unique_ptr<adaptive_tree>> adaptive_trees;
+
+        bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
+        unique_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
 
 };
 
