@@ -59,7 +59,7 @@ bool pearl::process() {
     int actual_label = instance->getLabel();
 
     for (int i = 0; i < num_trees; i++) {
-        predicted_label = predict(*instance);
+        predicted_label = adaptive_trees[i]->predict(*instance);
 
         int num_classes = instance->getNumberClasses();
 
@@ -83,23 +83,6 @@ bool pearl::process() {
     return predicted_label == actual_label;
 }
 
-int pearl::predict(Instance& instance) {
-    double numberClasses = instance.getNumberClasses();
-    double* classPredictions = adaptive_trees[0]->tree->getPrediction(instance);
-    int result = 0;
-    double max = classPredictions[0];
-
-    // Find class label with the highest probability
-    for (int i = 1; i < numberClasses; i++) {
-        if (max < classPredictions[i]) {
-            max = classPredictions[i];
-            result = i;
-        }
-    }
-
-    return result;
-}
-
 bool pearl::detect_change(int error_count,
                           unique_ptr<HT::ADWIN>& detector) {
 
@@ -117,7 +100,6 @@ bool pearl::detect_change(int error_count,
 
     return true;
 }
-
 
 bool pearl::get_next_instance() {
     if (!reader->hasNextInstance()) {
@@ -149,6 +131,23 @@ pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
     tree = make_unique<HT::HoeffdingTree>();
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
+}
+
+int pearl::adaptive_tree::predict(Instance& instance) {
+    double numberClasses = instance.getNumberClasses();
+    double* classPredictions = tree->getPrediction(instance);
+    int result = 0;
+    double max = classPredictions[0];
+
+    // Find class label with the highest probability
+    for (int i = 1; i < numberClasses; i++) {
+        if (max < classPredictions[i]) {
+            max = classPredictions[i];
+            result = i;
+        }
+    }
+
+    return result;
 }
 
 void pearl::adaptive_tree::train(Instance& instance) {

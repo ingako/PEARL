@@ -33,6 +33,7 @@ class pearl {
                           double drift_delta);
 
             void train(Instance& instance);
+            int predict(Instance& instance);
             void update_kappa(int actual_labels);
             void reset();
 
@@ -75,7 +76,6 @@ class pearl {
         bool get_next_instance();
 
         bool process();
-        int predict(Instance& instance);
         void partial_fit(string instance);
 
     private:
