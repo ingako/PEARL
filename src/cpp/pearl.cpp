@@ -55,30 +55,32 @@ bool pearl::init_data_source(const string& filename) {
 }
 
 bool pearl::process() {
-    int result;
+    int predicted_label;
     int actual_label = instance->getLabel();
 
     for (int i = 0; i < num_trees; i++) {
-        int predicted_label = this->predict(*instance);
+        predicted_label = predict(*instance);
 
         int num_classes = instance->getNumberClasses();
 
-        result = (int)(actual_label == predicted_label);
+        int error_count = (int)(actual_label != predicted_label);
 
         // detect warning
-        if (detect_change(result, adaptive_trees[i]->warning_detector)) {
+        if (detect_change(error_count, adaptive_trees[i]->warning_detector)) {
             adaptive_trees[i]->bg_adaptive_tree = make_adaptive_tree(-1);
+            adaptive_trees[i]->warning_detector->resetChange();
         }
 
         // detect drift
-        if (detect_change(result, adaptive_trees[i]->drift_detector)) {
+        if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
             adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
+            adaptive_trees[i]->drift_detector->resetChange();
         }
 
         adaptive_trees[i]->train(*instance);
     }
 
-    return result;
+    return predicted_label == actual_label;
 }
 
 int pearl::predict(Instance& instance) {
@@ -104,7 +106,11 @@ bool pearl::detect_change(int error_count,
     double old_error = detector->getEstimation();
     bool error_change = detector->setInput(error_count);
 
-    if (error_change && old_error > detector->getEstimation()) {
+    if (!error_change) {
+       return false;
+    }
+
+    if (old_error > detector->getEstimation()) {
         // error is decreasing
         return false;
     }
@@ -135,16 +141,14 @@ pearl::adaptive_tree::adaptive_tree(int tree_pool_id,
                                     int kappa_window_size,
                                     double warning_delta,
                                     double drift_delta) :
-    tree_pool_id(tree_pool_id),
-    kappa_window_size(kappa_window_size),
-    warning_delta(warning_delta),
-    drift_delta(drift_delta) {
+        tree_pool_id(tree_pool_id),
+        kappa_window_size(kappa_window_size),
+        warning_delta(warning_delta),
+        drift_delta(drift_delta) {
 
     tree = make_unique<HT::HoeffdingTree>();
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
-
-    std::cout << "init an adaptive tree" << std::endl;
 }
 
 void pearl::adaptive_tree::train(Instance& instance) {
