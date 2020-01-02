@@ -54,11 +54,30 @@ bool pearl::init_data_source(const string& filename) {
     return true;
 }
 
+void pearl::prepare_instance(Instance& instance) {
+    vector<int> attribute_indices;
+
+    // select random attributes
+    for (int i = 0; i < arf_max_features; i++) {
+        attribute_indices.push_back(rand() % num_features);
+    }
+
+    instance.setAttributeStatus(attribute_indices);
+
+    std::cout << "attributes: ";
+    for (int i : attribute_indices) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+}
+
 bool pearl::process() {
     int predicted_label;
     int actual_label = instance->getLabel();
 
     for (int i = 0; i < num_trees; i++) {
+
+        prepare_instance(*instance);
         predicted_label = adaptive_trees[i]->predict(*instance);
 
         int num_classes = instance->getNumberClasses();
@@ -78,6 +97,8 @@ bool pearl::process() {
         }
 
         adaptive_trees[i]->train(*instance);
+
+        delete instance;
     }
 
     return predicted_label == actual_label;
@@ -107,6 +128,10 @@ bool pearl::get_next_instance() {
     }
 
     instance = reader->nextInstance();
+
+    num_features = instance->getNumberInputAttributes();
+    arf_max_features = log2(num_features) + 1;
+
     return true;
 }
 

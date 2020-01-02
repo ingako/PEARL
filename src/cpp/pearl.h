@@ -74,6 +74,7 @@ class pearl {
 
         bool init_data_source(const string& filename);
         bool get_next_instance();
+        void prepare_instance(Instance& instance);
 
         bool process();
         void partial_fit(string instance);
@@ -86,6 +87,7 @@ class pearl {
         int kappa_window_size;
         int lossy_window_size;
         int reuse_window_size;
+        int num_features;
         int arf_max_features;
         double bg_kappa_threshold;
         double cd_kappa_threshold;
