@@ -31,7 +31,7 @@ Utils utils;
 Utils::Utils() {
 	if (!init) {
 		init = true;
-		srand(time(NULL));
+		// srand(time(NULL));
 	}
 }
 
