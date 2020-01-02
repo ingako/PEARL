@@ -30,6 +30,9 @@ public:
 	Instance();
 	virtual ~Instance();
 
+    void setAttributeStatus(vector<int>& indices);
+    bool isAttributeEnabled(int idx) const;
+
 	//Values
 	virtual double getInputAttributeValue(int) const = 0;
     virtual int getInputAttributeID(int) const { return 0;}
@@ -66,6 +69,7 @@ protected:
 	InstanceInformation* instanceInformation;
 	bool instanceInformationSaved;
 	double weight;
+    vector<bool> attributeStatus;
 };
 
 Instance* cloneInstance(const Instance* s);
