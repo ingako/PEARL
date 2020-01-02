@@ -78,3 +78,58 @@ class Evaluator:
             classifier.partial_fit(X, y)
 
         print(f"length of candidate_trees: {len(classifier.candidate_trees)}")
+
+
+    @staticmethod
+    def prequential_evaluation_cpp(classifier,
+                                   stream,
+                                   max_samples,
+                                   wait_samples,
+                                   sample_freq,
+                                   metrics_logger):
+        correct = 0
+        x_axis = []
+        accuracy_list = []
+
+        sample_counter = 0
+        sample_counter_interval = 0
+        window_accuracy = 0.0
+        window_kappa = 0.0
+        window_actual_labels = []
+        window_predicted_labels = []
+
+        current_state = []
+
+        metrics_logger.info("count,accuracy")
+
+        classifier.init_data_source("covtype.arff");
+
+        for count in range(0, max_samples):
+            if not classifier.get_next_instance():
+                break
+
+            correct += 1 if classifier.process() else 0
+
+            if (count % wait_samples == 0) and (count != 0):
+                accuracy = correct / wait_samples
+
+                window_accuracy = (window_accuracy * sample_counter + accuracy) \
+                    / (sample_counter + 1)
+
+                sample_counter += 1
+                sample_counter_interval += wait_samples
+                correct = 0
+
+                if sample_counter_interval == sample_freq:
+                    x_axis.append(count)
+                    accuracy_list.append(window_accuracy)
+
+                    metrics_logger.info(f"{count},{window_accuracy}")
+
+                    sample_counter = 0
+                    sample_counter_interval = 0
+
+                    window_accuracy = 0.0
+                    window_kappa = 0.0
+                    window_actual_labels = []
+                    window_predicted_labels = []

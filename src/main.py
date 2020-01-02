@@ -13,6 +13,8 @@ from skmultiflow.data.file_stream import FileStream
 
 from evaluator import Evaluator
 from pearl import Pearl
+from cpp.pearl import pearl
+
 
 formatter = logging.Formatter('%(message)s')
 
@@ -28,6 +30,11 @@ def setup_logger(name, log_file, level=logging.INFO):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--cpp",
+                        dest="cpp", action="store_true",
+                        help="Enable cpp backend")
+    parser.set_defaults(cpp=False)
+
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
@@ -199,29 +206,47 @@ if __name__ == '__main__':
     metrics_logger = setup_logger('metrics', metric_output_file)
     process_logger = setup_logger('process', f'{result_directory}/processes-{args.generator_seed}.info')
 
-    pearl = Pearl(num_trees=args.num_trees,
-                  repo_size=repo_size,
-                  edit_distance_threshold=args.edit_distance_threshold,
-                  bg_kappa_threshold=args.bg_kappa_threshold,
-                  cd_kappa_threshold=args.cd_kappa_threshold,
-                  kappa_window=args.kappa_window,
-                  lossy_window_size=args.lossy_window_size,
-                  reuse_window_size=args.reuse_window_size,
-                  reuse_rate_upper_bound=args.reuse_rate_upper_bound,
-                  warning_delta=args.warning_delta,
-                  drift_delta=args.drift_delta,
-                  arf_max_features=arf_max_features,
-                  enable_state_adaption=args.enable_state_adaption,
-                  enable_state_graph=args.enable_state_graph,
-                  logger=process_logger)
+    if args.cpp:
+        pearl = pearl(1,
+                      repo_size,
+                      args.edit_distance_threshold,
+                      args.kappa_window,
+                      args.lossy_window_size,
+                      args.reuse_window_size,
+                      arf_max_features,
+                      args.bg_kappa_threshold,
+                      args.cd_kappa_threshold,
+                      args.reuse_rate_upper_bound,
+                      args.warning_delta,
+                      args.drift_delta,
+                      args.enable_state_adaption)
+        eval_func = Evaluator.prequential_evaluation_cpp
+
+    else:
+        pearl = Pearl(num_trees=args.num_trees,
+                      repo_size=repo_size,
+                      edit_distance_threshold=args.edit_distance_threshold,
+                      bg_kappa_threshold=args.bg_kappa_threshold,
+                      cd_kappa_threshold=args.cd_kappa_threshold,
+                      kappa_window=args.kappa_window,
+                      lossy_window_size=args.lossy_window_size,
+                      reuse_window_size=args.reuse_window_size,
+                      reuse_rate_upper_bound=args.reuse_rate_upper_bound,
+                      warning_delta=args.warning_delta,
+                      drift_delta=args.drift_delta,
+                      arf_max_features=arf_max_features,
+                      enable_state_adaption=args.enable_state_adaption,
+                      enable_state_graph=args.enable_state_graph,
+                      logger=process_logger)
+        eval_func = Evaluator.prequential_evaluation
 
     start = time.process_time()
-    Evaluator.prequential_evaluation(classifier=pearl,
-                                     stream=stream,
-                                     max_samples=args.max_samples,
-                                     wait_samples=args.wait_samples,
-                                     sample_freq=args.sample_freq,
-                                     metrics_logger=metrics_logger)
+    eval_func(classifier=pearl,
+              stream=stream,
+              max_samples=args.max_samples,
+              wait_samples=args.wait_samples,
+              sample_freq=args.sample_freq,
+              metrics_logger=metrics_logger)
     elapsed = time.process_time() - start
 
     with open(f"{time_output_file}", 'w') as out:
