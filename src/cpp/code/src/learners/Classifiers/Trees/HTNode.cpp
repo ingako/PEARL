@@ -442,6 +442,11 @@ void ActiveLearningNode::learnFromInstance(const Instance* inst,
 					ht->newNumericClassObserver();
 			(*iter) = obs;
 		}
+
+        if (!inst->isAttributeEnabled(instAttIndex)) {
+            continue;
+        }
+
 		obs->observeAttributeClass(inst->getInputAttributeValue(instAttIndex),
 				(int) inst->getLabel(), inst->getWeight());
 	}
@@ -639,7 +644,13 @@ vector<double>* LearningNodeNB::doNaiveBayesPrediction(const Instance* inst,
 						&& iter != attributeObservers.end();
 				attIndex++, iter++) {
 //			int instAttIndex = modelAttIndexToInstanceAttIndex(attIndex, inst);
+
 			int instAttIndex = attIndex;
+
+            if (!inst->isAttributeEnabled(instAttIndex)) {
+                continue;
+            }
+
 			AttributeClassObserver* obs = (*iter);
 			double v = inst->getInputAttributeValue(instAttIndex);
 			if ((obs != nullptr) && !std::isnan(v)) {
