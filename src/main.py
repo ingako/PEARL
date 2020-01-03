@@ -207,7 +207,7 @@ if __name__ == '__main__':
     process_logger = setup_logger('process', f'{result_directory}/processes-{args.generator_seed}.info')
 
     if args.cpp:
-        pearl = pearl(1,
+        pearl = pearl(args.num_trees,
                       repo_size,
                       args.edit_distance_threshold,
                       args.kappa_window,

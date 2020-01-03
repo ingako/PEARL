@@ -47,7 +47,7 @@ bool pearl::init_data_source(const string& filename) {
     reader = new ArffReader();
 
     if (!reader->setFile(filename)) {
-        LOG("Failed to open file: ");
+        std::cout << "Failed to open file: " << filename << std::endl;
         exit(1);
     }
 
@@ -57,31 +57,27 @@ bool pearl::init_data_source(const string& filename) {
 void pearl::prepare_instance(Instance& instance) {
     vector<int> attribute_indices;
 
-    // select random attributes
+    // select random features
     for (int i = 0; i < arf_max_features; i++) {
         attribute_indices.push_back(rand() % num_features);
     }
 
     instance.setAttributeStatus(attribute_indices);
-
-    std::cout << "attributes: ";
-    for (int i : attribute_indices) {
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
 }
 
 bool pearl::process() {
     int predicted_label;
     int actual_label = instance->getLabel();
 
+    int num_classes = instance->getNumberClasses();
+    vector<int> votes(num_classes, 0);
+
     for (int i = 0; i < num_trees; i++) {
 
         prepare_instance(*instance);
         predicted_label = adaptive_trees[i]->predict(*instance);
 
-        int num_classes = instance->getNumberClasses();
-
+        votes[predicted_label]++;
         int error_count = (int)(actual_label != predicted_label);
 
         // detect warning
@@ -92,14 +88,27 @@ bool pearl::process() {
 
         // detect drift
         if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
+            if (!adaptive_trees[i]->bg_adaptive_tree) {
+                adaptive_trees[i]->bg_adaptive_tree = make_adaptive_tree(-1);
+            }
             adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
-            adaptive_trees[i]->drift_detector->resetChange();
         }
 
         adaptive_trees[i]->train(*instance);
-
-        delete instance;
     }
+
+    delete instance;
+
+    int max_votes = votes[0];
+    int max_class_idx = 0;
+    for (int i = 1; i < num_classes; i++) {
+        if (max_votes < votes[i]) {
+            max_votes = votes[i];
+            max_class_idx = i;
+        }
+    }
+
+    predicted_label = max_class_idx;
 
     return predicted_label == actual_label;
 }
