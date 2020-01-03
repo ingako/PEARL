@@ -74,7 +74,6 @@ bool pearl::process() {
 
     for (int i = 0; i < num_trees; i++) {
 
-        prepare_instance(*instance);
         predicted_label = adaptive_trees[i]->predict(*instance);
 
         votes[predicted_label]++;
@@ -88,27 +87,31 @@ bool pearl::process() {
 
         // detect drift
         if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
-            if (!adaptive_trees[i]->bg_adaptive_tree) {
-                adaptive_trees[i]->bg_adaptive_tree = make_adaptive_tree(-1);
+            if (adaptive_trees[i]->bg_adaptive_tree) {
+                adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
+            } else {
+                adaptive_trees[i] = make_adaptive_tree(-1);
             }
-            adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
         }
 
-        adaptive_trees[i]->train(*instance);
+        // online bagging
+        prepare_instance(*instance);
+        int weight = Utils::poisson(1.0);
+        while (weight > 0) {
+            weight--;
+            adaptive_trees[i]->train(*instance);
+        }
     }
 
     delete instance;
 
     int max_votes = votes[0];
-    int max_class_idx = 0;
     for (int i = 1; i < num_classes; i++) {
         if (max_votes < votes[i]) {
             max_votes = votes[i];
-            max_class_idx = i;
+            predicted_label = i;
         }
     }
-
-    predicted_label = max_class_idx;
 
     return predicted_label == actual_label;
 }
