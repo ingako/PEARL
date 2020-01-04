@@ -31,6 +31,16 @@ pearl::pearl(int num_trees,
         unique_ptr<adaptive_tree> tree = make_adaptive_tree(i);
         adaptive_trees.push_back(move(tree));
     }
+
+    // initialize LRU state pattern queue
+    state_queue = make_unique<lru_state>(100, edit_distance_threshold);
+
+    cur_state = vector<char>(repo_size, '0');
+    for (int i = 0; i < num_trees; i++) {
+        cur_state[i] = '1';
+    }
+
+    state_queue->enqueue(cur_state);
 }
 
 unique_ptr<pearl::adaptive_tree> pearl::make_adaptive_tree(int tree_pool_id) {

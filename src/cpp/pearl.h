@@ -9,6 +9,7 @@
 #include "code/src/streams/ArffReader.h"
 #include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
 #include "code/src/learners/Classifiers/Trees/ADWIN.h"
+#include "lru_state.h"
 
 #ifndef NOPYBIND
 #include <pybind11/pybind11.h>
@@ -99,10 +100,14 @@ class pearl {
         Instance* instance;
         Reader* reader = nullptr;
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
+        vector<unique_ptr<adaptive_tree>> candidate_trees;
+        vector<unique_ptr<adaptive_tree>> tree_pool;
 
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
         unique_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
 
+        unique_ptr<lru_state> state_queue;
+        vector<char> cur_state;
 };
 
 #ifndef NOPYBIND
