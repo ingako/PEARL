@@ -107,8 +107,7 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     actual_labels.push_back(actual_label);
 
     int predicted_label;
-    vector<char> target_state(cur_state);
-    vector<int> warning_tree_id_list;
+    vector<int> warning_tree_pos_list;
     vector<int> drifted_tree_pos_list;
 
     for (int i = 0; i < num_trees; i++) {
@@ -135,13 +134,7 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
         }
 
         if (warning_detected_only) {
-            warning_tree_id_list.push_back(adaptive_trees[i]->tree_pool_id);
-            if (adaptive_trees[i]->tree_pool_id == -1) {
-                LOG("Error: tree_pool_id is not updated");
-                exit(1);
-            }
-
-            target_state[adaptive_trees[i]->tree_pool_id] = '2';
+            warning_tree_pos_list.push_back(i);
         }
     }
 
@@ -150,9 +143,9 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 
     // if warnings are detected, find closest state and update candidate_trees list
-    if (warning_tree_id_list.size() > 0) {
+    if (warning_tree_pos_list.size() > 0) {
         cout << "copy cur_state..." << endl;
-        select_candidate_trees(target_state, warning_tree_id_list);
+        select_candidate_trees(warning_tree_pos_list);
         cout << "copy cur_state completed" << endl;
     }
 
@@ -217,8 +210,20 @@ void pearl::train(Instance& instance) {
     }
 }
 
-void pearl::select_candidate_trees(vector<char>& target_state,
-                                   vector<int>& warning_tree_id_list) {
+void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
+
+    vector<char> target_state(cur_state);
+
+    for (int i = 0; i < warning_tree_pos_list.size(); i++) {
+        int tree_pos = warning_tree_pos_list[i];
+
+        if (adaptive_trees[tree_pos]->tree_pool_id == -1) {
+            LOG("Error: tree_pool_id is not updated");
+            exit(1);
+        }
+
+        target_state[adaptive_trees[tree_pos]->tree_pool_id] = '2';
+    }
 
     vector<char> closest_state = state_queue->get_closest_state(target_state);
     if (closest_state.size() == 0) {

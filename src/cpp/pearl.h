@@ -80,8 +80,7 @@ class pearl {
         void train(Instance& instance);
         int vote(vector<int> votes);
 
-        void select_candidate_trees(vector<char>& target_state,
-                                    vector<int>& warning_tree_id_list);
+        void select_candidate_trees(vector<int>& warning_tree_pos_list);
 
         static bool compare_kappa(unique_ptr<adaptive_tree>& tree1,
                                   unique_ptr<adaptive_tree>& tree2);
