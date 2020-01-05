@@ -79,6 +79,9 @@ class pearl {
         void prepare_instance(Instance& instance);
 
         bool process();
+        void process_basic(vector<int>& votes);
+        void process_with_state_adaption(vector<int>& votes);
+
         void train(Instance& instance);
         int vote(vector<int> votes);
 
