@@ -99,13 +99,17 @@ bool pearl::process() {
 }
 
 void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
-    int predicted_label;
 
+    // keep track of actual labels for candidate tree evaluations
+    if (actual_labels.size() >= kappa_window_size) {
+        actual_labels.pop_front();
+    }
+    actual_labels.push_back(actual_label);
+
+    int predicted_label;
     vector<char> target_state(cur_state);
     vector<int> warning_tree_id_list;
-
-    vector<unique_ptr<adaptive_tree>> drifted_tree_list;
-    vector<int> drift_tree_pos_list;
+    vector<int> drifted_tree_pos_list;
 
     for (int i = 0; i < num_trees; i++) {
 
@@ -127,13 +131,7 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
         // detect drift
         if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
             warning_detected_only = true;
-            drift_tree_pos_list.push_back(i);
-
-            if (adaptive_trees[i]->bg_adaptive_tree) {
-                adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
-            } else {
-                adaptive_trees[i] = make_adaptive_tree(tree_pool.size());
-            }
+            drifted_tree_pos_list.push_back(i);
         }
 
         if (warning_detected_only) {
@@ -147,6 +145,10 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
         }
     }
 
+    for (int i = 0; i < candidate_trees.size(); i++) {
+        candidate_trees[i]->predict(*instance);
+    }
+
     // if warnings are detected, find closest state and update candidate_trees list
     if (warning_tree_id_list.size() > 0) {
         cout << "copy cur_state..." << endl;
@@ -155,10 +157,10 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 
     // if actual drifts are detected, swap trees and update cur_state
-    if (drifted_tree_list.size() > 0) {
+    if (drifted_tree_pos_list.size() > 0) {
         // TODO
-        // adapt_state(drifted_tree_list, drifted_tree_pos_list, actual_labels);
-        // state_queue->enqueue(cur_state);
+        adapt_state(drifted_tree_pos_list);
+        state_queue->enqueue(cur_state);
     }
 }
 
@@ -227,8 +229,85 @@ void pearl::select_candidate_trees(vector<char>& target_state,
         if (cur_state[i] == '0' && closest_state[i] == '1' && tree_pool[i]) {
             // TODO restrict the size of candidate_trees
 
-            // TODO add trees to empty slots
             candidate_trees.push_back(move(tree_pool[i]));
+        }
+    }
+}
+
+void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
+    // sort candiate trees by kappa
+    for (int i = 0; i < candidate_trees.size(); i++) {
+        candidate_trees[i]->update_kappa(actual_labels);
+    }
+    sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
+
+    for (int i = 0; i < drifted_tree_pos_list.size(); i++) {
+        // TODO
+        if (tree_pool.size() >= repo_size) {
+            LOG("early break");
+            exit(1);
+        }
+
+
+        int drifted_pos = drifted_tree_pos_list[i];
+        unique_ptr<adaptive_tree> drifted_tree = move(adaptive_trees[drifted_pos]);
+        unique_ptr<adaptive_tree> swap_tree;
+
+        drifted_tree->update_kappa(actual_labels);
+
+        cur_state[drifted_tree->tree_pool_id] = '0';
+
+        if (candidate_trees.size() > 0
+            && candidate_trees.back()->kappa
+                - drifted_tree->kappa >= cd_kappa_threshold) {
+            swap_tree = move(candidate_trees.back());
+            candidate_trees.pop_back();
+        }
+
+        if (swap_tree == nullptr) {
+            bool add_to_repo = true;
+
+            if (!drifted_tree->bg_adaptive_tree) {
+                swap_tree = make_adaptive_tree(-1);
+
+            } else {
+                unique_ptr<adaptive_tree> bg_tree =
+                    move(drifted_tree->bg_adaptive_tree);
+                bg_tree->update_kappa(actual_labels);
+
+                if (bg_tree->kappa == INT_MIN) {
+                    // add bg tree to the repo even if it didn't fill the window
+                    swap_tree = move(bg_tree);
+
+                } else if (bg_tree->kappa - drifted_tree->kappa >= bg_kappa_threshold) {
+                    swap_tree = move(bg_tree);
+
+                } else {
+                    // false positive
+                    add_to_repo = false;
+
+                }
+            }
+
+            if (add_to_repo) {
+                swap_tree->reset();
+
+                // assign a new tree_pool_id for background tree
+                // and add background tree to tree_pool
+                swap_tree->tree_pool_id = tree_pool.size();
+                tree_pool.push_back(move(swap_tree));
+            }
+        }
+
+        cur_state[swap_tree->tree_pool_id] = '1';
+
+        // replace drifted_tree with swap tree
+        adaptive_trees[drifted_pos] = move(swap_tree);
+
+        // put drifted tree back to tree_pool
+        if (drifted_tree) {
+            drifted_tree->reset();
+            tree_pool[drifted_tree->tree_pool_id] = move(drifted_tree);
         }
     }
 }
@@ -263,6 +342,13 @@ bool pearl::get_next_instance() {
 
     return true;
 }
+
+bool pearl::compare_kappa(unique_ptr<adaptive_tree>& tree1,
+                          unique_ptr<adaptive_tree>& tree2) {
+    return tree1->kappa < tree2->kappa;
+}
+
+
 
 void pearl::set_num_trees(int num_trees_) {
     num_trees = num_trees_;
@@ -301,6 +387,11 @@ int pearl::adaptive_tree::predict(Instance& instance) {
         }
     }
 
+    if (predicted_labels.size() >= kappa_window_size) {
+        predicted_labels.pop_front();
+    }
+    predicted_labels.push_back(result);
+
     return result;
 }
 
@@ -312,10 +403,14 @@ void pearl::adaptive_tree::train(Instance& instance) {
     }
 }
 
-void pearl::adaptive_tree::update_kappa(int actual_labels) {
+void pearl::adaptive_tree::update_kappa(deque<int> actual_labels) {
 
 }
 
 void pearl::adaptive_tree::reset() {
-
+    bg_adaptive_tree = nullptr;
+    warning_detector->resetChange();
+    drift_detector->resetChange();
+    predicted_labels.clear();
+    kappa = INT_MIN;
 }

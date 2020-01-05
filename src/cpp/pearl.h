@@ -29,6 +29,9 @@ class pearl {
     class adaptive_tree {
         public:
             int tree_pool_id;
+            double kappa = INT_MIN;
+            bool is_candidate = false;
+            deque<int> predicted_labels;
 
             adaptive_tree(int tree_pool_id,
                           int kappa_window_size,
@@ -37,7 +40,7 @@ class pearl {
 
             void train(Instance& instance);
             int predict(Instance& instance);
-            void update_kappa(int actual_labels);
+            void update_kappa(deque<int> actual_labels);
             void reset();
 
             unique_ptr<HT::HoeffdingTree> tree;
@@ -49,11 +52,6 @@ class pearl {
             int kappa_window_size;
             double warning_delta;
             double drift_delta;
-
-            double kappa = INT_MIN;
-            bool is_candidate = false;
-
-            deque<int> predicted_labels;
     };
 
     public:
@@ -79,14 +77,14 @@ class pearl {
         void prepare_instance(Instance& instance);
 
         bool process();
-        void process_basic(vector<int>& votes, int actual_label);
-        void process_with_state_adaption(vector<int>& votes, int actual_label);
-
         void train(Instance& instance);
         int vote(vector<int> votes);
 
         void select_candidate_trees(vector<char>& target_state,
                                     vector<int>& warning_tree_id_list);
+
+        static bool compare_kappa(unique_ptr<adaptive_tree>& tree1,
+                                  unique_ptr<adaptive_tree>& tree2);
 
     private:
 
@@ -107,16 +105,23 @@ class pearl {
 
         Instance* instance;
         Reader* reader = nullptr;
+
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
         vector<unique_ptr<adaptive_tree>> candidate_trees;
         vector<unique_ptr<adaptive_tree>> tree_pool;
 
+        unique_ptr<lru_state> state_queue;
+        vector<char> cur_state;
+        deque<int> actual_labels;
+
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
         unique_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
 
-        unique_ptr<lru_state> state_queue;
-        vector<char> cur_state;
+        void process_basic(vector<int>& votes, int actual_label);
+        void process_with_state_adaption(vector<int>& votes, int actual_label);
+        void adapt_state(vector<int> drifted_tree_pos_list);
 };
+
 
 #ifndef NOPYBIND
 
