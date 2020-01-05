@@ -78,18 +78,19 @@ void pearl::prepare_instance(Instance& instance) {
 }
 
 bool pearl::process() {
+    int actual_label = instance->getLabel();
+
     int num_classes = instance->getNumberClasses();
     vector<int> votes(num_classes, 0);
 
     if (enable_state_adaption) {
-        process_with_state_adaption(votes);
+        process_with_state_adaption(votes, actual_label);
     } else {
-        process_basic(votes);
+        process_basic(votes, actual_label);
     }
 
     train(*instance);
 
-    int actual_label = instance->getLabel();
     int predicted_label = vote(votes);
 
     delete instance;
@@ -97,9 +98,8 @@ bool pearl::process() {
     return predicted_label == actual_label;
 }
 
-void pearl::process_with_state_adaption(vector<int>& votes) {
+void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     int predicted_label;
-    int actual_label = instance->getLabel();
 
     vector<char> target_state(cur_state);
     vector<int> warning_tree_id_list;
@@ -162,9 +162,8 @@ void pearl::process_with_state_adaption(vector<int>& votes) {
     }
 }
 
-void pearl::process_basic(vector<int>& votes) {
+void pearl::process_basic(vector<int>& votes, int actual_label) {
     int predicted_label;
-    int actual_label = instance->getLabel();
 
     for (int i = 0; i < num_trees; i++) {
 
