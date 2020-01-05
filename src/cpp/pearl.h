@@ -79,7 +79,8 @@ class pearl {
         void prepare_instance(Instance& instance);
 
         bool process();
-        void partial_fit(string instance);
+        void train(Instance& instance);
+        int vote(vector<int> votes);
 
         void select_candidate_trees(vector<char>& target_state,
                                     vector<int>& warning_tree_id_list);

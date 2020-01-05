@@ -150,27 +150,37 @@ bool pearl::process() {
         }
     }
 
-    for (int i = 0; i < num_trees; i++) {
-        // online bagging
-        prepare_instance(*instance);
-        int weight = Utils::poisson(1.0);
-        while (weight > 0) {
-            weight--;
-            adaptive_trees[i]->train(*instance);
-        }
-    }
+    train(*instance);
 
     delete instance;
 
+    return vote(votes) == actual_label;
+}
+
+int pearl::vote(vector<int> votes) {
     int max_votes = votes[0];
-    for (int i = 1; i < num_classes; i++) {
+    int predicted_label = 0;
+
+    for (int i = 1; i < votes.size(); i++) {
         if (max_votes < votes[i]) {
             max_votes = votes[i];
             predicted_label = i;
         }
     }
 
-    return predicted_label == actual_label;
+    return predicted_label;
+}
+
+void pearl::train(Instance& instance) {
+    for (int i = 0; i < num_trees; i++) {
+        // online bagging
+        prepare_instance(instance);
+        int weight = Utils::poisson(1.0);
+        while (weight > 0) {
+            weight--;
+            adaptive_trees[i]->train(instance);
+        }
+    }
 }
 
 void pearl::select_candidate_trees(vector<char>& target_state,
