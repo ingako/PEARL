@@ -28,6 +28,8 @@ class pearl {
 
     class adaptive_tree {
         public:
+            int tree_pool_id;
+
             adaptive_tree(int tree_pool_id,
                           int kappa_window_size,
                           double warning_delta,
@@ -44,7 +46,6 @@ class pearl {
             unique_ptr<HT::ADWIN> drift_detector;
 
         private:
-            int tree_pool_id;
             int kappa_window_size;
             double warning_delta;
             double drift_delta;
@@ -79,6 +80,9 @@ class pearl {
 
         bool process();
         void partial_fit(string instance);
+
+        void select_candidate_trees(vector<char>& target_state,
+                                    vector<int>& warning_tree_id_list);
 
     private:
 

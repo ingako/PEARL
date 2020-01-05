@@ -27,6 +27,8 @@ pearl::pearl(int num_trees,
     drift_delta(drift_delta),
     enable_state_adaption(enable_state_adaption) {
 
+    tree_pool = vector<unique_ptr<adaptive_tree>>(num_trees);
+
     for (int i = 0; i < num_trees; i++) {
         unique_ptr<adaptive_tree> tree = make_adaptive_tree(i);
         adaptive_trees.push_back(move(tree));
@@ -82,6 +84,12 @@ bool pearl::process() {
     int num_classes = instance->getNumberClasses();
     vector<int> votes(num_classes, 0);
 
+    vector<char> target_state(cur_state);
+    vector<int> warning_tree_id_list;
+
+    vector<unique_ptr<adaptive_tree>> drifted_tree_list;
+    vector<int> drift_tree_pos_list;
+
     for (int i = 0; i < num_trees; i++) {
 
         predicted_label = adaptive_trees[i]->predict(*instance);
@@ -89,21 +97,60 @@ bool pearl::process() {
         votes[predicted_label]++;
         int error_count = (int)(actual_label != predicted_label);
 
+        bool warning_detected_only = false;
+
         // detect warning
         if (detect_change(error_count, adaptive_trees[i]->warning_detector)) {
+            warning_detected_only = false;
+
             adaptive_trees[i]->bg_adaptive_tree = make_adaptive_tree(-1);
             adaptive_trees[i]->warning_detector->resetChange();
         }
 
         // detect drift
         if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
-            if (adaptive_trees[i]->bg_adaptive_tree) {
-                adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
-            } else {
-                adaptive_trees[i] = make_adaptive_tree(-1);
+            warning_detected_only = true;
+            drift_tree_pos_list.push_back(i);
+
+            if (!enable_state_adaption) {
+                if (adaptive_trees[i]->bg_adaptive_tree) {
+                    adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
+                } else {
+                    adaptive_trees[i] = make_adaptive_tree(tree_pool.size());
+                }
             }
         }
 
+        if (enable_state_adaption) {
+            if (warning_detected_only) {
+                warning_tree_id_list.push_back(adaptive_trees[i]->tree_pool_id);
+                if (adaptive_trees[i]->tree_pool_id == -1) {
+                    LOG("Error: tree_pool_id is not updated");
+                    exit(1);
+                }
+
+                target_state[adaptive_trees[i]->tree_pool_id] = '2';
+            }
+        }
+    }
+
+    if (enable_state_adaption) {
+        // if warnings are detected, find closest state and update candidate_trees list
+        if (warning_tree_id_list.size() > 0) {
+            cout << "copy cur_state..." << endl;
+            select_candidate_trees(target_state, warning_tree_id_list);
+            cout << "copy cur_state completed" << endl;
+        }
+
+        // if actual drifts are detected, swap trees and update cur_state
+        if (drifted_tree_list.size() > 0) {
+            // TODO
+            // adapt_state(drifted_tree_list, drifted_tree_pos_list, actual_labels);
+            // state_queue->enqueue(cur_state);
+        }
+    }
+
+    for (int i = 0; i < num_trees; i++) {
         // online bagging
         prepare_instance(*instance);
         int weight = Utils::poisson(1.0);
@@ -124,6 +171,24 @@ bool pearl::process() {
     }
 
     return predicted_label == actual_label;
+}
+
+void pearl::select_candidate_trees(vector<char>& target_state,
+                                   vector<int>& warning_tree_id_list) {
+
+    vector<char> closest_state = state_queue->get_closest_state(target_state);
+    if (closest_state.size() == 0) {
+        return;
+    }
+
+    for (int i = 0; i < tree_pool.size(); i++) {
+        if (cur_state[i] == '0' && closest_state[i] == '1' && tree_pool[i]) {
+            // TODO restrict the size of candidate_trees
+
+            // TODO add trees to empty slots
+            candidate_trees.push_back(move(tree_pool[i]));
+        }
+    }
 }
 
 bool pearl::detect_change(int error_count,
