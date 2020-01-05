@@ -144,16 +144,13 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
 
     // if warnings are detected, find closest state and update candidate_trees list
     if (warning_tree_pos_list.size() > 0) {
-        cout << "copy cur_state..." << endl;
         select_candidate_trees(warning_tree_pos_list);
-        cout << "copy cur_state completed" << endl;
     }
 
     // if actual drifts are detected, swap trees and update cur_state
     if (drifted_tree_pos_list.size() > 0) {
         // TODO
         adapt_state(drifted_tree_pos_list);
-        state_queue->enqueue(cur_state);
     }
 }
 
@@ -253,7 +250,6 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             exit(1);
         }
 
-
         int drifted_pos = drifted_tree_pos_list[i];
         unique_ptr<adaptive_tree> drifted_tree = move(adaptive_trees[drifted_pos]);
         unique_ptr<adaptive_tree> swap_tree;
@@ -261,6 +257,8 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         drifted_tree->update_kappa(actual_labels);
 
         cur_state[drifted_tree->tree_pool_id] = '0';
+
+        bool add_to_repo = false;
 
         if (candidate_trees.size() > 0
             && candidate_trees.back()->kappa
@@ -270,38 +268,45 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         }
 
         if (swap_tree == nullptr) {
-            bool add_to_repo = true;
+            add_to_repo = true;
 
-            if (!drifted_tree->bg_adaptive_tree) {
-                swap_tree = make_adaptive_tree(-1);
+            unique_ptr<adaptive_tree> bg_tree =
+                move(drifted_tree->bg_adaptive_tree);
+
+            if (!bg_tree) {
+                swap_tree = make_adaptive_tree(tree_pool.size());
 
             } else {
-                unique_ptr<adaptive_tree> bg_tree =
-                    move(drifted_tree->bg_adaptive_tree);
                 bg_tree->update_kappa(actual_labels);
 
                 if (bg_tree->kappa == INT_MIN) {
                     // add bg tree to the repo even if it didn't fill the window
-                    swap_tree = move(bg_tree);
 
                 } else if (bg_tree->kappa - drifted_tree->kappa >= bg_kappa_threshold) {
-                    swap_tree = move(bg_tree);
+                    // swap_tree = move(bg_tree);
 
                 } else {
                     // false positive
                     add_to_repo = false;
 
                 }
+
+                swap_tree = move(bg_tree);
             }
 
             if (add_to_repo) {
                 swap_tree->reset();
 
                 // assign a new tree_pool_id for background tree
-                // and add background tree to tree_pool
+                // and allocate a slot for background tree in tree_pool
                 swap_tree->tree_pool_id = tree_pool.size();
-                tree_pool.push_back(move(swap_tree));
+                tree_pool.push_back(nullptr);
             }
+        }
+
+        if (!swap_tree) {
+            LOG("swap_tree is nullptr");
+            exit(1);
         }
 
         cur_state[swap_tree->tree_pool_id] = '1';
@@ -315,6 +320,8 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             tree_pool[drifted_tree->tree_pool_id] = move(drifted_tree);
         }
     }
+
+    state_queue->enqueue(cur_state);
 }
 
 bool pearl::detect_change(int error_count,
