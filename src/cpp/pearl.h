@@ -40,7 +40,7 @@ class pearl {
 
             void train(Instance& instance);
             int predict(Instance& instance);
-            void update_kappa(deque<int> actual_labels);
+            void update_kappa(deque<int> actual_labels, int class_count);
             void reset();
 
             unique_ptr<HT::HoeffdingTree> tree;
@@ -52,6 +52,11 @@ class pearl {
             int kappa_window_size;
             double warning_delta;
             double drift_delta;
+
+            double compute_kappa(int* confusion_matrix,
+                                 double accuracy,
+                                 int sapmle_count,
+                                 int class_count);
     };
 
     public:

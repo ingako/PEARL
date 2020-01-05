@@ -149,7 +149,6 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
 
     // if actual drifts are detected, swap trees and update cur_state
     if (drifted_tree_pos_list.size() > 0) {
-        // TODO
         adapt_state(drifted_tree_pos_list);
     }
 }
@@ -237,16 +236,20 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 }
 
 void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
+    int class_count = instance->getNumberClasses();
+
     // sort candiate trees by kappa
     for (int i = 0; i < candidate_trees.size(); i++) {
-        candidate_trees[i]->update_kappa(actual_labels);
+        candidate_trees[i]->update_kappa(actual_labels, class_count);
     }
     sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
 
+    // cout << std::to_string(drifted_tree_pos_list.size()) << endl;
     for (int i = 0; i < drifted_tree_pos_list.size(); i++) {
         // TODO
         if (tree_pool.size() >= repo_size) {
-            LOG("early break");
+            std::cout << "tree_pool full: "
+                      << std::to_string(tree_pool.size()) << endl;
             exit(1);
         }
 
@@ -254,7 +257,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         unique_ptr<adaptive_tree> drifted_tree = move(adaptive_trees[drifted_pos]);
         unique_ptr<adaptive_tree> swap_tree;
 
-        drifted_tree->update_kappa(actual_labels);
+        drifted_tree->update_kappa(actual_labels, class_count);
 
         cur_state[drifted_tree->tree_pool_id] = '0';
 
@@ -277,7 +280,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                 swap_tree = make_adaptive_tree(tree_pool.size());
 
             } else {
-                bg_tree->update_kappa(actual_labels);
+                bg_tree->update_kappa(actual_labels, class_count);
 
                 if (bg_tree->kappa == INT_MIN) {
                     // add bg tree to the repo even if it didn't fill the window
@@ -415,8 +418,57 @@ void pearl::adaptive_tree::train(Instance& instance) {
     }
 }
 
-void pearl::adaptive_tree::update_kappa(deque<int> actual_labels) {
+void pearl::adaptive_tree::update_kappa(deque<int> actual_labels, int class_count) {
 
+    if (predicted_labels.size() < kappa_window_size) {
+        kappa = INT_MIN;
+        return;
+    }
+
+    int confusion_matrix[class_count][class_count] = {};
+    int correct = 0;
+
+    for (int i = 0; i < kappa_window_size; i++) {
+        confusion_matrix[actual_labels[i]][predicted_labels[i]]++;
+        if (actual_labels[i] == predicted_labels[i]) {
+            correct++;
+        }
+    }
+
+    double accuracy = (double) correct / kappa_window_size;
+
+    kappa = compute_kappa(&(confusion_matrix[0][0]), accuracy, kappa_window_size, class_count);
+}
+
+double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
+                                           double accuracy,
+                                           int sample_count,
+                                           int class_count) {
+    // computes the Cohen's kappa coefficient
+    double p0 = accuracy;
+    double pc = 0.0;
+    int row_count = class_count;
+    int col_count = class_count;
+
+    for (int i = 0; i < row_count; i++) {
+        double row_sum = 0;
+        for (int j = 0; j < col_count; j++) {
+            row_sum += confusion_matrix[i * col_count + j];
+        }
+
+        double col_sum = 0;
+        for (int j = 0; j < row_count; j++) {
+            col_sum += confusion_matrix[j * row_count + i];
+        }
+
+        pc += (row_sum / sample_count) * (col_sum / sample_count);
+    }
+
+    if (pc == 1) {
+        return 1;
+    }
+
+    return (p0 - pc) / (1.0 - pc);
 }
 
 void pearl::adaptive_tree::reset() {
