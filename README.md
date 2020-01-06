@@ -24,6 +24,12 @@ python src/main.py -h
 
 ### Speed Optimization with C++
 
+```
+pip3 install pybind11
+cd src/cpp
+make
+```
+
 See `run/run-covtype-cpp.sh` for an example.
 
 ### Data Preparation
