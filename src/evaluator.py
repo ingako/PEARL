@@ -100,7 +100,7 @@ class Evaluator:
 
         current_state = []
 
-        metrics_logger.info("count,accuracy")
+        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
 
         classifier.init_data_source("covtype.arff");
 
@@ -124,7 +124,14 @@ class Evaluator:
                     x_axis.append(count)
                     accuracy_list.append(window_accuracy)
 
-                    metrics_logger.info(f"{count},{window_accuracy}")
+                    candidate_tree_size = \
+                        classifier.get_candidate_tree_group_size()
+                    tree_pool_size = classifier.get_tree_pool_size()
+
+                    print(f"{count},{window_accuracy}," \
+                          f"{candidate_tree_size},{tree_pool_size}")
+                    metrics_logger.info(f"{count},{window_accuracy}," \
+                                        f"{candidate_tree_size},{tree_pool_size}")
 
                     sample_counter = 0
                     sample_counter_interval = 0

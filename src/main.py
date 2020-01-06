@@ -38,6 +38,9 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
+    parser.add_argument("-c", "--candidate_tree",
+                        dest="max_num_candidate_trees", default=60, type=int,
+                        help="max number of candidate trees in the forest")
     parser.add_argument("-g", "--generator",
                         dest="generator", default="agrawal", type=str,
                         help="name of the synthetic data generator")
@@ -208,6 +211,7 @@ if __name__ == '__main__':
 
     if args.cpp:
         pearl = pearl(args.num_trees,
+                      args.max_num_candidate_trees,
                       repo_size,
                       args.edit_distance_threshold,
                       args.kappa_window,

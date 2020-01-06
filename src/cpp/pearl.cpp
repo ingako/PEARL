@@ -1,6 +1,7 @@
 #include "pearl.h"
 
 pearl::pearl(int num_trees,
+             int max_num_candidate_trees,
              int repo_size,
              int edit_distance_threshold,
              int kappa_window_size,
@@ -14,6 +15,7 @@ pearl::pearl(int num_trees,
              double drift_delta,
              bool enable_state_adaption) :
     num_trees(num_trees),
+    max_num_candidate_trees(max_num_candidate_trees),
     repo_size(repo_size),
     edit_distance_threshold(edit_distance_threshold),
     kappa_window_size(kappa_window_size),
@@ -228,7 +230,11 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
     for (int i = 0; i < tree_pool.size(); i++) {
         if (cur_state[i] == '0' && closest_state[i] == '1' && tree_pool[i]) {
-            // TODO restrict the size of candidate_trees
+            if (candidate_trees.size() >= max_num_candidate_trees) {
+                tree_pool[candidate_trees[0]->tree_pool_id] =
+                    move(candidate_trees[0]);
+                candidate_trees.pop_front();
+            }
 
             candidate_trees.push_back(move(tree_pool[i]));
         }
@@ -371,6 +377,14 @@ void pearl::set_num_trees(int num_trees_) {
 
 int pearl::get_num_trees() const {
     return num_trees;
+}
+
+int pearl::get_candidate_tree_group_size() {
+    return candidate_trees.size();
+}
+
+int pearl::get_tree_pool_size() {
+    return tree_pool.size();
 }
 
 // class adaptive_tree

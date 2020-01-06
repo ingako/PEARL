@@ -61,6 +61,7 @@ class pearl {
 
     public:
         pearl(int num_trees,
+              int max_num_candidate_trees,
               int repo_size,
               int edit_distance_threshold,
               int kappa_window_size,
@@ -76,6 +77,8 @@ class pearl {
 
         void set_num_trees(int num_trees_);
         int get_num_trees() const;
+        int get_candidate_tree_group_size();
+        int get_tree_pool_size();
 
         bool init_data_source(const string& filename);
         bool get_next_instance();
@@ -93,6 +96,7 @@ class pearl {
     private:
 
         int num_trees;
+        int max_num_candidate_trees;
         int repo_size;
         int edit_distance_threshold;
         int kappa_window_size;
@@ -111,7 +115,7 @@ class pearl {
         Reader* reader = nullptr;
 
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
-        vector<unique_ptr<adaptive_tree>> candidate_trees;
+        deque<unique_ptr<adaptive_tree>> candidate_trees;
         vector<unique_ptr<adaptive_tree>> tree_pool;
 
         unique_ptr<lru_state> state_queue;
@@ -140,6 +144,7 @@ PYBIND11_MODULE(pearl, m) {
                       int,
                       int,
                       int,
+                      int,
                       double,
                       double,
                       double,
@@ -147,6 +152,8 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       bool>())
         .def_property("num_trees", &pearl::get_num_trees, &pearl::set_num_trees)
+        .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
+        .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
         .def("get_next_instance", &pearl::get_next_instance)
         .def("process", &pearl::process)
