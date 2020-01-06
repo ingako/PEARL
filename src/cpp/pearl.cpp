@@ -133,6 +133,8 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
         if (detect_change(error_count, adaptive_trees[i]->drift_detector)) {
             warning_detected_only = true;
             drifted_tree_pos_list.push_back(i);
+
+            adaptive_trees[i]->drift_detector->resetChange();
         }
 
         if (warning_detected_only) {
@@ -292,7 +294,6 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                     // add bg tree to the repo even if it didn't fill the window
 
                 } else if (bg_tree->kappa - drifted_tree->kappa >= bg_kappa_threshold) {
-                    // swap_tree = move(bg_tree);
 
                 } else {
                     // false positive
@@ -310,6 +311,12 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                 // and allocate a slot for background tree in tree_pool
                 swap_tree->tree_pool_id = tree_pool.size();
                 tree_pool.push_back(nullptr);
+
+            } else {
+                swap_tree->tree_pool_id = drifted_tree->tree_pool_id;
+
+                // TODO
+                // swap_tree = move(drifted_tree);
             }
         }
 
@@ -420,6 +427,11 @@ int pearl::adaptive_tree::predict(Instance& instance) {
         predicted_labels.pop_front();
     }
     predicted_labels.push_back(result);
+
+    // the background tree performs prediction for performance eval
+    if (bg_adaptive_tree) {
+        bg_adaptive_tree->predict(instance);
+    }
 
     return result;
 }
