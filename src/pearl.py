@@ -70,6 +70,8 @@ class Pearl:
         for i in range(0, num_trees):
             self.tree_pool[i] = self.adaptive_trees[i]
 
+        self.actual_labels = deque(maxlen=self.kappa_window)
+
     def update_drift_detector(self, adaptive_tree, predicted_label, actual_label):
         if predicted_label == actual_label:
             adaptive_tree.warning_detector.add_element(0)
@@ -79,6 +81,8 @@ class Pearl:
             adaptive_tree.drift_detector.add_element(1)
 
     def predict(self, X, y):
+        self.actual_labels.append(y[0])
+
         # test on candidate trees
         self.__predict(X, y, self.candidate_trees, should_vote=False)
 
@@ -169,12 +173,11 @@ class Pearl:
 
     def adapt_state(self,
                     drifted_tree_list,
-                    drifted_tree_pos,
-                    actual_labels):
+                    drifted_tree_pos):
 
         # sort candidates by kappa
         for candidate_tree in self.candidate_trees:
-            candidate_tree.update_kappa(actual_labels)
+            candidate_tree.update_kappa(self.actual_labels)
         self.candidate_trees.sort(key=lambda c : c.kappa)
 
         for drifted_tree in drifted_tree_list:
@@ -183,11 +186,11 @@ class Pearl:
                 print("early break")
                 exit()
 
-            drifted_tree.update_kappa(actual_labels)
+            drifted_tree.update_kappa(self.actual_labels)
             swap_tree = drifted_tree
 
-            background_count = 0
-            candidate_count = 0
+            # background_count = 0
+            # candidate_count = 0
 
             if len(self.candidate_trees) > 0 \
                     and self.candidate_trees[-1].kappa - drifted_tree.kappa >= self.cd_kappa_threshold:
@@ -213,9 +216,9 @@ class Pearl:
                                          drift_delta=self.drift_delta)
 
                 else:
-                    prediction_win_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
+                    # prediction_win_size = len(drifted_tree.bg_adaptive_tree.predicted_labels)
 
-                    drifted_tree.bg_adaptive_tree.update_kappa(actual_labels)
+                    drifted_tree.bg_adaptive_tree.update_kappa(self.actual_labels)
 
                     if drifted_tree.bg_adaptive_tree.kappa == -sys.maxsize:
                         # add bg_adaptive_tree to the repo even if it didn't fill the window
@@ -251,7 +254,7 @@ class Pearl:
         if self.enable_state_graph:
             self.graph_switch.switch()
 
-    def handle_drift(self, count, actual_labels):
+    def handle_drift(self, count):
 
         target_state = copy.deepcopy(self.cur_state)
 
@@ -301,8 +304,7 @@ class Pearl:
             # if actual drifts are detected, swap trees and update cur_state
             if len(drifted_tree_list) > 0:
                 self.adapt_state(drifted_tree_list=drifted_tree_list,
-                                 drifted_tree_pos=drifted_tree_pos,
-                                 actual_labels=actual_labels)
+                                 drifted_tree_pos=drifted_tree_pos)
 
             self.lru_states.enqueue(self.cur_state)
 

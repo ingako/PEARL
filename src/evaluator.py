@@ -16,7 +16,6 @@ class Evaluator:
         correct = 0
         x_axis = []
         accuracy_list = []
-        actual_labels = deque(maxlen=classifier.kappa_window) # a window of size kappa_window
 
         sample_counter = 0
         sample_counter_interval = 0
@@ -31,7 +30,6 @@ class Evaluator:
 
         for count in range(0, max_samples):
             X, y = stream.next_sample()
-            actual_labels.append(y[0])
 
             # test
             prediction = classifier.predict(X, y)[0]
@@ -41,7 +39,7 @@ class Evaluator:
             if prediction == y[0]:
                 correct += 1
 
-            classifier.handle_drift(count, actual_labels)
+            classifier.handle_drift(count)
 
             if (count % wait_samples == 0) and (count != 0):
                 accuracy = correct / wait_samples
