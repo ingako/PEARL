@@ -22,6 +22,10 @@ For a list of available options, run
 python src/main.py -h
 ```
 
+### Speed Optimization with C++
+
+See `run/run-covtype-cpp.sh` for an example.
+
 ### Data Preparation
 
 ##### Real World Dataset
