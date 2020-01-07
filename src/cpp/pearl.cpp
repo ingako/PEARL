@@ -252,7 +252,6 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
     }
     sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
 
-    // cout << std::to_string(drifted_tree_pos_list.size()) << endl;
     for (int i = 0; i < drifted_tree_pos_list.size(); i++) {
         // TODO
         if (tree_pool.size() >= repo_size) {
@@ -376,21 +375,11 @@ bool pearl::compare_kappa(unique_ptr<adaptive_tree>& tree1,
     return tree1->kappa < tree2->kappa;
 }
 
-
-
-void pearl::set_num_trees(int num_trees_) {
-    num_trees = num_trees_;
-}
-
-int pearl::get_num_trees() const {
-    return num_trees;
-}
-
-int pearl::get_candidate_tree_group_size() {
+int pearl::get_candidate_tree_group_size() const {
     return candidate_trees.size();
 }
 
-int pearl::get_tree_pool_size() {
+int pearl::get_tree_pool_size() const {
     return tree_pool.size();
 }
 

@@ -75,10 +75,8 @@ class pearl {
               double drift_delta,
               bool enable_state_adaption);
 
-        void set_num_trees(int num_trees_);
-        int get_num_trees() const;
-        int get_candidate_tree_group_size();
-        int get_tree_pool_size();
+        int get_candidate_tree_group_size() const;
+        int get_tree_pool_size() const;
 
         bool init_data_source(const string& filename);
         bool get_next_instance();
@@ -151,7 +149,6 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       double,
                       bool>())
-        .def_property("num_trees", &pearl::get_num_trees, &pearl::set_num_trees)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
@@ -159,7 +156,8 @@ PYBIND11_MODULE(pearl, m) {
         .def("process", &pearl::process)
         .def("__repr__",
             [](const pearl &p) {
-                return "<pearl.pearl has " + std::to_string(p.get_num_trees()) + " trees>";
+                return "<pearl.pearl has "
+                    + std::to_string(p.get_tree_pool_size()) + " trees>";
             }
          );
 }
