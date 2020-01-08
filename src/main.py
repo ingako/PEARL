@@ -35,15 +35,23 @@ if __name__ == '__main__':
                         help="Enable cpp backend")
     parser.set_defaults(cpp=False)
 
+
+    parser.add_argument("--dataset_name",
+                        dest="dataset_name", default="", type=str,
+                        help="dataset path")
+    parser.add_argument("--data_format",
+                        dest="data_format", default="", type=str,
+                        help="dataset format {csv|arff}")
+    parser.add_argument("-g", "--generator",
+                        dest="generator", default="agrawal", type=str,
+                        help="name of the synthetic data generator")
+
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
     parser.add_argument("-c", "--candidate_tree",
                         dest="max_num_candidate_trees", default=60, type=int,
                         help="max number of candidate trees in the forest")
-    parser.add_argument("-g", "--generator",
-                        dest="generator", default="agrawal", type=str,
-                        help="name of the synthetic data generator")
     # parser.add_argument("--pool",
     #                     dest="tree_pool_size", default=180, type=int,
     #                     help="number of trees in the online tree repository")
@@ -119,17 +127,23 @@ if __name__ == '__main__':
     if args.enable_state_graph:
         args.enable_state_adaption = True
 
-    stream = None
-    potential_file = f"../data/{args.generator}/{args.generator}.csv"
+    potential_file = f"../data/{args.dataset_name}/{args.dataset_name}.{args.data_format}"
     potential_pre_gen_file = f"../data/{args.generator}/{args.generator}-{args.generator_seed}.csv"
 
     # prepare data
     if os.path.isfile(potential_file):
         print(f"preparing stream from file {potential_file}...")
-        stream = FileStream(potential_file)
-        stream.prepare_for_use()
 
-        args.max_samples = min(args.max_samples, stream.n_remaining_samples())
+        if args.cpp:
+            print("speed optimization with C++")
+            stream = potential_file
+        else:
+            stream = FileStream(potential_file)
+            stream.prepare_for_use()
+            args.max_samples = min(args.max_samples, stream.n_remaining_samples())
+
+        result_directory = args.dataset_name
+
 
     elif os.path.isfile(potential_pre_gen_file):
         print(f"preparing stream from file {potential_pre_gen_file}...")
@@ -137,6 +151,7 @@ if __name__ == '__main__':
         stream.prepare_for_use()
 
         args.max_samples = min(args.max_samples, stream.n_remaining_samples())
+        result_directory = args.generator
 
     else:
         print(f"preparing stream from {args.generator} generator...")
@@ -148,7 +163,8 @@ if __name__ == '__main__':
         stream.prepare_for_use()
         print(stream.get_data_info())
 
-    result_directory = args.generator
+        result_directory = args.generator
+
     if args.enable_generator_noise:
         result_directory = f"{result_directory}-noise"
 
@@ -195,10 +211,15 @@ if __name__ == '__main__':
         out.write(configs)
         out.flush()
 
-    num_features = stream.n_features
-    arf_max_features = int(math.log2(num_features)) + 1
+    if args.cpp:
+        arf_max_features = -1
+        num_features = -1
+    else:
+        num_features = stream.n_features
+        arf_max_features = int(math.log2(num_features)) + 1
 
-    repo_size = args.num_trees * 160
+    # repo_size = args.num_trees * 160
+    repo_size = args.num_trees * 1600
     np.random.seed(args.random_state)
     random.seed(0)
 

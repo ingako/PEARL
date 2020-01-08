@@ -100,7 +100,7 @@ class Evaluator:
 
         metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
 
-        classifier.init_data_source("../data/covtype/covtype.arff");
+        classifier.init_data_source(stream);
 
         for count in range(0, max_samples):
             if not classifier.get_next_instance():
