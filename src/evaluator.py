@@ -10,21 +10,11 @@ class Evaluator:
     def prequential_evaluation(classifier,
                                stream,
                                max_samples,
-                               wait_samples,
                                sample_freq,
                                metrics_logger):
         correct = 0
-        x_axis = []
-        accuracy_list = []
-
-        sample_counter = 0
-        sample_counter_interval = 0
-        window_accuracy = 0.0
-        window_kappa = 0.0
         window_actual_labels = []
         window_predicted_labels = []
-
-        current_state = []
 
         metrics_logger.info("count,accuracy,kappa,memory")
 
@@ -41,36 +31,18 @@ class Evaluator:
 
             classifier.handle_drift(count)
 
-            if (count % wait_samples == 0) and (count != 0):
-                accuracy = correct / wait_samples
+            if count % sample_freq == 0 and count != 0:
 
-                window_accuracy = (window_accuracy * sample_counter + accuracy) \
-                    / (sample_counter + 1)
-
+                accuracy = correct / sample_freq
                 kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
-                window_kappa = (window_kappa * sample_counter + kappa) \
-                        / (sample_counter + 1)
+                memory_usage = classifier.get_size()
 
-                sample_counter += 1
-                sample_counter_interval += wait_samples
+                print(f"{count},{accuracy},{kappa},{memory_usage}")
+                metrics_logger.info(f"{count},{accuracy},{kappa},{memory_usage}")
+
                 correct = 0
-
-                if sample_counter_interval == sample_freq:
-                    x_axis.append(count)
-                    accuracy_list.append(window_accuracy)
-
-                    memory_usage = classifier.get_size()
-
-                    print(f"{count},{window_accuracy},{window_kappa},{memory_usage}")
-                    metrics_logger.info(f"{count},{window_accuracy},{window_kappa},{memory_usage}")
-
-                    sample_counter = 0
-                    sample_counter_interval = 0
-
-                    window_accuracy = 0.0
-                    window_kappa = 0.0
-                    window_actual_labels = []
-                    window_predicted_labels = []
+                window_actual_labels = []
+                window_predicted_labels = []
 
             # train
             classifier.partial_fit(X, y)
@@ -82,21 +54,11 @@ class Evaluator:
     def prequential_evaluation_cpp(classifier,
                                    stream,
                                    max_samples,
-                                   wait_samples,
                                    sample_freq,
                                    metrics_logger):
         correct = 0
-        x_axis = []
-        accuracy_list = []
-
-        sample_counter = 0
-        sample_counter_interval = 0
-        window_accuracy = 0.0
-        window_kappa = 0.0
         window_actual_labels = []
         window_predicted_labels = []
-
-        current_state = []
 
         metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
 
@@ -108,33 +70,15 @@ class Evaluator:
 
             correct += 1 if classifier.process() else 0
 
-            if (count % wait_samples == 0) and (count != 0):
-                accuracy = correct / wait_samples
+            if count % sample_freq == 0 and count != 0:
+                accuracy = correct / sample_freq
+                candidate_tree_size = classifier.get_candidate_tree_group_size()
+                tree_pool_size = classifier.get_tree_pool_size()
 
-                window_accuracy = (window_accuracy * sample_counter + accuracy) \
-                    / (sample_counter + 1)
+                print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
+                metrics_logger.info(f"{count},{accuracy}," \
+                                    f"{candidate_tree_size},{tree_pool_size}")
 
-                sample_counter += 1
-                sample_counter_interval += wait_samples
                 correct = 0
-
-                if sample_counter_interval == sample_freq:
-                    x_axis.append(count)
-                    accuracy_list.append(window_accuracy)
-
-                    candidate_tree_size = \
-                        classifier.get_candidate_tree_group_size()
-                    tree_pool_size = classifier.get_tree_pool_size()
-
-                    print(f"{count},{window_accuracy}," \
-                          f"{candidate_tree_size},{tree_pool_size}")
-                    metrics_logger.info(f"{count},{window_accuracy}," \
-                                        f"{candidate_tree_size},{tree_pool_size}")
-
-                    sample_counter = 0
-                    sample_counter_interval = 0
-
-                    window_accuracy = 0.0
-                    window_kappa = 0.0
-                    window_actual_labels = []
-                    window_predicted_labels = []
+                window_actual_labels = []
+                window_predicted_labels = []

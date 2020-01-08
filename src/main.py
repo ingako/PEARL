@@ -64,9 +64,6 @@ if __name__ == '__main__':
     parser.add_argument("--max_samples",
                         dest="max_samples", default=200000, type=int,
                         help="total number of samples")
-    parser.add_argument("--wait_samples",
-                        dest="wait_samples", default=100, type=int,
-                        help="number of samples per evaluation")
     parser.add_argument("--sample_freq",
                         dest="sample_freq", default=1000, type=int,
                         help="log interval for performance")
@@ -199,7 +196,6 @@ if __name__ == '__main__':
         f"warning_delta: {args.warning_delta}\n"
         f"drift_delta: {args.drift_delta}\n"
         f"max_samples: {args.max_samples}\n"
-        f"wait_samples: {args.wait_samples}\n"
         f"sample_freq: {args.sample_freq}\n"
         f"kappa_window: {args.kappa_window}\n"
         f"random_state: {args.random_state}\n"
@@ -269,7 +265,6 @@ if __name__ == '__main__':
     eval_func(classifier=pearl,
               stream=stream,
               max_samples=args.max_samples,
-              wait_samples=args.wait_samples,
               sample_freq=args.sample_freq,
               metrics_logger=metrics_logger)
     elapsed = time.process_time() - start
