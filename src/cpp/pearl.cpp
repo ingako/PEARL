@@ -37,7 +37,7 @@ pearl::pearl(int num_trees,
     }
 
     // initialize LRU state pattern queue
-    state_queue = make_unique<lru_state>(100, edit_distance_threshold);
+    state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
 
     cur_state = vector<char>(repo_size, '0');
     for (int i = 0; i < num_trees; i++) {
@@ -58,7 +58,7 @@ bool pearl::init_data_source(const string& filename) {
 
     LOG("Initializing data source...");
 
-    reader = new ArffReader();
+    reader = make_unique<ArffReader>();
 
     if (!reader->setFile(filename)) {
         std::cout << "Failed to open file: " << filename << std::endl;
