@@ -111,7 +111,7 @@ class pearl {
         bool enable_state_adaption;
 
         Instance* instance;
-        unique_ptr<Reader> reader;
+        Reader* reader = nullptr;
 
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
 

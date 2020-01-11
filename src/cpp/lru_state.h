@@ -16,9 +16,9 @@ class lru_state {
         lru_state(int capacity, int distance_threshold);
 
         vector<char> get_closest_state(vector<char> target_pattern);
+        string to_string();
         void update_queue(vector<char> pattern);
         void enqueue(vector<char> pattern);
-        string to_string();
 
     private:
         struct state {
