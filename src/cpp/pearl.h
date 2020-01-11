@@ -40,7 +40,7 @@ class pearl {
 
             void train(Instance& instance);
             int predict(Instance& instance);
-            void update_kappa(deque<int> actual_labels, int class_count);
+            double update_kappa(deque<int> actual_labels, int class_count);
             void reset();
 
             unique_ptr<HT::HoeffdingTree> tree;
@@ -88,10 +88,11 @@ class pearl {
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
 
-        static bool compare_kappa(unique_ptr<adaptive_tree>& tree1,
-                                  unique_ptr<adaptive_tree>& tree2);
-
     private:
+        struct candidate_tree {
+            int tree_pool_id;
+            double kappa;
+        };
 
         int num_trees;
         int max_num_candidate_trees;
@@ -113,8 +114,8 @@ class pearl {
         unique_ptr<Reader> reader;
 
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
-        deque<unique_ptr<adaptive_tree>> candidate_trees;
         vector<unique_ptr<adaptive_tree>> tree_pool;
+        deque<candidate_tree> candidate_trees;
 
         unique_ptr<lru_state> state_queue;
         vector<char> cur_state;
