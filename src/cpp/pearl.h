@@ -20,7 +20,9 @@ namespace py = pybind11;
 
 using std::string;
 using std::unique_ptr;
+using std::shared_ptr;
 using std::make_unique;
+using std::make_shared;
 using std::move;
 using std::vector;
 
@@ -40,11 +42,11 @@ class pearl {
 
             void train(Instance& instance);
             int predict(Instance& instance);
-            double update_kappa(deque<int> actual_labels, int class_count);
+            void update_kappa(deque<int> actual_labels, int class_count);
             void reset();
 
             unique_ptr<HT::HoeffdingTree> tree;
-            unique_ptr<adaptive_tree> bg_adaptive_tree;
+            shared_ptr<adaptive_tree> bg_adaptive_tree;
             unique_ptr<HT::ADWIN> warning_detector;
             unique_ptr<HT::ADWIN> drift_detector;
 
@@ -88,11 +90,10 @@ class pearl {
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
 
+        static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
+                                  shared_ptr<adaptive_tree>& tree2);
+
     private:
-        struct candidate_tree {
-            int tree_pool_id;
-            double kappa;
-        };
 
         int num_trees;
         int max_num_candidate_trees;
@@ -111,20 +112,18 @@ class pearl {
         bool enable_state_adaption;
 
         Instance* instance;
-        Reader* reader = nullptr;
+        unique_ptr<Reader> reader;
 
-        vector<unique_ptr<adaptive_tree>> adaptive_trees;
-
-        vector<int> foreground_tree_ids;
-        vector<unique_ptr<adaptive_tree>> tree_pool;
-        deque<candidate_tree> candidate_trees;
+        vector<shared_ptr<adaptive_tree>> adaptive_trees;
+        deque<shared_ptr<adaptive_tree>> candidate_trees;
+        vector<shared_ptr<adaptive_tree>> tree_pool;
 
         unique_ptr<lru_state> state_queue;
         vector<char> cur_state;
         deque<int> actual_labels;
 
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
-        unique_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
+        shared_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
 
         void process_basic(vector<int>& votes, int actual_label);
         void process_with_state_adaption(vector<int>& votes, int actual_label);
