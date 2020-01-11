@@ -32,8 +32,8 @@ pearl::pearl(int num_trees,
     tree_pool = vector<shared_ptr<adaptive_tree>>(num_trees);
 
     for (int i = 0; i < num_trees; i++) {
-        shared_ptr<adaptive_tree> tree = make_adaptive_tree(i);
-        adaptive_trees.push_back(move(tree));
+        tree_pool[i] = make_adaptive_tree(i);
+        adaptive_trees.push_back(tree_pool[i]);
     }
 
     // initialize LRU state pattern queue
@@ -231,14 +231,17 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
     }
 
     for (int i = 0; i < tree_pool.size(); i++) {
-        if (cur_state[i] == '0' && closest_state[i] == '1' && tree_pool[i]) {
+        if (cur_state[i] == '0'
+            && closest_state[i] == '1'
+            && !tree_pool[i]->is_candidate) {
+
             if (candidate_trees.size() >= max_num_candidate_trees) {
-                tree_pool[candidate_trees[0]->tree_pool_id] =
-                    move(candidate_trees[0]);
+                candidate_trees[0]->is_candidate = false;
                 candidate_trees.pop_front();
             }
 
-            candidate_trees.push_back(move(tree_pool[i]));
+            tree_pool[i]->is_candidate = true;
+            candidate_trees.push_back(tree_pool[i]);
         }
     }
 }
@@ -261,7 +264,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         }
 
         int drifted_pos = drifted_tree_pos_list[i];
-        shared_ptr<adaptive_tree> drifted_tree = move(adaptive_trees[drifted_pos]);
+        shared_ptr<adaptive_tree> drifted_tree = adaptive_trees[drifted_pos];
         shared_ptr<adaptive_tree> swap_tree;
 
         drifted_tree->update_kappa(actual_labels, class_count);
@@ -273,15 +276,15 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         if (candidate_trees.size() > 0
             && candidate_trees.back()->kappa
                 - drifted_tree->kappa >= cd_kappa_threshold) {
-            swap_tree = move(candidate_trees.back());
+            candidate_trees.back()->is_candidate = false;
+            swap_tree = candidate_trees.back();
             candidate_trees.pop_back();
         }
 
         if (swap_tree == nullptr) {
             add_to_repo = true;
 
-            shared_ptr<adaptive_tree> bg_tree =
-                move(drifted_tree->bg_adaptive_tree);
+            shared_ptr<adaptive_tree> bg_tree = drifted_tree->bg_adaptive_tree;
 
             if (!bg_tree) {
                 swap_tree = make_adaptive_tree(tree_pool.size());
@@ -300,7 +303,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
 
                 }
 
-                swap_tree = move(bg_tree);
+                swap_tree = bg_tree;
             }
 
             if (add_to_repo) {
@@ -309,7 +312,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                 // assign a new tree_pool_id for background tree
                 // and allocate a slot for background tree in tree_pool
                 swap_tree->tree_pool_id = tree_pool.size();
-                tree_pool.push_back(nullptr);
+                tree_pool.push_back(swap_tree);
 
             } else {
                 swap_tree->tree_pool_id = drifted_tree->tree_pool_id;
@@ -327,13 +330,9 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         cur_state[swap_tree->tree_pool_id] = '1';
 
         // replace drifted_tree with swap tree
-        adaptive_trees[drifted_pos] = move(swap_tree);
+        adaptive_trees[drifted_pos] = swap_tree;
 
-        // put drifted tree back to tree_pool
-        if (drifted_tree) {
-            drifted_tree->reset();
-            tree_pool[drifted_tree->tree_pool_id] = move(drifted_tree);
-        }
+        drifted_tree->reset();
     }
 
     state_queue->enqueue(cur_state);
@@ -488,6 +487,7 @@ double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
 
 void pearl::adaptive_tree::reset() {
     bg_adaptive_tree = nullptr;
+    is_candidate = false;
     warning_detector->resetChange();
     drift_detector->resetChange();
     predicted_labels.clear();
