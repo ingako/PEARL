@@ -4,8 +4,6 @@ lru_state::lru_state(int capacity, int distance_threshold)
     : capacity(capacity), distance_threshold(distance_threshold) {}
 
 vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
-    string target_key(std::begin(target_pattern), std::end(target_pattern));
-
     int min_edit_distance = INT_MAX;
     int max_freq = 0;
     vector<char> closest_pattern;
@@ -13,7 +11,7 @@ vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
     // find the smallest edit distance
     for (auto cur_state : queue) {
         vector<char> cur_pattern = cur_state.pattern;
-        
+
         int cur_freq = cur_state.freq;
         int cur_edit_distance = 0;
 
@@ -41,7 +39,7 @@ vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
         if (!update_flag) {
             continue;
         }
-        
+
         if (min_edit_distance == cur_edit_distance && cur_freq < max_freq) {
             continue;
         }
@@ -54,39 +52,26 @@ vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
     return closest_pattern;
 }
 
-string lru_state::to_string() {
-    string s = "";
+void lru_state::update_queue(vector<char> pattern) {
+    string key(std::begin(pattern), std::end(pattern));
 
-    list<state>::iterator it;
-    for (it = queue.begin(); it != queue.end(); it++) {
-        vector<char> cur_pattern = it->pattern;
-        string freq = std::to_string(it->freq);
-        for (int i = 0; i < cur_pattern.size(); i++) {
-            s += cur_pattern[i]; 
-        }
-        s += ":" + freq + "->";
+    if (map.find(key) == map.end()) {
+        queue.emplace_front(pattern, 1, 1);
+
+    } else {
+        auto pos = map[key];
+        auto res = *pos;
+        res.freq++;
+
+        queue.erase(pos);
+        queue.push_front(res);
     }
 
-    return s;
-}
-
-void lru_state::update_queue(vector<char> pattern) {
-    string pattern_key(std::begin(pattern), std::end(pattern));
-
-    auto pos = map[pattern_key];
-    auto res = *pos;
-    res.freq++;
-
-    queue.erase(pos);
-    queue.push_front(res);
-    map[pattern_key] = queue.begin();
+    map[key] = queue.begin();
 }
 
 void lru_state::enqueue(vector<char> pattern) {
-    string key(std::begin(pattern), std::end(pattern));
-
-    queue.emplace_front(pattern, 1, 1);
-    map[key] = queue.begin();
+    update_queue(pattern);
 
     while (queue.size() > this->capacity) {
         vector<char> rm_pattern = queue.back().pattern;
@@ -95,4 +80,20 @@ void lru_state::enqueue(vector<char> pattern) {
 
         queue.pop_back();
     }
+}
+
+string lru_state::to_string() {
+    string s = "";
+
+    list<state>::iterator it;
+    for (it = queue.begin(); it != queue.end(); it++) {
+        vector<char> cur_pattern = it->pattern;
+        string freq = std::to_string(it->freq);
+        for (int i = 0; i < cur_pattern.size(); i++) {
+            s += cur_pattern[i];
+        }
+        s += ":" + freq + "->";
+    }
+
+    return s;
 }
