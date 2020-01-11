@@ -114,6 +114,8 @@ class pearl {
         unique_ptr<Reader> reader;
 
         vector<unique_ptr<adaptive_tree>> adaptive_trees;
+
+        vector<int> foreground_tree_ids;
         vector<unique_ptr<adaptive_tree>> tree_pool;
         deque<candidate_tree> candidate_trees;
 

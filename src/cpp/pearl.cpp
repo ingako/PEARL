@@ -29,22 +29,33 @@ pearl::pearl(int num_trees,
     drift_delta(drift_delta),
     enable_state_adaption(enable_state_adaption) {
 
-    tree_pool = vector<unique_ptr<adaptive_tree>>(num_trees);
+    if (enable_state_adaption) {
 
-    for (int i = 0; i < num_trees; i++) {
-        unique_ptr<adaptive_tree> tree = make_adaptive_tree(i);
-        adaptive_trees.push_back(move(tree));
+        tree_pool = vector<unique_ptr<adaptive_tree>>(num_trees);
+
+        for (int i = 0; i < num_trees; i++) {
+            tree_pool[i] = make_adaptive_tree(i);
+            foreground_tree_ids.push_back(i);
+        }
+
+        // initialize LRU state pattern queue
+        state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
+
+        cur_state = vector<char>(repo_size, '0');
+        for (int i = 0; i < num_trees; i++) {
+            cur_state[i] = '1';
+        }
+
+        state_queue->enqueue(cur_state);
+
+    }  else {
+        for (int i = 0; i < num_trees; i++) {
+            unique_ptr<adaptive_tree> tree = make_adaptive_tree(i);
+            adaptive_trees.push_back(move(tree));
+        }
+
     }
 
-    // initialize LRU state pattern queue
-    state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
-
-    cur_state = vector<char>(repo_size, '0');
-    for (int i = 0; i < num_trees; i++) {
-        cur_state[i] = '1';
-    }
-
-    state_queue->enqueue(cur_state);
 }
 
 unique_ptr<pearl::adaptive_tree> pearl::make_adaptive_tree(int tree_pool_id) {
@@ -178,7 +189,7 @@ void pearl::process_basic(vector<int>& votes, int actual_label) {
             if (adaptive_trees[i]->bg_adaptive_tree) {
                 adaptive_trees[i] = move(adaptive_trees[i]->bg_adaptive_tree);
             } else {
-                adaptive_trees[i] = make_adaptive_tree(tree_pool.size());
+                adaptive_trees[i] = make_adaptive_tree(-1);
             }
         }
     }
