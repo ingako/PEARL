@@ -41,7 +41,7 @@ class pearl {
                           double drift_delta);
 
             void train(Instance& instance);
-            int predict(Instance& instance);
+            int predict(Instance& instance, bool track_performance);
             void update_kappa(deque<int> actual_labels, int class_count);
             void reset();
 
@@ -139,7 +139,8 @@ class pearl {
         bool drift_detected;
         int num_max_backtrack_instances = 1000;
         deque<Instance*> backtrack_instances;
-        deque<shared_ptr<adaptive_tree>> backtrack_trees;
+        deque<shared_ptr<adaptive_tree>> backtrack_drifted_trees;
+        deque<shared_ptr<adaptive_tree>> backtrack_swapped_trees;
 
 };
 
@@ -165,6 +166,7 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       bool>())
         .def_property_readonly("drift_detected", &pearl::get_drift_detected)
+        .def("find_actual_drift_point", &pearl::find_actual_drift_point)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
