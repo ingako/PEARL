@@ -87,15 +87,23 @@ bool pearl::process() {
 
     if (enable_state_adaption) {
         process_with_state_adaption(votes, actual_label);
+
+        if (is_proactive) {
+            if (backtrack_instances.size() >= num_max_backtrack_instances) {
+                delete backtrack_instances[0];
+                backtrack_instances.pop_front();
+            }
+            backtrack_instances.push_back(instance);
+        }
+
     } else {
         process_basic(votes, actual_label);
+        delete instance;
     }
 
     train(*instance);
 
     int predicted_label = vote(votes);
-
-    delete instance;
 
     return predicted_label == actual_label;
 }
@@ -152,7 +160,9 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 
     // if actual drifts are detected, swap trees and update cur_state
+    drift_detected = false;
     if (drifted_tree_pos_list.size() > 0) {
+        drift_detected = true;
         adapt_state(drifted_tree_pos_list);
     }
 }
@@ -255,6 +265,8 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
     }
     sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
 
+    shared_ptr<adaptive_tree> best_swapped_tree;
+
     for (int i = 0; i < drifted_tree_pos_list.size(); i++) {
         // TODO
         if (tree_pool.size() >= repo_size) {
@@ -332,10 +344,23 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         // replace drifted_tree with swap tree
         adaptive_trees[drifted_pos] = swap_tree;
 
+        if (!best_swapped_tree) {
+            best_swapped_tree = swap_tree;
+        }
+
         drifted_tree->reset();
     }
 
+    if (is_proactive) {
+        backtrack_trees.push_back(best_swapped_tree);
+    }
+
     state_queue->enqueue(cur_state);
+}
+
+int pearl::find_actual_drift_point() {
+    // TODO
+
 }
 
 bool pearl::detect_change(int error_count,
