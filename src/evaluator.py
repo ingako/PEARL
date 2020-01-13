@@ -101,6 +101,8 @@ class Evaluator:
         # proactive drift point prediction
         drift_interval_seq_len = 8
         next_backtrack_points = deque()
+        next_adapt_state_points = deque()
+        predicted_drift_points = deque()
         drift_interval_sequence = deque(maxlen=drift_interval_seq_len)
         sample_to_train = 25
         last_drift_point = 0
@@ -123,7 +125,7 @@ class Evaluator:
                 if len(next_backtrack_points) > 0:
                     next_backtrack_points[0] -= 1
 
-                    if next_backtrack_points[0] == 0:
+                    if next_backtrack_points[0] <= 0:
                         next_backtrack_points.popleft()
 
                         # find actual drift point at num_instances_before
@@ -138,15 +140,16 @@ class Evaluator:
 
                         if len(drift_interval_sequence) >= drift_interval_seq_len:
                             num_request += 1
-                            print(f"gRPC train request {num_request}: {drift_interval_sequence}")
+                            # print(f"gRPC train request {num_request}: {drift_interval_sequence}")
                             if stub.train(
-                                    seqprediction_pb2.
-                                        SequenceMessage(seqId=count, seq=drift_interval_sequence)
-                                ).result:
+                                        seqprediction_pb2.
+                                            SequenceMessage(seqId=count, seq=drift_interval_sequence)
+                                    ).result:
 
-                                print("Training completed\n")
-                            else:
-                                print("Training failed\n")
+                                pass
+                            #     print("Training completed\n")
+                            # else:
+                            #     print("Training failed\n")
 
                 if classifier.drift_detected > 0:
                     base = 0
@@ -154,6 +157,41 @@ class Evaluator:
                         base = next_backtrack_points[-1]
 
                     next_backtrack_points.append(sample_to_train - base)
+
+                    # TODO
+                    if count > 20000:
+                        # predict the next drift point
+                        temp = drift_interval_sequence.popleft()
+                        response = stub.predict(
+                                            seqprediction_pb2
+                                                .SequenceMessage(seqId=count,
+                                                                 seq=drift_interval_sequence)
+                                        )
+                        drift_interval_sequence.appendleft(temp)
+
+                        predicted_drift_points.append(response.seq[0])
+                        # print(f"Predicted next drift point: {response.seq[0]}")
+
+                if len(predicted_drift_points) > 0:
+                    predicted_drift_points[0] -= 1
+                    if predicted_drift_points[0] <= 0:
+                        predicted_drift_points.popleft()
+
+                        if not classifier.drift_detected:
+                            classifier.select_candidate_trees_proactively()
+
+                            offset = 0
+                            if len(next_adapt_state_points) > 0:
+                                offset = next_adapt_state_points[-1]
+                            next_adapt_state_points.append(51 - offset)
+
+                if len(next_adapt_state_points) > 0:
+                    next_adapt_state_points[0] -= 1
+                    if next_adapt_state_points[0] <= 0:
+                        next_adapt_state_points.popleft()
+
+                        if not classifier.drift_detected:
+                            classifier.adapt_state_proactively()
 
                 if count % sample_freq == 0 and count != 0:
                     accuracy = correct / sample_freq
