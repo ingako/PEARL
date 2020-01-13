@@ -4,6 +4,10 @@ from collections import deque
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
+import grpc
+import seqprediction_pb2
+import seqprediction_pb2_grpc
+
 class Evaluator:
 
     @staticmethod
@@ -106,48 +110,60 @@ class Evaluator:
 
         classifier.init_data_source(stream);
 
-        for count in range(0, max_samples):
-            if not classifier.get_next_instance():
-                break
+        with grpc.insecure_channel('localhost:50051') as channel:
 
-            correct += 1 if classifier.process() else 0
+            stub = seqprediction_pb2_grpc.PredictorStub(channel)
 
-            if len(next_backtrack_points) > 0:
-                next_backtrack_points[0] -= 1
+            for count in range(0, max_samples):
+                if not classifier.get_next_instance():
+                    break
 
-                if next_backtrack_points[0] == 0:
-                    next_backtrack_points.popleft()
+                correct += 1 if classifier.process() else 0
 
-                    # find actual drift point at num_instances_before
-                    num_instances_before = classifier.find_actual_drift_point()
-                    interval = count - num_instances_before - last_drift_point
-                    if interval < 0:
-                        print("Failed to find the actual drift point")
-                        exit()
-
-                    drift_interval_sequence.append(interval)
-                    last_drift_point = count - num_instances_before
-
-                    if len(drift_interval_sequence) >= drift_interval_seq_len:
-                        num_request += 1
-                        print(f"gRPC request {num_request}: {drift_interval_sequence}")
-
-            if classifier.drift_detected > 0:
-                base = 0
                 if len(next_backtrack_points) > 0:
-                    base = next_backtrack_points[-1]
+                    next_backtrack_points[0] -= 1
 
-                next_backtrack_points.append(sample_to_train - base)
+                    if next_backtrack_points[0] == 0:
+                        next_backtrack_points.popleft()
 
-            if count % sample_freq == 0 and count != 0:
-                accuracy = correct / sample_freq
-                candidate_tree_size = classifier.get_candidate_tree_group_size()
-                tree_pool_size = classifier.get_tree_pool_size()
+                        # find actual drift point at num_instances_before
+                        num_instances_before = classifier.find_actual_drift_point()
+                        interval = count - num_instances_before - last_drift_point
+                        if interval < 0:
+                            print("Failed to find the actual drift point")
+                            exit()
 
-                print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
-                metrics_logger.info(f"{count},{accuracy}," \
-                                    f"{candidate_tree_size},{tree_pool_size}")
+                        drift_interval_sequence.append(interval)
+                        last_drift_point = count - num_instances_before
 
-                correct = 0
-                window_actual_labels = []
-                window_predicted_labels = []
+                        if len(drift_interval_sequence) >= drift_interval_seq_len:
+                            num_request += 1
+                            print(f"gRPC train request {num_request}: {drift_interval_sequence}")
+                            if stub.train(
+                                    seqprediction_pb2.
+                                        SequenceMessage(seqId=count, seq=drift_interval_sequence)
+                                ).result:
+
+                                print("Training completed\n")
+                            else:
+                                print("Training failed\n")
+
+                if classifier.drift_detected > 0:
+                    base = 0
+                    if len(next_backtrack_points) > 0:
+                        base = next_backtrack_points[-1]
+
+                    next_backtrack_points.append(sample_to_train - base)
+
+                if count % sample_freq == 0 and count != 0:
+                    accuracy = correct / sample_freq
+                    candidate_tree_size = classifier.get_candidate_tree_group_size()
+                    tree_pool_size = classifier.get_tree_pool_size()
+
+                    print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
+                    metrics_logger.info(f"{count},{accuracy}," \
+                                        f"{candidate_tree_size},{tree_pool_size}")
+
+                    correct = 0
+                    window_actual_labels = []
+                    window_predicted_labels = []
