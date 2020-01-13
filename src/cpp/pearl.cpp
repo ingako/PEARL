@@ -220,6 +220,24 @@ void pearl::train(Instance& instance) {
     }
 }
 
+void pearl::select_candidate_trees_proactively() {
+    int class_count = instance->getNumberClasses();
+
+    // sort foreground trees by kappa
+    for (int i = 0; i < adaptive_trees.size(); i++) {
+        adaptive_trees[i]->update_kappa(actual_labels, class_count);
+    }
+    sort(adaptive_trees.begin(), adaptive_trees.end(), compare_kappa);
+
+    // TODO find the worst trees and mark as warning detected
+    vector<int> warning_tree_pos_list;
+    for (int i = 0; i < 10; i++) {
+        warning_tree_pos_list.push_back(i);
+    }
+
+    select_candidate_trees(warning_tree_pos_list);
+}
+
 void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
     vector<char> target_state(cur_state);
