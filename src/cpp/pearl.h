@@ -97,6 +97,7 @@ class pearl {
         int find_actual_drift_point();
         const bool &get_drift_detected() const { return drift_detected; }
         void select_candidate_trees_proactively();
+        void adapt_state_proactively();
 
     private:
 
@@ -169,6 +170,7 @@ PYBIND11_MODULE(pearl, m) {
         .def_property_readonly("drift_detected", &pearl::get_drift_detected)
         .def("find_actual_drift_point", &pearl::find_actual_drift_point)
         .def("select_candidate_trees_proactively", &pearl::select_candidate_trees_proactively)
+        .def("adapt_state_proactively", &pearl::adapt_state_proactively)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)

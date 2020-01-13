@@ -238,6 +238,39 @@ void pearl::select_candidate_trees_proactively() {
     select_candidate_trees(warning_tree_pos_list);
 }
 
+void pearl::adapt_state_proactively() {
+    if (candidate_trees.size() == 0) {
+        return;
+    }
+
+    int class_count = instance->getNumberClasses();
+
+    // sort foreground trees by kappa
+    for (int i = 0; i < adaptive_trees.size(); i++) {
+        adaptive_trees[i]->update_kappa(actual_labels, class_count);
+    }
+    sort(adaptive_trees.begin(), adaptive_trees.end(), compare_kappa);
+
+    // sort candiate trees by kappa
+    for (int i = 0; i < candidate_trees.size(); i++) {
+        candidate_trees[i]->update_kappa(actual_labels, class_count);
+    }
+    sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
+
+    for (int i = 0; i < adaptive_trees.size(); i++) {
+        if (adaptive_trees[i]->kappa < candidate_trees.back()->kappa) {
+            adaptive_trees[i].reset();
+            candidate_trees.back()->reset();
+
+            adaptive_trees[i] = candidate_trees.back();
+            candidate_trees.pop_back();
+
+        } else {
+            break;
+        }
+    }
+}
+
 void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
     vector<char> target_state(cur_state);
@@ -400,6 +433,11 @@ int pearl::find_actual_drift_point() {
     deque<int> swapped_tree_predictions;
 
     for (int i = backtrack_instances.size() - 1; i >= 0; i--) {
+    // for (int i = num_max_backtrack_instances - 1; i >= 0; i--) {
+        if (!backtrack_instances[i]) {
+            LOG("cur instance is null!");
+        }
+
         int drift_predicted_label = drifted_tree->predict(*backtrack_instances[i], false);
         int swap_predicted_label = swapped_tree->predict(*backtrack_instances[i], false);
 
