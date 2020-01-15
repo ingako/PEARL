@@ -13,6 +13,7 @@ from skmultiflow.data import HyperplaneGenerator
 from skmultiflow.data import ConceptDriftStream
 
 class RecurrentDriftStream(ConceptDriftStream):
+
     def __init__(self,
                  generator='agrawal',
                  stable_period=3000,
@@ -55,7 +56,7 @@ class RecurrentDriftStream(ConceptDriftStream):
 
         self.stable_period_lam = stable_period_lam
         self.stable_period_start = stable_period_start
-        self.stable_period_base  = stable_period_base
+        self.stable_period_base = stable_period_base
         self.stable_period_probs = \
                 self.__get_poisson_probs(20, self.stable_period_lam)
         self.stable_period_logger = stable_period_logger
@@ -209,6 +210,18 @@ class RecurrentDriftStream(ConceptDriftStream):
         print(f"len: {len(self.concepts)}")
         self.concept_probs = \
                 self.__get_poisson_probs(len(self.concepts), self.lam)
+
+    def get_arff_header(self):
+        header = []
+
+        for i in range(0, self.n_num_features + 1):
+            header.append(f"@attribute a{i} numeric")
+
+        header.append("@attribute class {0.0, 1.0}")
+        header.append("@data")
+        header.append("\n")
+
+        return "\n".join(header)
 
     def __get_next_random_idx(self, probs):
         r = self._random_state.uniform(0, 1)
