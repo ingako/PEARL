@@ -14,20 +14,25 @@ pearl::pearl(int num_trees,
              double warning_delta,
              double drift_delta,
              bool enable_state_adaption) :
-    num_trees(num_trees),
-    max_num_candidate_trees(max_num_candidate_trees),
-    repo_size(repo_size),
-    edit_distance_threshold(edit_distance_threshold),
-    kappa_window_size(kappa_window_size),
-    lossy_window_size(lossy_window_size),
-    reuse_window_size(reuse_window_size),
-    arf_max_features(arf_max_features),
-    bg_kappa_threshold(bg_kappa_threshold),
-    cd_kappa_threshold(cd_kappa_threshold),
-    reuse_rate_upper_bound(reuse_rate_upper_bound),
-    warning_delta(warning_delta),
-    drift_delta(drift_delta),
-    enable_state_adaption(enable_state_adaption) {
+        num_trees(num_trees),
+        max_num_candidate_trees(max_num_candidate_trees),
+        repo_size(repo_size),
+        edit_distance_threshold(edit_distance_threshold),
+        kappa_window_size(kappa_window_size),
+        lossy_window_size(lossy_window_size),
+        reuse_window_size(reuse_window_size),
+        arf_max_features(arf_max_features),
+        bg_kappa_threshold(bg_kappa_threshold),
+        cd_kappa_threshold(cd_kappa_threshold),
+        reuse_rate_upper_bound(reuse_rate_upper_bound),
+        warning_delta(warning_delta),
+        drift_delta(drift_delta),
+        enable_state_adaption(enable_state_adaption) {
+
+    init();
+}
+
+void pearl::init() {
 
     tree_pool = vector<shared_ptr<adaptive_tree>>(num_trees);
 
@@ -45,6 +50,7 @@ pearl::pearl(int num_trees,
     }
 
     state_queue->enqueue(cur_state);
+
 }
 
 shared_ptr<pearl::adaptive_tree> pearl::make_adaptive_tree(int tree_pool_id) {
@@ -88,20 +94,12 @@ bool pearl::process() {
     if (enable_state_adaption) {
         process_with_state_adaption(votes, actual_label);
 
-        if (is_proactive) {
-            if (backtrack_instances.size() >= num_max_backtrack_instances) {
-                delete backtrack_instances[0];
-                backtrack_instances.pop_front();
-            }
-            backtrack_instances.push_back(instance);
-        }
-
     } else {
         process_basic(votes, actual_label);
-        delete instance;
     }
 
     train(*instance);
+    delete instance;
 
     int predicted_label = vote(votes);
 
@@ -160,9 +158,7 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 
     // if actual drifts are detected, swap trees and update cur_state
-    drift_detected = false;
     if (drifted_tree_pos_list.size() > 0) {
-        drift_detected = true;
         adapt_state(drifted_tree_pos_list);
     }
 }
@@ -220,57 +216,6 @@ void pearl::train(Instance& instance) {
     }
 }
 
-void pearl::select_candidate_trees_proactively() {
-    int class_count = instance->getNumberClasses();
-
-    // sort foreground trees by kappa
-    for (int i = 0; i < adaptive_trees.size(); i++) {
-        adaptive_trees[i]->update_kappa(actual_labels, class_count);
-    }
-    sort(adaptive_trees.begin(), adaptive_trees.end(), compare_kappa);
-
-    // TODO find the worst trees and mark as warning detected
-    vector<int> warning_tree_pos_list;
-    for (int i = 0; i < 10; i++) {
-        warning_tree_pos_list.push_back(i);
-    }
-
-    select_candidate_trees(warning_tree_pos_list);
-}
-
-void pearl::adapt_state_proactively() {
-    if (candidate_trees.size() == 0) {
-        return;
-    }
-
-    int class_count = instance->getNumberClasses();
-
-    // sort foreground trees by kappa
-    for (int i = 0; i < adaptive_trees.size(); i++) {
-        adaptive_trees[i]->update_kappa(actual_labels, class_count);
-    }
-    sort(adaptive_trees.begin(), adaptive_trees.end(), compare_kappa);
-
-    // sort candiate trees by kappa
-    for (int i = 0; i < candidate_trees.size(); i++) {
-        candidate_trees[i]->update_kappa(actual_labels, class_count);
-    }
-    sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
-
-    for (int i = 0; i < adaptive_trees.size(); i++) {
-        if (adaptive_trees[i]->kappa < candidate_trees.back()->kappa) {
-            adaptive_trees[i].reset();
-            candidate_trees.back()->reset();
-
-            adaptive_trees[i] = candidate_trees.back();
-            candidate_trees.pop_back();
-
-        } else {
-            break;
-        }
-    }
-}
-
 void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
     vector<char> target_state(cur_state);
@@ -315,9 +260,6 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         candidate_trees[i]->update_kappa(actual_labels, class_count);
     }
     sort(candidate_trees.begin(), candidate_trees.end(), compare_kappa);
-
-    shared_ptr<adaptive_tree> first_drifted_tree;
-    shared_ptr<adaptive_tree> best_swapped_tree;
 
     for (int i = 0; i < drifted_tree_pos_list.size(); i++) {
         // TODO
@@ -396,73 +338,10 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         // replace drifted_tree with swap tree
         adaptive_trees[drifted_pos] = swap_tree;
 
-        if (!best_swapped_tree) {
-            first_drifted_tree = drifted_tree;
-            best_swapped_tree = swap_tree;
-        }
-
         drifted_tree->reset();
     }
 
-    if (is_proactive) {
-        backtrack_drifted_trees.push_back(first_drifted_tree);
-        backtrack_swapped_trees.push_back(best_swapped_tree);
-    }
-
     state_queue->enqueue(cur_state);
-}
-
-int pearl::find_actual_drift_point() {
-    if (backtrack_drifted_trees.size() == 0) {
-        LOG("No trees to backtrack");
-        exit(1);
-    }
-
-    shared_ptr<adaptive_tree> drifted_tree = backtrack_drifted_trees[0];
-    shared_ptr<adaptive_tree> swapped_tree = backtrack_swapped_trees[0];
-    backtrack_drifted_trees.pop_front();
-    backtrack_swapped_trees.pop_front();
-
-    int window = 50; // TODO
-    int drift_correct = 0;
-    int swap_correct = 0;
-    double drifted_tree_accuracy = 0.0;
-    double swapped_tree_accuracy = 0.0;
-
-    deque<int> drifted_tree_predictions;
-    deque<int> swapped_tree_predictions;
-
-    for (int i = backtrack_instances.size() - 1; i >= 0; i--) {
-    // for (int i = num_max_backtrack_instances - 1; i >= 0; i--) {
-        if (!backtrack_instances[i]) {
-            LOG("cur instance is null!");
-        }
-
-        int drift_predicted_label = drifted_tree->predict(*backtrack_instances[i], false);
-        int swap_predicted_label = swapped_tree->predict(*backtrack_instances[i], false);
-
-        int actual_label = instance->getLabel();
-
-        drift_correct += (int) (drift_predicted_label == actual_label);
-        swap_correct += (int) (swap_predicted_label == actual_label);
-
-        if (drifted_tree_predictions.size() >= window) {
-            drift_correct -= drifted_tree_predictions[0];
-            swap_correct -= swapped_tree_predictions[0];
-            drifted_tree_predictions.pop_front();
-            swapped_tree_predictions.pop_front();
-
-            drifted_tree_accuracy = (double) drift_correct / window;
-            swapped_tree_accuracy = (double) swap_correct / window;
-
-            if (drifted_tree_accuracy >= swapped_tree_accuracy) {
-                return backtrack_instances.size() - 1 - i;
-            }
-        }
-
-    }
-
-    return -1;
 }
 
 bool pearl::detect_change(int error_count,

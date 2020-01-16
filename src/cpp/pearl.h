@@ -77,6 +77,8 @@ class pearl {
               double drift_delta,
               bool enable_state_adaption);
 
+        void init();
+
         int get_candidate_tree_group_size() const;
         int get_tree_pool_size() const;
 
@@ -84,7 +86,7 @@ class pearl {
         bool get_next_instance();
         void prepare_instance(Instance& instance);
 
-        bool process();
+        virtual bool process();
         void train(Instance& instance);
         int vote(vector<int> votes);
 
@@ -93,11 +95,6 @@ class pearl {
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
                                   shared_ptr<adaptive_tree>& tree2);
 
-        // proactive
-        int find_actual_drift_point();
-        const bool &get_drift_detected() const { return drift_detected; }
-        void select_candidate_trees_proactively();
-        void adapt_state_proactively();
 
     private:
 
@@ -133,16 +130,7 @@ class pearl {
 
         void process_basic(vector<int>& votes, int actual_label);
         void process_with_state_adaption(vector<int>& votes, int actual_label);
-        void adapt_state(vector<int> drifted_tree_pos_list);
-
-
-        // proactive
-        bool is_proactive = true;
-        bool drift_detected;
-        int num_max_backtrack_instances = 1000;
-        deque<Instance*> backtrack_instances;
-        deque<shared_ptr<adaptive_tree>> backtrack_drifted_trees;
-        deque<shared_ptr<adaptive_tree>> backtrack_swapped_trees;
+        virtual void adapt_state(vector<int> drifted_tree_pos_list);
 
 };
 
@@ -167,10 +155,10 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       double,
                       bool>())
-        .def_property_readonly("drift_detected", &pearl::get_drift_detected)
-        .def("find_actual_drift_point", &pearl::find_actual_drift_point)
-        .def("select_candidate_trees_proactively", &pearl::select_candidate_trees_proactively)
-        .def("adapt_state_proactively", &pearl::adapt_state_proactively)
+        // .def_property_readonly("drift_detected", &pearl::get_drift_detected)
+        // .def("find_actual_drift_point", &pearl::find_actual_drift_point)
+        // .def("select_candidate_trees_proactively", &pearl::select_candidate_trees_proactively)
+        // .def("adapt_state_proactively", &pearl::adapt_state_proactively)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
