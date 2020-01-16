@@ -214,7 +214,7 @@ class RecurrentDriftStream(ConceptDriftStream):
     def get_arff_header(self):
         header = []
 
-        for i in range(0, self.n_num_features + 1):
+        for i in range(0, self.n_features + 1):
             header.append(f"@attribute a{i} numeric")
 
         header.append("@attribute class {0.0, 1.0}")
