@@ -30,6 +30,39 @@ int lossy_state_graph::get_next_tree_id(int src) {
     return -1;
 }
 
+void lossy_state_graph::update(int warning_tree_count) {
+    drifted_tree_counter += warning_tree_count;
+
+    if (drifted_tree_counter < window_size) {
+        return;
+    }
+
+    drifted_tree_counter -= window_size;
+
+    // lossy count
+    for (int i = 0; i < graph.size(); i++) {
+        if (!graph[i]) {
+            continue;
+        }
+
+        for (auto& nei : graph[i]->neighbors) {
+            // decrement freq by 1
+            graph[i]->total_weight--;
+            nei.second--; // freq
+
+            if (nei.second == 0) {
+                // remove edge
+                graph[nei.first]->indegree--;
+                try_remove_node(nei.first);
+
+                graph[i]->neighbors.erase(nei.first);
+            }
+        }
+
+        try_remove_node(i);
+    }
+}
+
 void lossy_state_graph::try_remove_node(int key) {
     if (graph[key]->indegree == 0 && graph[key]->neighbors.size() == 0) {
         graph[key].reset();
