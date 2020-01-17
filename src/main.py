@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import argparse
 import math
@@ -14,6 +14,7 @@ from skmultiflow.data.file_stream import FileStream
 from evaluator import Evaluator
 from pearl import Pearl
 from cpp.pearl import pearl
+from cpp.pearl import pro_pearl
 
 
 formatter = logging.Formatter('%(message)s')
@@ -35,6 +36,10 @@ if __name__ == '__main__':
                         help="Enable cpp backend")
     parser.set_defaults(cpp=False)
 
+    parser.add_argument("--proactive",
+                        dest="proactive", action="store_true",
+                        help="Enable ProPearl")
+    parser.set_defaults(cpp=False)
 
     parser.add_argument("--dataset_name",
                         dest="dataset_name", default="", type=str,
@@ -165,6 +170,9 @@ if __name__ == '__main__':
     if args.enable_generator_noise:
         result_directory = f"{result_directory}-noise"
 
+    if args.proactive:
+        result_directory = f"{result_directory}-pro"
+
     metric_output_file = "result"
     time_output_file = "time"
 
@@ -227,21 +235,38 @@ if __name__ == '__main__':
     process_logger = setup_logger('process', f'{result_directory}/processes-{args.generator_seed}.info')
 
     if args.cpp:
-        pearl = pearl(args.num_trees,
-                      args.max_num_candidate_trees,
-                      repo_size,
-                      args.edit_distance_threshold,
-                      args.kappa_window,
-                      args.lossy_window_size,
-                      args.reuse_window_size,
-                      arf_max_features,
-                      args.bg_kappa_threshold,
-                      args.cd_kappa_threshold,
-                      args.reuse_rate_upper_bound,
-                      args.warning_delta,
-                      args.drift_delta,
-                      args.enable_state_adaption)
-        eval_func = Evaluator.prequential_evaluation_cpp
+        if args.proactive:
+            pearl = pro_pearl(args.num_trees,
+                              args.max_num_candidate_trees,
+                              repo_size,
+                              args.edit_distance_threshold,
+                              args.kappa_window,
+                              args.lossy_window_size,
+                              args.reuse_window_size,
+                              arf_max_features,
+                              args.bg_kappa_threshold,
+                              args.cd_kappa_threshold,
+                              args.reuse_rate_upper_bound,
+                              args.warning_delta,
+                              args.drift_delta)
+            eval_func = Evaluator.prequential_evaluation_proactive
+
+        else:
+            pearl = pearl(args.num_trees,
+                          args.max_num_candidate_trees,
+                          repo_size,
+                          args.edit_distance_threshold,
+                          args.kappa_window,
+                          args.lossy_window_size,
+                          args.reuse_window_size,
+                          arf_max_features,
+                          args.bg_kappa_threshold,
+                          args.cd_kappa_threshold,
+                          args.reuse_rate_upper_bound,
+                          args.warning_delta,
+                          args.drift_delta,
+                          args.enable_state_adaption)
+            eval_func = Evaluator.prequential_evaluation_cpp
 
     else:
         pearl = Pearl(num_trees=args.num_trees,
