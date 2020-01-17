@@ -11,11 +11,6 @@
 #include "code/src/learners/Classifiers/Trees/ADWIN.h"
 #include "lru_state.h"
 
-#ifndef NOPYBIND
-#include <pybind11/pybind11.h>
-namespace py = pybind11;
-#endif
-
 #define LOG(x) std::cout << (x) << std::endl
 
 using std::string;
@@ -28,40 +23,41 @@ using std::vector;
 
 class pearl {
 
-    class adaptive_tree {
-        public:
-            int tree_pool_id;
-            double kappa = INT_MIN;
-            bool is_candidate = false;
-            deque<int> predicted_labels;
-
-            adaptive_tree(int tree_pool_id,
-                          int kappa_window_size,
-                          double warning_delta,
-                          double drift_delta);
-
-            void train(Instance& instance);
-            int predict(Instance& instance, bool track_performance);
-            void update_kappa(deque<int> actual_labels, int class_count);
-            void reset();
-
-            unique_ptr<HT::HoeffdingTree> tree;
-            shared_ptr<adaptive_tree> bg_adaptive_tree;
-            unique_ptr<HT::ADWIN> warning_detector;
-            unique_ptr<HT::ADWIN> drift_detector;
-
-        private:
-            int kappa_window_size;
-            double warning_delta;
-            double drift_delta;
-
-            double compute_kappa(int* confusion_matrix,
-                                 double accuracy,
-                                 int sapmle_count,
-                                 int class_count);
-    };
-
     public:
+
+        class adaptive_tree {
+            public:
+                int tree_pool_id;
+                double kappa = INT_MIN;
+                bool is_candidate = false;
+                deque<int> predicted_labels;
+
+                adaptive_tree(int tree_pool_id,
+                              int kappa_window_size,
+                              double warning_delta,
+                              double drift_delta);
+
+                void train(Instance& instance);
+                int predict(Instance& instance, bool track_performance);
+                void update_kappa(deque<int> actual_labels, int class_count);
+                void reset();
+
+                unique_ptr<HT::HoeffdingTree> tree;
+                shared_ptr<adaptive_tree> bg_adaptive_tree;
+                unique_ptr<HT::ADWIN> warning_detector;
+                unique_ptr<HT::ADWIN> drift_detector;
+
+            private:
+                int kappa_window_size;
+                double warning_delta;
+                double drift_delta;
+
+                double compute_kappa(int* confusion_matrix,
+                                     double accuracy,
+                                     int sapmle_count,
+                                     int class_count);
+        };
+
         pearl(int num_trees,
               int max_num_candidate_trees,
               int repo_size,
@@ -96,7 +92,7 @@ class pearl {
                                   shared_ptr<adaptive_tree>& tree2);
 
 
-    private:
+    protected:
 
         int num_trees;
         int max_num_candidate_trees;
@@ -133,45 +129,5 @@ class pearl {
         virtual void adapt_state(vector<int> drifted_tree_pos_list);
 
 };
-
-
-#ifndef NOPYBIND
-
-PYBIND11_MODULE(pearl, m) {
-    m.doc() = "PEARL's implementation in C++"; // module docstring
-
-    py::class_<pearl>(m, "pearl")
-        .def(py::init<int,
-                      int,
-                      int,
-                      int,
-                      int,
-                      int,
-                      int,
-                      int,
-                      double,
-                      double,
-                      double,
-                      double,
-                      double,
-                      bool>())
-        // .def_property_readonly("drift_detected", &pearl::get_drift_detected)
-        // .def("find_actual_drift_point", &pearl::find_actual_drift_point)
-        // .def("select_candidate_trees_proactively", &pearl::select_candidate_trees_proactively)
-        // .def("adapt_state_proactively", &pearl::adapt_state_proactively)
-        .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
-        .def("get_tree_pool_size", &pearl::get_tree_pool_size)
-        .def("init_data_source", &pearl::init_data_source)
-        .def("get_next_instance", &pearl::get_next_instance)
-        .def("process", &pearl::process)
-        .def("__repr__",
-            [](const pearl &p) {
-                return "<pearl.pearl has "
-                    + std::to_string(p.get_tree_pool_size()) + " trees>";
-            }
-         );
-}
-
-#endif
 
 #endif
