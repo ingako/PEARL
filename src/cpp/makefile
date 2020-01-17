@@ -76,7 +76,7 @@ warning = -Wall -Wno-sign-compare -Wno-nonnull -Wno-unused-variable
 flags = -std=c++14 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE64 -O3 -DUNIX $(debug)
 
 all: streamDM.a
-	g++ -shared -fPIC `python3 -m pybind11 --includes` pearl.cpp lru_state.cpp streamDM.a $(log4cpp) $(flags) -o pearl`python3-config --extension-suffix`
+	g++ -shared -fPIC `python -m pybind11 --includes` pearl.cpp pro_pearl.cpp lru_state.cpp streamDM.a $(log4cpp) $(flags) -o pearl`python-config --extension-suffix`
 
 streamDM.a:
 	g++ -c -fPIC $(sourcefiles) $(includepath) $(flags)
