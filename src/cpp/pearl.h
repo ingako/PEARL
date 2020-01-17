@@ -77,6 +77,7 @@ class pearl {
 
         int get_candidate_tree_group_size() const;
         int get_tree_pool_size() const;
+        bool get_drift_detected();
 
         bool init_data_source(const string& filename);
         bool get_next_instance();
@@ -120,6 +121,7 @@ class pearl {
         unique_ptr<lru_state> state_queue;
         vector<char> cur_state;
         deque<int> actual_labels;
+        bool drift_detected;
 
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
         shared_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);

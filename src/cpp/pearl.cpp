@@ -158,8 +158,10 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 
     // if actual drifts are detected, swap trees and update cur_state
+    drift_detected = false;
     if (drifted_tree_pos_list.size() > 0) {
         adapt_state(drifted_tree_pos_list);
+        drift_detected = true;
     }
 }
 
@@ -500,4 +502,8 @@ void pearl::adaptive_tree::reset() {
     drift_detector->resetChange();
     predicted_labels.clear();
     kappa = INT_MIN;
+}
+
+bool pearl::get_drift_detected() {
+    return drift_detected;
 }

@@ -257,7 +257,3 @@ int pro_pearl::find_actual_drift_point() {
 
     return -1;
 }
-
-const bool pro_pearl::get_drift_detected() {
-    return drift_detected;
-}

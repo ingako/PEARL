@@ -31,14 +31,12 @@ class pro_pearl : public pearl {
         virtual void adapt_state(vector<int> drifted_tree_pos_list);
 
         int find_actual_drift_point();
-        const bool get_drift_detected();
         void select_candidate_trees_proactively();
         void adapt_state_proactively();
 
     private:
 
         bool is_proactive = true;
-        bool drift_detected;
         int num_max_backtrack_instances = 1000;
         deque<Instance*> backtrack_instances;
         deque<shared_ptr<adaptive_tree>> backtrack_drifted_trees;
@@ -66,10 +64,7 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       double,
                       bool>())
-        // .def_property_readonly("drift_detected", &pearl::get_drift_detected)
-        // .def("find_actual_drift_point", &pearl::find_actual_drift_point)
-        // .def("select_candidate_trees_proactively", &pearl::select_candidate_trees_proactively)
-        // .def("adapt_state_proactively", &pearl::adapt_state_proactively)
+        .def_property_readonly("drift_detected", &pearl::get_drift_detected)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
@@ -81,9 +76,29 @@ PYBIND11_MODULE(pearl, m) {
                     + std::to_string(p.get_tree_pool_size()) + " trees>";
             }
          );
+
+
+    py::class_<pro_pearl, pearl>(m, "pro_pearl")
+        .def(py::init<int,
+                      int,
+                      int,
+                      int,
+                      int,
+                      int,
+                      int,
+                      int,
+                      double,
+                      double,
+                      double,
+                      double,
+                      double >())
+        .def("find_actual_drift_point", &pro_pearl::find_actual_drift_point)
+        .def("select_candidate_trees_proactively", &pro_pearl::select_candidate_trees_proactively)
+        .def("adapt_state_proactively", &pro_pearl::adapt_state_proactively)
+        .def("process", &pro_pearl::process)
+        .def("adapt_state", &pro_pearl::adapt_state);
 }
 
 #endif
 
 #endif
-
