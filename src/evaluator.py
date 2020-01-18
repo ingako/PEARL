@@ -4,10 +4,6 @@ from collections import deque
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
-import grpc
-import seqprediction_pb2
-import seqprediction_pb2_grpc
-
 class Evaluator:
 
     @staticmethod
@@ -94,6 +90,11 @@ class Evaluator:
                                          max_samples,
                                          sample_freq,
                                          metrics_logger):
+
+        import grpc
+        import seqprediction_pb2
+        import seqprediction_pb2_grpc
+
         correct = 0
         window_actual_labels = []
         window_predicted_labels = []
