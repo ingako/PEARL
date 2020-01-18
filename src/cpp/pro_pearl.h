@@ -63,6 +63,7 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       double,
                       double,
+                      bool,
                       bool>())
         .def_property_readonly("drift_detected", &pearl::get_drift_detected)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)

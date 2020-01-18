@@ -26,6 +26,7 @@ pro_pearl::pro_pearl(int num_trees,
               reuse_rate_upper_bound,
               warning_delta,
               drift_delta,
+              true,
               true) { }
 
 bool pro_pearl::process() {

@@ -265,7 +265,8 @@ if __name__ == '__main__':
                           args.reuse_rate_upper_bound,
                           args.warning_delta,
                           args.drift_delta,
-                          args.enable_state_adaption)
+                          args.enable_state_adaption,
+                          args.enable_state_graph)
             eval_func = Evaluator.prequential_evaluation_cpp
 
     else:

@@ -30,11 +30,11 @@ int lossy_state_graph::get_next_tree_id(int src) {
     return -1;
 }
 
-void lossy_state_graph::update(int warning_tree_count) {
+bool lossy_state_graph::update(int warning_tree_count) {
     drifted_tree_counter += warning_tree_count;
 
     if (drifted_tree_counter < window_size) {
-        return;
+        return false;
     }
 
     drifted_tree_counter -= window_size;
@@ -61,6 +61,8 @@ void lossy_state_graph::update(int warning_tree_count) {
 
         try_remove_node(i);
     }
+
+    return true;
 }
 
 void lossy_state_graph::try_remove_node(int key) {

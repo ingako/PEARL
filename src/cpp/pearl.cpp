@@ -13,7 +13,8 @@ pearl::pearl(int num_trees,
              double reuse_rate_upper_bound,
              double warning_delta,
              double drift_delta,
-             bool enable_state_adaption) :
+             bool enable_state_adaption,
+             bool enable_state_graph) :
         num_trees(num_trees),
         max_num_candidate_trees(max_num_candidate_trees),
         repo_size(repo_size),
@@ -27,7 +28,8 @@ pearl::pearl(int num_trees,
         reuse_rate_upper_bound(reuse_rate_upper_bound),
         warning_delta(warning_delta),
         drift_delta(drift_delta),
-        enable_state_adaption(enable_state_adaption) {
+        enable_state_adaption(enable_state_adaption),
+        enable_state_graph(enable_state_graph) {
 
     init();
 }
@@ -50,6 +52,9 @@ void pearl::init() {
     }
 
     state_queue->enqueue(cur_state);
+
+    // initialize state graph with lossy counting
+    state_graph = make_unique<lossy_state_graph>(repo_size, lossy_window_size);
 
 }
 
@@ -220,6 +225,38 @@ void pearl::train(Instance& instance) {
 
 void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
+    if (enable_state_graph) {
+        // try trigger lossy counting
+        if (state_graph->update(warning_tree_pos_list.size())) {
+            // TODO log
+        }
+    }
+
+    // add selected neighbors as candidate trees if graph is stable
+    if (state_graph->get_is_stable()) {
+        for (auto warning_tree_id : warning_tree_pos_list) {
+            int next_id = state_graph->get_next_tree_id(warning_tree_id);
+            if (next_id == -1) {
+                state_graph->set_is_stable(false);
+            } else {
+                if (!tree_pool[next_id]->is_candidate) {
+                    tree_pool[next_id]->is_candidate = true;
+                    candidate_trees.push_back(tree_pool[next_id]);
+                }
+            }
+        }
+    }
+
+    // trigger pattern matching if graph has become unstable
+    if (!state_graph->get_is_stable()) {
+        pattern_match_candidate_trees(warning_tree_pos_list);
+
+    } else {
+        // TODO log
+    }
+}
+
+void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
     vector<char> target_state(cur_state);
 
     for (int i = 0; i < warning_tree_pos_list.size(); i++) {

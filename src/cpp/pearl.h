@@ -10,6 +10,7 @@
 #include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
 #include "code/src/learners/Classifiers/Trees/ADWIN.h"
 #include "lru_state.h"
+#include "lossy_state_graph.h"
 
 #define LOG(x) std::cout << (x) << std::endl
 
@@ -71,7 +72,8 @@ class pearl {
               double reuse_rate_upper_bound,
               double warning_delta,
               double drift_delta,
-              bool enable_state_adaption);
+              bool enable_state_adaption,
+              bool enable_state_graph);
 
         void init();
 
@@ -88,6 +90,7 @@ class pearl {
         int vote(vector<int> votes);
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
+        void pattern_match_candidate_trees(vector<int>& warning_tree_pos_list);
 
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
                                   shared_ptr<adaptive_tree>& tree2);
@@ -110,6 +113,7 @@ class pearl {
         double warning_delta;
         double drift_delta;
         bool enable_state_adaption;
+        bool enable_state_graph;
 
         Instance* instance;
         unique_ptr<Reader> reader;
@@ -118,6 +122,7 @@ class pearl {
         deque<shared_ptr<adaptive_tree>> candidate_trees;
         vector<shared_ptr<adaptive_tree>> tree_pool;
 
+        unique_ptr<lossy_state_graph> state_graph;
         unique_ptr<lru_state> state_queue;
         vector<char> cur_state;
         deque<int> actual_labels;

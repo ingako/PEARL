@@ -19,7 +19,7 @@ class lossy_state_graph {
 
         lossy_state_graph(int capacity, int window_size);
         int get_next_tree_id(int src);
-        void update(int warning_tree_count);
+        bool update(int warning_tree_count);
 
         void try_remove_node(int key);
         void add_node(int key);
