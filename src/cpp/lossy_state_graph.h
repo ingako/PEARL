@@ -5,14 +5,17 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <queue>
 
 using std::cout;
 using std::endl;
 using std::to_string;
 using std::unique_ptr;
+using std::shared_ptr;
 using std::make_unique;
 using std::unordered_map;
 using std::vector;
+using std::queue;
 
 class lossy_state_graph {
     public:
@@ -41,6 +44,25 @@ class lossy_state_graph {
         int window_size;
         int drifted_tree_counter;
         bool is_stable;
+};
+
+class state_graph_switch {
+    public:
+        state_graph_switch(shared_ptr<lossy_state_graph> state_graph,
+                           int window_size,
+                           double reuse_rate);
+
+        void update_reuse_count(int num_reused_trees);
+        void update_switch();
+
+    private:
+        int window_size = 0;
+        int reused_tree_count = 0;
+        int total_tree_count = 0;
+        double reuse_rate = 1.0;
+
+        queue<int> window;
+        shared_ptr<lossy_state_graph> state_graph;
 };
 
 #endif

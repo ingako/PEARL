@@ -106,3 +106,47 @@ void lossy_state_graph::set_is_stable(bool is_stable_) {
 bool lossy_state_graph::get_is_stable() {
     return is_stable;
 }
+
+
+// graph switch
+state_graph_switch::state_graph_switch(shared_ptr<lossy_state_graph> state_graph,
+                                       int window_size,
+                                       double reuse_rate)
+        : state_graph(state_graph),
+          window_size(window_size),
+          reuse_rate(reuse_rate) { }
+
+void state_graph_switch::update_reuse_count(int num_reused_trees) {
+    reused_tree_count += num_reused_trees;
+    total_tree_count++;
+
+    if (window_size <= 0) {
+        return;
+    }
+
+    if (window.size() >= window_size) {
+        reused_tree_count -= window.front();
+        window.pop();
+    }
+
+    window.push(num_reused_trees);
+}
+
+void state_graph_switch::update_switch() {
+    double cur_reuse_rate = 0;
+    if (window_size <= 0) {
+        cur_reuse_rate = (double) reused_tree_count / total_tree_count;
+    } else {
+        cur_reuse_rate = (double) reused_tree_count / window_size;
+    }
+
+    // cout << "reused_tree_count: " << to_string(reused_tree_count)  << endl;
+    // cout << "total_tree_count: " << to_string(total_tree_count)  << endl;
+    // cout << "cur_reuse_rate: " << to_string(cur_reuse_rate)  << endl;
+
+    if (cur_reuse_rate >= reuse_rate) {
+        state_graph->set_is_stable(true);
+    } else {
+        state_graph->set_is_stable(false);
+    }
+}
