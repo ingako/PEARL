@@ -122,7 +122,8 @@ class pearl {
         deque<shared_ptr<adaptive_tree>> candidate_trees;
         vector<shared_ptr<adaptive_tree>> tree_pool;
 
-        unique_ptr<lossy_state_graph> state_graph;
+        unique_ptr<state_graph_switch> graph_switch;
+        shared_ptr<lossy_state_graph> state_graph;
         unique_ptr<lru_state> state_queue;
         vector<char> cur_state;
         deque<int> actual_labels;
