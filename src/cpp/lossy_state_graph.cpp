@@ -45,6 +45,8 @@ bool lossy_state_graph::update(int warning_tree_count) {
             continue;
         }
 
+        vector<int> keys_to_remove;
+
         for (auto& nei : graph[i]->neighbors) {
             // decrement freq by 1
             graph[i]->total_weight--;
@@ -55,8 +57,12 @@ bool lossy_state_graph::update(int warning_tree_count) {
                 graph[nei.first]->indegree--;
                 try_remove_node(nei.first);
 
-                graph[i]->neighbors.erase(nei.first);
+                keys_to_remove.push_back(nei.first);
             }
+        }
+
+        for (auto& key : keys_to_remove) {
+            graph[i]->neighbors.erase(key);
         }
 
         try_remove_node(i);
