@@ -129,7 +129,7 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
 
         drifted_tree->update_kappa(actual_labels, class_count);
 
-        cur_state[drifted_tree->tree_pool_id] = '0';
+        cur_state.erase(drifted_tree->tree_pool_id);
 
         bool add_to_repo = false;
 
@@ -187,7 +187,7 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             exit(1);
         }
 
-        cur_state[swap_tree->tree_pool_id] = '1';
+        cur_state.insert(swap_tree->tree_pool_id);
 
         // replace drifted_tree with swap tree
         adaptive_trees[drifted_pos] = swap_tree;

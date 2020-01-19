@@ -46,9 +46,9 @@ void pearl::init() {
     // initialize LRU state pattern queue
     state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
 
-    cur_state = vector<char>(repo_size, '0');
+    cur_state = set<int>();
     for (int i = 0; i < num_trees; i++) {
-        cur_state[i] = '1';
+        cur_state.insert(i);
     }
 
     state_queue->enqueue(cur_state);
@@ -269,7 +269,7 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 }
 
 void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
-    vector<char> target_state(cur_state);
+    set<int> ids_to_exclude;
 
     for (int i = 0; i < warning_tree_pos_list.size(); i++) {
         int tree_pos = warning_tree_pos_list[i];
@@ -279,17 +279,18 @@ void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
             exit(1);
         }
 
-        target_state[adaptive_trees[tree_pos]->tree_pool_id] = '2';
+        ids_to_exclude.insert(adaptive_trees[tree_pos]->tree_pool_id);
     }
 
-    vector<char> closest_state = state_queue->get_closest_state(target_state);
+    set<int> closest_state =
+        state_queue->get_closest_state(cur_state, ids_to_exclude);
+
     if (closest_state.size() == 0) {
         return;
     }
 
-    for (int i = 0; i < tree_pool.size(); i++) {
-        if (cur_state[i] == '0'
-            && closest_state[i] == '1'
+    for (auto i : closest_state) {
+        if (cur_state.find(i) == cur_state.end()
             && !tree_pool[i]->is_candidate) {
 
             if (candidate_trees.size() >= max_num_candidate_trees) {
@@ -300,6 +301,7 @@ void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
             tree_pool[i]->is_candidate = true;
             candidate_trees.push_back(tree_pool[i]);
         }
+
     }
 }
 
@@ -326,7 +328,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
 
         drifted_tree->update_kappa(actual_labels, class_count);
 
-        cur_state[drifted_tree->tree_pool_id] = '0';
+        cur_state.erase(drifted_tree->tree_pool_id);
 
         bool add_to_repo = false;
 
@@ -396,7 +398,7 @@ void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             state_graph->add_edge(drifted_tree->tree_pool_id, swap_tree->tree_pool_id);
         }
 
-        cur_state[swap_tree->tree_pool_id] = '1';
+        cur_state.insert(swap_tree->tree_pool_id);
 
         // replace drifted_tree with swap tree
         adaptive_trees[drifted_pos] = swap_tree;

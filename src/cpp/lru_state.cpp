@@ -3,36 +3,39 @@
 lru_state::lru_state(int capacity, int distance_threshold)
     : capacity(capacity), distance_threshold(distance_threshold) {}
 
-vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
+set<int> lru_state::get_closest_state(set<int> target_pattern,
+                                      set<int> ids_to_exclude) {
     int min_edit_distance = INT_MAX;
     int max_freq = 0;
-    vector<char> closest_pattern;
+    set<int> closest_pattern;
 
     // find the smallest edit distance
     for (auto cur_state : queue) {
-        vector<char> cur_pattern = cur_state.pattern;
+        set<int> cur_pattern = cur_state.pattern;
 
         int cur_freq = cur_state.freq;
         int cur_edit_distance = 0;
 
         bool update_flag = true;
-        for (int i = 0; i < target_pattern.size(); i++) {
-            if (cur_pattern[i] == target_pattern[i]) {
-                continue;
-            }
-
-            // tree with drift must be unset
-            if (cur_pattern[i] == '1' && target_pattern[i] == '2') {
+        for (auto id : ids_to_exclude) {
+            if (cur_pattern.find(id) != cur_pattern.end()) {
+                // tree with drift must be unset
                 update_flag = false;
                 break;
             }
+        }
 
-            cur_edit_distance++;
+        if (update_flag) {
+            for (auto id : target_pattern) {
+                if (cur_pattern.find(id) == cur_pattern.end()) {
+                    cur_edit_distance++;
+                }
 
-            if (cur_edit_distance > distance_threshold
-                    || cur_edit_distance > min_edit_distance) {
-                update_flag = false;
-                break;
+                if (cur_edit_distance > distance_threshold
+                        || cur_edit_distance > min_edit_distance) {
+                    update_flag = false;
+                    break;
+                }
             }
         }
 
@@ -49,11 +52,12 @@ vector<char> lru_state::get_closest_state(vector<char> target_pattern) {
         closest_pattern = cur_pattern;
     }
 
-    return closest_pattern;
+    set<int> new_pattern(closest_pattern);
+    return new_pattern;
 }
 
-void lru_state::update_queue(vector<char> pattern) {
-    string key(std::begin(pattern), std::end(pattern));
+void lru_state::update_queue(set<int> new_pattern) {
+    string key = pattern_to_key(pattern);
 
     if (map.find(key) == map.end()) {
         queue.emplace_front(pattern, 1, 1);
@@ -70,16 +74,25 @@ void lru_state::update_queue(vector<char> pattern) {
     map[key] = queue.begin();
 }
 
-void lru_state::enqueue(vector<char> pattern) {
+void lru_state::enqueue(set<int> pattern) {
     update_queue(pattern);
 
     while (queue.size() > this->capacity) {
-        vector<char> rm_pattern = queue.back().pattern;
-        string rm_pattern_str(std::begin(rm_pattern), std::end(rm_pattern));
+        set<int> rm_pattern = queue.back().pattern;
+        string rm_pattern_str = pattern_to_key(pattern);
         map.erase(rm_pattern_str);
 
         queue.pop_back();
     }
+}
+
+string lru_state::pattern_to_key(set<int> pattern) {
+    stringstream ss;
+    for (auto i : pattern) {
+        ss << i << ",";
+    }
+
+    return ss.str();
 }
 
 string lru_state::to_string() {
@@ -87,10 +100,11 @@ string lru_state::to_string() {
 
     list<state>::iterator it;
     for (it = queue.begin(); it != queue.end(); it++) {
-        vector<char> cur_pattern = it->pattern;
+        set<int> cur_pattern = it->pattern;
         string freq = std::to_string(it->freq);
-        for (int i = 0; i < cur_pattern.size(); i++) {
-            s += cur_pattern[i];
+        for (auto i : cur_pattern) {
+            s += i;
+            s += ",";
         }
         s += ":" + freq + "->";
     }

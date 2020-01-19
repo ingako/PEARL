@@ -21,6 +21,7 @@ using std::make_unique;
 using std::make_shared;
 using std::move;
 using std::vector;
+using std::set;
 
 class pearl {
 
@@ -125,7 +126,7 @@ class pearl {
         unique_ptr<state_graph_switch> graph_switch;
         shared_ptr<lossy_state_graph> state_graph;
         unique_ptr<lru_state> state_queue;
-        vector<char> cur_state;
+        set<int> cur_state;
         deque<int> actual_labels;
         bool drift_detected;
 

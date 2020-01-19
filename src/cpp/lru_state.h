@@ -5,27 +5,34 @@
 #include <unordered_map>
 #include <list>
 #include <vector>
+#include <set>
+#include <sstream>
 
 using std::string;
 using std::vector;
 using std::unordered_map;
 using std::list;
+using std::set;
+using std::stringstream;
 
 class lru_state {
     public:
         lru_state(int capacity, int distance_threshold);
 
-        vector<char> get_closest_state(vector<char> target_pattern);
-        void update_queue(vector<char> pattern);
-        void enqueue(vector<char> pattern);
+        set<int> get_closest_state(set<int> target_pattern,
+                                   set<int> ids_to_exclude);
+
+        void update_queue(set<int> pattern);
+        void enqueue(set<int> pattern);
+        string pattern_to_key(set<int> pattern);
         string to_string();
 
     private:
         struct state {
-            vector<char> pattern;
+            set<int> pattern;
             int val;
             int freq;
-            state(vector<char> pattern, int val, int freq) : pattern(pattern),
+            state(set<int> pattern, int val, int freq) : pattern(pattern),
             val(val), freq(freq) {}
         };
 
