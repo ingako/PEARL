@@ -7,6 +7,7 @@ lossy_state_graph::lossy_state_graph(int capacity,
 
     is_stable = false;
     graph = vector<unique_ptr<node_t>>(capacity);
+    srand(0);
 }
 
 int lossy_state_graph::get_next_tree_id(int src) {
@@ -111,6 +112,25 @@ void lossy_state_graph::set_is_stable(bool is_stable_) {
 
 bool lossy_state_graph::get_is_stable() {
     return is_stable;
+}
+
+string lossy_state_graph::to_string() {
+    stringstream ss;
+    for (int i = 0; i < graph.size(); i++) {
+        ss << i;
+        if (!graph[i]) {
+            ss << " {}" << endl;
+            continue;
+        }
+
+        ss << " w:" << std::to_string(graph[i]->total_weight) << " {";
+        for (auto& nei : graph[i]->neighbors) {
+            ss << std::to_string(nei.first) << ":" << std::to_string(nei.second) << " ";
+        }
+        ss << "}" << endl;
+    }
+
+    return ss.str();
 }
 
 

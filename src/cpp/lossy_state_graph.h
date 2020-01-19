@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <memory>
 #include <queue>
+#include <sstream>
+#include <string>
 
 using std::cout;
 using std::endl;
@@ -16,6 +18,8 @@ using std::make_unique;
 using std::unordered_map;
 using std::vector;
 using std::queue;
+using std::string;
+using std::stringstream;
 
 class lossy_state_graph {
     public:
@@ -30,6 +34,7 @@ class lossy_state_graph {
 
         void set_is_stable(bool is_stable_);
         bool get_is_stable();
+        string to_string();
 
     private:
 
