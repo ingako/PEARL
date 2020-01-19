@@ -239,12 +239,19 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
 
     // add selected neighbors as candidate trees if graph is stable
     if (state_graph->get_is_stable()) {
-        for (auto warning_tree_id : warning_tree_pos_list) {
+        for (auto warning_tree_pos : warning_tree_pos_list) {
+            int warning_tree_id = adaptive_trees[warning_tree_pos]->tree_pool_id;
             int next_id = state_graph->get_next_tree_id(warning_tree_id);
+
             if (next_id == -1) {
                 state_graph->set_is_stable(false);
             } else {
                 if (!tree_pool[next_id]->is_candidate) {
+                    // TODO
+                    if (candidate_trees.size() >= max_num_candidate_trees) {
+                        candidate_trees[0]->is_candidate = false;
+                        candidate_trees.pop_front();
+                    }
                     tree_pool[next_id]->is_candidate = true;
                     candidate_trees.push_back(tree_pool[next_id]);
                 }
