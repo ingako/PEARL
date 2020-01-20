@@ -91,6 +91,7 @@ class pearl {
         int vote(vector<int> votes);
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
+        void tree_transition(vector<int>& warning_tree_pos_list);
         void pattern_match_candidate_trees(vector<int>& warning_tree_pos_list);
 
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
