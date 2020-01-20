@@ -56,7 +56,7 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
     return new_pattern;
 }
 
-void lru_state::update_queue(set<int> new_pattern) {
+void lru_state::update_queue(set<int> pattern) {
     string key = pattern_to_key(pattern);
 
     if (map.find(key) == map.end()) {
