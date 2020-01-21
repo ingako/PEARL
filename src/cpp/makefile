@@ -71,7 +71,7 @@ log4cpp = -llog4cpp -lpthread
 
 debug = -g
 
-warning = -Wall -Wno-sign-compare -Wno-nonnull -Wno-unused-variable
+warning = -Wall -Wextra -Wno-sign-compare -Wno-nonnull -Wno-unused-variable
 
 flags = -std=c++14 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE64 -O3 -DUNIX $(debug)
 
@@ -82,9 +82,6 @@ streamDM.a:
 	g++ -c -fPIC $(sourcefiles) $(includepath) $(flags)
 	ar rcs streamDM.a *.o
 	rm *.o
-
-nopybind:
-	g++ $(sourcefiles) $(includepath) $(log4cpp) $(flags) pearl.cpp main.cpp -o main -D NOPYBIND
 
 build:
 	g++ -shared -fPIC `python3 -m pybind11 --includes` pearl.cpp lru_state.cpp $(sourcefiles) $(includepath) $(log4cpp) $(flags) -o pearl`python3-config --extension-suffix`

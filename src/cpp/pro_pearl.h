@@ -3,10 +3,6 @@
 
 #include "pearl.h"
 
-#ifndef NOPYBIND
-#endif
-
-
 class pro_pearl : public pearl {
 
     public:
@@ -41,10 +37,5 @@ class pro_pearl : public pearl {
         deque<shared_ptr<adaptive_tree>> backtrack_swapped_trees;
 
 };
-
-#ifndef NOPYBIND
-
-
-#endif
 
 #endif
