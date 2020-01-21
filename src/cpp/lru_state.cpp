@@ -96,18 +96,20 @@ string lru_state::pattern_to_key(set<int> pattern) {
 }
 
 string lru_state::to_string() {
-    string s = "";
+    string str = "";
 
-    list<state>::iterator it;
-    for (it = queue.begin(); it != queue.end(); it++) {
-        set<int> cur_pattern = it->pattern;
-        string freq = std::to_string(it->freq);
-        for (auto i : cur_pattern) {
-            s += i;
-            s += ",";
+    for (auto& s : queue) {
+        set<int> cur_pattern = s.pattern;
+        string freq = std::to_string(s.freq);
+
+        string delim = "";
+        for (int i : cur_pattern) {
+            str += delim;
+            str += std::to_string(i);
+            delim = ",";
         }
-        s += ":" + freq + "->";
+        str += ":" + freq + "->";
     }
 
-    return s;
+    return str;
 }
