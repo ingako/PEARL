@@ -174,7 +174,14 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                 swap_tree->tree_pool_id = tree_pool.size();
                 tree_pool.push_back(swap_tree);
 
+                if (!best_swapped_tree) {
+                    first_drifted_tree = drifted_tree;
+                    best_swapped_tree = swap_tree;
+                    swap_tree->replaced_tree_id = drifted_tree->tree_pool_id;
+                }
+
             } else {
+                // false positive
                 swap_tree->tree_pool_id = drifted_tree->tree_pool_id;
 
                 // TODO
@@ -192,11 +199,6 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         // replace drifted_tree with swap tree
         adaptive_trees[drifted_pos] = swap_tree;
 
-        if (!best_swapped_tree) {
-            first_drifted_tree = drifted_tree;
-            best_swapped_tree = swap_tree;
-        }
-
         drifted_tree->reset();
     }
 
@@ -204,11 +206,23 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
     backtrack_swapped_trees.push_back(best_swapped_tree);
 
     state_queue->enqueue(cur_state);
+
+    if (!first_drifted_tree) {
+        // found actual drifted tree, not just false positives
+        drift_detected = true;
+    } else {
+        drift_detected = false;
+    }
 }
 
 int pro_pearl::find_actual_drift_point() {
     if (backtrack_drifted_trees.size() == 0) {
         LOG("No trees to backtrack");
+        exit(1);
+    }
+
+    if (backtrack_instances.size() > num_max_backtrack_instances) {
+        LOG("backtrack_instances has too many data instance");
         exit(1);
     }
 
@@ -229,6 +243,7 @@ int pro_pearl::find_actual_drift_point() {
     for (int i = backtrack_instances.size() - 1; i >= 0; i--) {
         if (!backtrack_instances[i]) {
             LOG("cur instance is null!");
+            exit(1);
         }
 
         int drift_predicted_label = drifted_tree->predict(*backtrack_instances[i], false);
