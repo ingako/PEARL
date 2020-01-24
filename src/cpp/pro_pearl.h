@@ -25,14 +25,16 @@ class pro_pearl : public pearl {
         virtual void train(Instance& instance);
         virtual void adapt_state(vector<int> drifted_tree_pos_list);
 
-        int find_actual_drift_point();
+        int find_last_actual_drift_point();
         void select_candidate_trees_proactively();
         void adapt_state_proactively();
+        bool get_drift_detected();
 
     private:
 
         bool is_proactive = true;
-        int num_max_backtrack_instances = 10000; // TODO
+        bool drift_detected = false;
+        int num_max_backtrack_instances = 100000; // TODO
         deque<Instance*> backtrack_instances;
         deque<shared_ptr<adaptive_tree>> backtrack_drifted_trees;
         deque<shared_ptr<adaptive_tree>> backtrack_swapped_trees;

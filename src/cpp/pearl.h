@@ -82,7 +82,6 @@ class pearl {
 
         int get_candidate_tree_group_size() const;
         int get_tree_pool_size() const;
-        bool get_drift_detected();
 
         bool init_data_source(const string& filename);
         bool get_next_instance();

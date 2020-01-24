@@ -222,7 +222,7 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
     }
 }
 
-int pro_pearl::find_actual_drift_point() {
+int pro_pearl::find_last_actual_drift_point() {
     if (backtrack_drifted_trees.size() == 0) {
         LOG("No trees to backtrack");
         exit(1);
@@ -238,7 +238,7 @@ int pro_pearl::find_actual_drift_point() {
     backtrack_drifted_trees.pop_front();
     backtrack_swapped_trees.pop_front();
 
-    int window = 50; // TODO
+    int window = 25; // TODO
     int drift_correct = 0;
     int swap_correct = 0;
     double drifted_tree_accuracy = 0.0;
@@ -247,7 +247,10 @@ int pro_pearl::find_actual_drift_point() {
     deque<int> drifted_tree_predictions;
     deque<int> swapped_tree_predictions;
 
-    for (int i = backtrack_instances.size() - 1; i >= 0; i--) {
+    int drifted_point = backtrack_instances.size() - drifted_tree->num_instances_seen;
+    int backtrack_start_point = min(window, drifted_tree->num_instances_seen);
+
+    for (int i = backtrack_start_point; i >= 0; i--) {
         if (!backtrack_instances[i]) {
             LOG("cur instance is null!");
             exit(1);
@@ -256,27 +259,28 @@ int pro_pearl::find_actual_drift_point() {
         int drift_predicted_label = drifted_tree->predict(*backtrack_instances[i], false);
         int swap_predicted_label = swapped_tree->predict(*backtrack_instances[i], false);
 
-        // TODO
         int actual_label = instance->getLabel();
+        drifted_tree_predictions.push_back((int) (drift_predicted_label == actual_label));
+        swapped_tree_predictions.push_back((int) (swap_predicted_label == actual_label));
 
-        drift_correct += (int) (drift_predicted_label == actual_label);
-        swap_correct += (int) (swap_predicted_label == actual_label);
+        drift_correct += drifted_tree_predictions.back();
+        swap_correct += swapped_tree_predictions.back();
 
         if (drifted_tree_predictions.size() >= window) {
-            drift_correct -= drifted_tree_predictions[0];
-            swap_correct -= swapped_tree_predictions[0];
+            drift_correct -= drifted_tree_predictions.front();
+            swap_correct -= swapped_tree_predictions.front();
             drifted_tree_predictions.pop_front();
             swapped_tree_predictions.pop_front();
 
-            drifted_tree_accuracy = (double) drift_correct / window;
-            swapped_tree_accuracy = (double) swap_correct / window;
-
-            if (drifted_tree_accuracy >= swapped_tree_accuracy) {
-                return backtrack_instances.size() - 1 - i;
+            if (drift_correct >= swap_correct) {
+                return backtrack_instances.size() - i;
             }
         }
-
     }
 
     return -1;
+}
+
+bool pro_pearl::get_drift_detected() {
+    return drift_detected;
 }

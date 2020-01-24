@@ -576,7 +576,3 @@ void pearl::adaptive_tree::reset() {
     predicted_labels.clear();
     kappa = INT_MIN;
 }
-
-bool pearl::get_drift_detected() {
-    return drift_detected;
-}
