@@ -33,6 +33,7 @@ class pearl {
                 double kappa = INT_MIN;
                 bool is_candidate = false;
                 int replaced_tree_id = -1;
+                int num_instances_seen;
                 deque<int> predicted_labels;
 
                 adaptive_tree(int tree_pool_id,
@@ -88,7 +89,7 @@ class pearl {
         void prepare_instance(Instance& instance);
 
         virtual bool process();
-        void train(Instance& instance);
+        virtual void train(Instance& instance);
         int vote(vector<int> votes);
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
@@ -134,6 +135,7 @@ class pearl {
 
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
         shared_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
+        void online_bagging(Instance& instance, adaptive_tree& tree);
 
         void process_basic(vector<int>& votes, int actual_label);
         void process_with_state_adaption(vector<int>& votes, int actual_label);

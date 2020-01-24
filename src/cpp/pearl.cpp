@@ -216,13 +216,16 @@ int pearl::vote(vector<int> votes) {
 
 void pearl::train(Instance& instance) {
     for (int i = 0; i < num_trees; i++) {
-        // online bagging
-        prepare_instance(instance);
-        int weight = Utils::poisson(1.0);
-        while (weight > 0) {
-            weight--;
-            adaptive_trees[i]->train(instance);
-        }
+        online_bagging(instance, *adaptive_trees[i]);
+    }
+}
+
+void pearl::online_bagging(Instance& instance, adaptive_tree& tree) {
+    prepare_instance(instance);
+    int weight = Utils::poisson(1.0);
+    while (weight > 0) {
+        weight--;
+        tree.train(instance);
     }
 }
 
@@ -567,6 +570,7 @@ double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
 void pearl::adaptive_tree::reset() {
     bg_adaptive_tree = nullptr;
     is_candidate = false;
+    num_instances_seen = 0;
     warning_detector->resetChange();
     drift_detector->resetChange();
     predicted_labels.clear();

@@ -44,11 +44,18 @@ bool pro_pearl::process() {
     }
     backtrack_instances.push_back(instance);
 
-    pearl::train(*instance);
+    train(*instance);
 
     int predicted_label = pearl::vote(votes);
 
     return predicted_label == actual_label;
+}
+
+void pro_pearl::train(Instance& instance) {
+    for (int i = 0; i < num_trees; i++) {
+        adaptive_trees[i]->num_instances_seen++;
+        pearl::online_bagging(instance, *adaptive_trees[i]);
+    }
 }
 
 void pro_pearl::select_candidate_trees_proactively() {
