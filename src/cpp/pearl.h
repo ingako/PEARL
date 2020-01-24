@@ -32,7 +32,6 @@ class pearl {
                 int tree_pool_id;
                 double kappa = INT_MIN;
                 bool is_candidate = false;
-                int replaced_tree_id = -1;
                 int num_instances_seen;
                 deque<int> predicted_labels;
 

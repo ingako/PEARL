@@ -570,7 +570,6 @@ double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
 void pearl::adaptive_tree::reset() {
     bg_adaptive_tree = nullptr;
     is_candidate = false;
-    num_instances_seen = 0;
     warning_detector->resetChange();
     drift_detector->resetChange();
     predicted_labels.clear();

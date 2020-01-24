@@ -184,7 +184,6 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
                 if (!best_swapped_tree) {
                     first_drifted_tree = drifted_tree;
                     best_swapped_tree = swap_tree;
-                    swap_tree->replaced_tree_id = drifted_tree->tree_pool_id;
                 }
 
             } else {
@@ -209,14 +208,13 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
         drifted_tree->reset();
     }
 
-    backtrack_drifted_trees.push_back(first_drifted_tree);
-    backtrack_swapped_trees.push_back(best_swapped_tree);
-
     state_queue->enqueue(cur_state);
 
-    if (!first_drifted_tree) {
+    if (first_drifted_tree) {
         // found actual drifted tree, not just false positives
         drift_detected = true;
+        backtrack_drifted_trees.push_back(first_drifted_tree);
+        backtrack_swapped_trees.push_back(best_swapped_tree);
     } else {
         drift_detected = false;
     }
@@ -247,8 +245,8 @@ int pro_pearl::find_last_actual_drift_point() {
     deque<int> drifted_tree_predictions;
     deque<int> swapped_tree_predictions;
 
-    int drifted_point = backtrack_instances.size() - drifted_tree->num_instances_seen;
-    int backtrack_start_point = min(window, drifted_tree->num_instances_seen);
+    int drifted_point = backtrack_instances.size() - swapped_tree->num_instances_seen;
+    int backtrack_start_point = min(window, swapped_tree->num_instances_seen);
 
     for (int i = backtrack_start_point; i >= 0; i--) {
         if (!backtrack_instances[i]) {
@@ -277,6 +275,9 @@ int pro_pearl::find_last_actual_drift_point() {
             }
         }
     }
+
+    swapped_tree->num_instances_seen = 0;
+    drifted_tree->num_instances_seen = 0;
 
     return -1;
 }
