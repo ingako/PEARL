@@ -97,6 +97,8 @@ class pearl {
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
                                   shared_ptr<adaptive_tree>& tree2);
 
+        bool is_state_graph_stable();
+
 
     protected:
 

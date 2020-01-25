@@ -575,3 +575,7 @@ void pearl::adaptive_tree::reset() {
     predicted_labels.clear();
     kappa = INT_MIN;
 }
+
+bool pearl::is_state_graph_stable() {
+    return state_graph->get_is_stable();
+}
