@@ -23,12 +23,12 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       bool,
                       bool>())
-        .def_property_readonly("drift_detected", &pearl::get_drift_detected)
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
         .def("get_next_instance", &pearl::get_next_instance)
         .def("process", &pearl::process)
+        .def("is_state_graph_stable", &pearl::is_state_graph_stable)
         .def("__repr__",
             [](const pearl &p) {
                 return "<pearl.pearl has "
@@ -51,7 +51,8 @@ PYBIND11_MODULE(pearl, m) {
                       double,
                       double,
                       double >())
-        .def("find_actual_drift_point", &pro_pearl::find_actual_drift_point)
+        .def_property_readonly("drift_detected", &pro_pearl::get_drift_detected)
+        .def("find_last_actual_drift_point", &pro_pearl::find_last_actual_drift_point)
         .def("select_candidate_trees_proactively", &pro_pearl::select_candidate_trees_proactively)
         .def("adapt_state_proactively", &pro_pearl::adapt_state_proactively)
         .def("process", &pro_pearl::process)
