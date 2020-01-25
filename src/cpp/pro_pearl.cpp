@@ -27,7 +27,11 @@ pro_pearl::pro_pearl(int num_trees,
               warning_delta,
               drift_delta,
               true,
-              true) { }
+              true) {
+
+    backtrack_drifted_trees.push_back(nullptr);
+    backtrack_swapped_trees.push_back(nullptr);
+}
 
 bool pro_pearl::process() {
 
@@ -36,6 +40,7 @@ bool pro_pearl::process() {
     int num_classes = instance->getNumberClasses();
     vector<int> votes(num_classes, 0);
 
+    drift_detected = false;
     pearl::process_with_state_adaption(votes, actual_label);
 
     if (backtrack_instances.size() >= num_max_backtrack_instances) {
@@ -223,7 +228,14 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
 int pro_pearl::find_last_actual_drift_point() {
     if (backtrack_drifted_trees.size() == 0) {
         LOG("No trees to backtrack");
-        exit(1);
+        // exit(1);
+        return -1;
+    }
+
+    if (!backtrack_drifted_trees.front()) {
+        backtrack_drifted_trees.pop_front();
+        backtrack_swapped_trees.pop_front();
+        return -1;
     }
 
     if (backtrack_instances.size() > num_max_backtrack_instances) {
@@ -231,8 +243,8 @@ int pro_pearl::find_last_actual_drift_point() {
         exit(1);
     }
 
-    shared_ptr<adaptive_tree> drifted_tree = backtrack_drifted_trees[0];
-    shared_ptr<adaptive_tree> swapped_tree = backtrack_swapped_trees[0];
+    shared_ptr<adaptive_tree> drifted_tree = backtrack_drifted_trees.front();
+    shared_ptr<adaptive_tree> swapped_tree = backtrack_swapped_trees.front();
     backtrack_drifted_trees.pop_front();
     backtrack_swapped_trees.pop_front();
 
@@ -246,7 +258,18 @@ int pro_pearl::find_last_actual_drift_point() {
     deque<int> swapped_tree_predictions;
 
     int drifted_point = backtrack_instances.size() - swapped_tree->num_instances_seen;
-    int backtrack_start_point = min(window, swapped_tree->num_instances_seen);
+    int backtrack_start_point = drifted_point + min(window, swapped_tree->num_instances_seen);
+
+    if (backtrack_start_point >= backtrack_instances.size()) {
+        cout << "backtrack_start_point exceeded num of cached instances" << endl;
+        cout << "swapped_tree->num_instances_seen: " << swapped_tree->num_instances_seen << endl;
+        return -1;
+    }
+
+    if (backtrack_start_point >= backtrack_instances.size()) {
+        cout << "backtrack_start_point exceeded num of cached instances" << endl;
+        exit(1);
+    }
 
     for (int i = backtrack_start_point; i >= 0; i--) {
         if (!backtrack_instances[i]) {
