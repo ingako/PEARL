@@ -151,10 +151,18 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             candidate_trees.back()->is_candidate = false;
             swap_tree = candidate_trees.back();
             candidate_trees.pop_back();
+
+            if (enable_state_graph) {
+                graph_switch->update_reuse_count(1);
+            }
         }
 
         if (swap_tree == nullptr) {
             add_to_repo = true;
+
+            if (enable_state_graph) {
+                graph_switch->update_reuse_count(0);
+            }
 
             shared_ptr<adaptive_tree> bg_tree = drifted_tree->bg_adaptive_tree;
 
@@ -205,6 +213,10 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
             exit(1);
         }
 
+        if (enable_state_graph) {
+            state_graph->add_edge(drifted_tree->tree_pool_id, swap_tree->tree_pool_id);
+        }
+
         cur_state.insert(swap_tree->tree_pool_id);
 
         // replace drifted_tree with swap tree
@@ -214,6 +226,10 @@ void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
     }
 
     state_queue->enqueue(cur_state);
+
+    if (enable_state_graph) {
+        graph_switch->update_switch();
+    }
 
     if (first_drifted_tree) {
         // found actual drifted tree, not just false positives
