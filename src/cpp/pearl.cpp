@@ -273,7 +273,7 @@ void pearl::tree_transition(vector<int>& warning_tree_pos_list) {
     }
 }
 
-void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
+void pearl::pattern_match_candidate_trees(const vector<int>& warning_tree_pos_list) {
     set<int> ids_to_exclude;
 
     for (int i = 0; i < warning_tree_pos_list.size(); i++) {
@@ -310,7 +310,7 @@ void pearl::pattern_match_candidate_trees(vector<int>& warning_tree_pos_list) {
     }
 }
 
-void pearl::adapt_state(vector<int> drifted_tree_pos_list) {
+void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
     int class_count = instance->getNumberClasses();
 
     // sort candiate trees by kappa
@@ -516,7 +516,7 @@ void pearl::adaptive_tree::train(Instance& instance) {
 
 void pearl::adaptive_tree::update_kappa(deque<int> actual_labels, int class_count) {
 
-    if (predicted_labels.size() < kappa_window_size) {
+    if (predicted_labels.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
         kappa = INT_MIN;
         return;
     }

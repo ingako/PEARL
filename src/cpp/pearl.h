@@ -32,7 +32,7 @@ class pearl {
                 int tree_pool_id;
                 double kappa = INT_MIN;
                 bool is_candidate = false;
-                int num_instances_seen;
+                int num_instances_seen = 0;
                 deque<int> predicted_labels;
 
                 adaptive_tree(int tree_pool_id,
@@ -92,7 +92,7 @@ class pearl {
 
         void select_candidate_trees(vector<int>& warning_tree_pos_list);
         void tree_transition(vector<int>& warning_tree_pos_list);
-        void pattern_match_candidate_trees(vector<int>& warning_tree_pos_list);
+        void pattern_match_candidate_trees(const vector<int>& warning_tree_pos_list);
 
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,
                                   shared_ptr<adaptive_tree>& tree2);
@@ -139,7 +139,7 @@ class pearl {
 
         void process_basic(vector<int>& votes, int actual_label);
         void process_with_state_adaption(vector<int>& votes, int actual_label);
-        virtual void adapt_state(vector<int> drifted_tree_pos_list);
+        virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
 
 };
 

@@ -7,11 +7,11 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
                                       set<int> ids_to_exclude) {
     int min_edit_distance = INT_MAX;
     int max_freq = 0;
-    set<int> closest_pattern;
+    set<int>* closest_pattern;
 
     // find the smallest edit distance
-    for (auto cur_state : queue) {
-        set<int> cur_pattern = cur_state.pattern;
+    for (auto& cur_state : queue) {
+        set<int>& cur_pattern = cur_state.pattern;
 
         int cur_freq = cur_state.freq;
         int cur_edit_distance = 0;
@@ -26,7 +26,7 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
         }
 
         if (update_flag) {
-            for (auto id : target_pattern) {
+            for (auto& id : target_pattern) {
                 if (cur_pattern.find(id) == cur_pattern.end()) {
                     cur_edit_distance++;
                 }
@@ -49,11 +49,14 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
 
         min_edit_distance = cur_edit_distance;
         max_freq = cur_freq;
-        closest_pattern = cur_pattern;
+        closest_pattern = &cur_pattern;
     }
 
-    set<int> new_pattern(closest_pattern);
-    return new_pattern;
+    if (!closest_pattern) {
+        return {};
+    }
+
+    return set<int>(*closest_pattern);
 }
 
 void lru_state::update_queue(set<int> pattern) {

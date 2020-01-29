@@ -114,7 +114,7 @@ void pro_pearl::adapt_state_proactively() {
     }
 }
 
-void pro_pearl::adapt_state(vector<int> drifted_tree_pos_list) {
+void pro_pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
 
     int class_count = instance->getNumberClasses();
 

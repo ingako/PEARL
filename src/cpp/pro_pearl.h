@@ -23,7 +23,7 @@ class pro_pearl : public pearl {
 
         virtual bool process();
         virtual void train(Instance& instance);
-        virtual void adapt_state(vector<int> drifted_tree_pos_list);
+        virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
 
         int find_last_actual_drift_point();
         void select_candidate_trees_proactively();
