@@ -200,7 +200,7 @@ void pearl::process_basic(vector<int>& votes, int actual_label) {
     }
 }
 
-int pearl::vote(vector<int> votes) {
+int pearl::vote(const vector<int>& votes) {
     int max_votes = votes[0];
     int predicted_label = 0;
 
@@ -229,7 +229,7 @@ void pearl::online_bagging(Instance& instance, adaptive_tree& tree) {
     }
 }
 
-void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
+void pearl::select_candidate_trees(const vector<int>& warning_tree_pos_list) {
 
     if (enable_state_graph) {
         // try trigger lossy counting
@@ -252,7 +252,7 @@ void pearl::select_candidate_trees(vector<int>& warning_tree_pos_list) {
     }
 }
 
-void pearl::tree_transition(vector<int>& warning_tree_pos_list) {
+void pearl::tree_transition(const vector<int>& warning_tree_pos_list) {
     for (auto warning_tree_pos : warning_tree_pos_list) {
         int warning_tree_id = adaptive_trees[warning_tree_pos]->tree_pool_id;
         int next_id = state_graph->get_next_tree_id(warning_tree_id);
@@ -514,7 +514,7 @@ void pearl::adaptive_tree::train(Instance& instance) {
     }
 }
 
-void pearl::adaptive_tree::update_kappa(deque<int> actual_labels, int class_count) {
+void pearl::adaptive_tree::update_kappa(const deque<int>& actual_labels, int class_count) {
 
     if (predicted_labels.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
         kappa = INT_MIN;

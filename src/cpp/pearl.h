@@ -42,7 +42,7 @@ class pearl {
 
                 void train(Instance& instance);
                 int predict(Instance& instance, bool track_performance);
-                void update_kappa(deque<int> actual_labels, int class_count);
+                void update_kappa(const deque<int>& actual_labels, int class_count);
                 void reset();
 
                 unique_ptr<HT::HoeffdingTree> tree;
@@ -88,10 +88,10 @@ class pearl {
 
         virtual bool process();
         virtual void train(Instance& instance);
-        int vote(vector<int> votes);
+        int vote(const vector<int>& votes);
 
-        void select_candidate_trees(vector<int>& warning_tree_pos_list);
-        void tree_transition(vector<int>& warning_tree_pos_list);
+        void select_candidate_trees(const vector<int>& warning_tree_pos_list);
+        void tree_transition(const vector<int>& warning_tree_pos_list);
         void pattern_match_candidate_trees(const vector<int>& warning_tree_pos_list);
 
         static bool compare_kappa(shared_ptr<adaptive_tree>& tree1,

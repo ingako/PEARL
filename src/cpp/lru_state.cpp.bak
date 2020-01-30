@@ -17,7 +17,7 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
         int cur_edit_distance = 0;
 
         bool update_flag = true;
-        for (auto& id : ids_to_exclude) {
+        for (auto id : ids_to_exclude) {
             if (cur_pattern.find(id) != cur_pattern.end()) {
                 // tree with drift must be unset
                 update_flag = false;
@@ -52,14 +52,11 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
         closest_pattern = &cur_pattern;
     }
 
-    if (!closest_pattern) {
-        return {};
-    }
-
-    return set<int>(*closest_pattern);
+    set<int> new_pattern(*closest_pattern);
+    return new_pattern;
 }
 
-void lru_state::update_queue(const set<int>& pattern) {
+void lru_state::update_queue(set<int> pattern) {
     string key = pattern_to_key(pattern);
 
     if (map.find(key) == map.end()) {
@@ -89,9 +86,9 @@ void lru_state::enqueue(set<int> pattern) {
     }
 }
 
-string lru_state::pattern_to_key(const set<int>& pattern) {
+string lru_state::pattern_to_key(set<int> pattern) {
     stringstream ss;
-    for (auto& i : pattern) {
+    for (auto i : pattern) {
         ss << i << ",";
     }
 

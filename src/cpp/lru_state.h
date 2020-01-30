@@ -22,9 +22,7 @@ class lru_state {
         set<int> get_closest_state(set<int> target_pattern,
                                    set<int> ids_to_exclude);
 
-        void update_queue(set<int> pattern);
         void enqueue(set<int> pattern);
-        string pattern_to_key(set<int> pattern);
         string to_string();
 
     private:
@@ -40,6 +38,9 @@ class lru_state {
         unordered_map<string, list<state>::iterator> map;
         int capacity;
         int distance_threshold; 
+
+        string pattern_to_key(const set<int>& pattern);
+        void update_queue(const set<int>& pattern);
 };
 
 #endif
