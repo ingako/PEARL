@@ -43,13 +43,14 @@ bool pro_pearl::process() {
     drift_detected = false;
     pearl::process_with_state_adaption(votes, actual_label);
 
-    if (backtrack_instances.size() >= num_max_backtrack_instances) {
-        delete backtrack_instances[0];
-        backtrack_instances.pop_front();
-    }
+    // if (backtrack_instances.size() >= num_max_backtrack_instances) {
+    //     delete backtrack_instances[0];
+    //     backtrack_instances.pop_front();
+    // }
     backtrack_instances.push_back(instance);
 
     train(*instance);
+    num_instances_seen++;
 
     int predicted_label = pearl::vote(votes);
 
@@ -236,6 +237,7 @@ void pro_pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
         drift_detected = true;
         backtrack_drifted_trees.push_back(first_drifted_tree);
         backtrack_swapped_trees.push_back(best_swapped_tree);
+        drifted_points.push_back(num_instances_seen);
     } else {
         drift_detected = false;
     }
@@ -259,10 +261,22 @@ int pro_pearl::find_last_actual_drift_point() {
         exit(1);
     }
 
+    // int drifted_point = backtrack_instances.size() - swapped_tree->num_instances_seen;
+    // int backtrack_start_point = drifted_point + min(window, swapped_tree->num_instances_seen);
+    int backtrack_start_point = drifted_points.front();
+
+    if (backtrack_start_point >= backtrack_instances.size()) {
+        cout << "backtrack_start_point exceeded num of cached instances" << endl;
+        return -1;
+    }
+
     shared_ptr<adaptive_tree> drifted_tree = backtrack_drifted_trees.front();
     shared_ptr<adaptive_tree> swapped_tree = backtrack_swapped_trees.front();
+    long drifted_point = drifted_points.front();
+
     backtrack_drifted_trees.pop_front();
     backtrack_swapped_trees.pop_front();
+    drifted_points.pop_front();
 
     int window = 25; // TODO
     int drift_correct = 0;
@@ -272,20 +286,6 @@ int pro_pearl::find_last_actual_drift_point() {
 
     deque<int> drifted_tree_predictions;
     deque<int> swapped_tree_predictions;
-
-    int drifted_point = backtrack_instances.size() - swapped_tree->num_instances_seen;
-    int backtrack_start_point = drifted_point + min(window, swapped_tree->num_instances_seen);
-
-    if (backtrack_start_point >= backtrack_instances.size()) {
-        cout << "backtrack_start_point exceeded num of cached instances" << endl;
-        cout << "swapped_tree->num_instances_seen: " << swapped_tree->num_instances_seen << endl;
-        return -1;
-    }
-
-    if (backtrack_start_point >= backtrack_instances.size()) {
-        cout << "backtrack_start_point exceeded num of cached instances" << endl;
-        exit(1);
-    }
 
     for (int i = backtrack_start_point; i >= 0; i--) {
         if (!backtrack_instances[i]) {

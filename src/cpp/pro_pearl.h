@@ -34,10 +34,12 @@ class pro_pearl : public pearl {
 
         bool is_proactive = true;
         bool drift_detected = false;
-        int num_max_backtrack_instances = 100000; // TODO
+        int num_max_backtrack_instances = 100000000; // TODO
+        int num_instances_seen = 0;
         deque<Instance*> backtrack_instances;
         deque<shared_ptr<adaptive_tree>> backtrack_drifted_trees;
         deque<shared_ptr<adaptive_tree>> backtrack_swapped_trees;
+        deque<long> drifted_points;
 
 };
 
