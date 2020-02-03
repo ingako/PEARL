@@ -32,7 +32,6 @@ class pearl {
                 int tree_pool_id;
                 double kappa = INT_MIN;
                 bool is_candidate = false;
-                int num_instances_seen = 0;
                 deque<int> predicted_labels;
 
                 adaptive_tree(int tree_pool_id,
@@ -131,7 +130,6 @@ class pearl {
         unique_ptr<lru_state> state_queue;
         set<int> cur_state;
         deque<int> actual_labels;
-        bool drift_detected;
 
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
         shared_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);

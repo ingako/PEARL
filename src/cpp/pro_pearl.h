@@ -22,7 +22,6 @@ class pro_pearl : public pearl {
                   double drift_delta);
 
         virtual bool process();
-        virtual void train(Instance& instance);
         virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
 
         int find_last_actual_drift_point();
@@ -32,7 +31,6 @@ class pro_pearl : public pearl {
 
     private:
 
-        bool is_proactive = true;
         bool drift_detected = false;
         int num_max_backtrack_instances = 100000000; // TODO
         int num_instances_seen = 0;

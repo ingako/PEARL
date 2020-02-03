@@ -49,19 +49,12 @@ bool pro_pearl::process() {
     // }
     backtrack_instances.push_back(instance);
 
-    train(*instance);
+    pearl::train(*instance);
     num_instances_seen++;
 
     int predicted_label = pearl::vote(votes);
 
     return predicted_label == actual_label;
-}
-
-void pro_pearl::train(Instance& instance) {
-    for (int i = 0; i < num_trees; i++) {
-        adaptive_trees[i]->num_instances_seen++;
-        pearl::online_bagging(instance, *adaptive_trees[i]);
-    }
 }
 
 void pro_pearl::select_candidate_trees_proactively() {
@@ -149,12 +142,18 @@ void pro_pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
         if (candidate_trees.size() > 0
             && candidate_trees.back()->kappa
                 - drifted_tree->kappa >= cd_kappa_threshold) {
+
             candidate_trees.back()->is_candidate = false;
             swap_tree = candidate_trees.back();
             candidate_trees.pop_back();
 
             if (enable_state_graph) {
                 graph_switch->update_reuse_count(1);
+            }
+
+            if (!best_swapped_tree) {
+                first_drifted_tree = drifted_tree;
+                best_swapped_tree = swap_tree;
             }
         }
 
@@ -261,9 +260,8 @@ int pro_pearl::find_last_actual_drift_point() {
         exit(1);
     }
 
-    // int drifted_point = backtrack_instances.size() - swapped_tree->num_instances_seen;
-    // int backtrack_start_point = drifted_point + min(window, swapped_tree->num_instances_seen);
-    int backtrack_start_point = drifted_points.front();
+    int window = 25; // TODO
+    int backtrack_start_point = drifted_points.front() + window;
 
     if (backtrack_start_point >= backtrack_instances.size()) {
         cout << "backtrack_start_point exceeded num of cached instances" << endl;
@@ -278,7 +276,6 @@ int pro_pearl::find_last_actual_drift_point() {
     backtrack_swapped_trees.pop_front();
     drifted_points.pop_front();
 
-    int window = 25; // TODO
     int drift_correct = 0;
     int swap_correct = 0;
     double drifted_tree_accuracy = 0.0;
@@ -314,9 +311,6 @@ int pro_pearl::find_last_actual_drift_point() {
             }
         }
     }
-
-    swapped_tree->num_instances_seen = 0;
-    drifted_tree->num_instances_seen = 0;
 
     return -1;
 }
