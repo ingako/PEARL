@@ -90,12 +90,24 @@ class Evaluator:
                                          max_samples,
                                          sample_freq,
                                          metrics_logger):
-
-        from sklearn.neighbors import KernelDensity
+        np.random.seed(0)
 
         import grpc
         import seqprediction_pb2
         import seqprediction_pb2_grpc
+
+        from denstream.DenStream import DenStream
+
+        clusterer = DenStream(lambd=0.1, eps=10, beta=0.5, mu=3)
+
+        def fit_predict(clusterer, interval):
+            x = [np.array([interval])]
+            label = clusterer.fit_predict(x)[0]
+
+            if label == -1:
+                return interval
+
+            return int(round(clusterer.p_micro_clusters[label].center()[0]))
 
         correct = 0
         window_actual_labels = []
@@ -135,30 +147,34 @@ class Evaluator:
                         drift_interval_sequence.appendleft(temp)
 
                         # print(f"Predicted next drift point: {response.seq[0]}")
-                        predicted_drift_points.append(response.seq[0])
+                        interval = fit_predict(clusterer, response.seq[0])
+                        predicted_drift_points.append(interval)
 
-                        drift_interval_sequence.append(response.seq[0])
-                        last_drift_point = response.seq[0]
+                        drift_interval_sequence.append(interval)
+                        last_actual_drift_point += interval
 
                     else:
                         # find actual drift point at num_instances_before
                         num_instances_before = classifier.find_last_actual_drift_point()
+
                         if num_instances_before > -1:
                             interval = count - num_instances_before - last_actual_drift_point
                             if interval < 0:
                                 print("Failed to find the actual drift point")
                                 # exit()
                             else:
+                                interval = fit_predict(clusterer, interval)
                                 drift_interval_sequence.append(interval)
                                 last_actual_drift_point = count - num_instances_before
 
                                 # train CPT
                                 if len(drift_interval_sequence) >= drift_interval_seq_len:
+
                                     num_request += 1
                                     print(f"gRPC train request {num_request}: {drift_interval_sequence}")
                                     if stub.train(
-                                                seqprediction_pb2.
-                                                    SequenceMessage(seqId=count, seq=drift_interval_sequence)
+                                                seqprediction_pb2
+                                                    .SequenceMessage(seqId=num_request, seq=drift_interval_sequence)
                                             ).result:
                                         pass
                                     else:
