@@ -85,7 +85,7 @@ class Evaluator:
 
 
     @staticmethod
-    def prequential_evaluation_proactive(classifier,
+    def prequential_evaluation_proactive_(classifier,
                                          stream,
                                          max_samples,
                                          sample_freq,
@@ -222,3 +222,55 @@ class Evaluator:
                     correct = 0
                     window_actual_labels = []
                     window_predicted_labels = []
+
+    @staticmethod
+    def prequential_evaluation_proactive(classifier,
+                                         stream,
+                                         max_samples,
+                                         sample_freq,
+                                         metrics_logger):
+        np.random.seed(0)
+
+        import grpc
+        import seqprediction_pb2
+        import seqprediction_pb2_grpc
+
+        correct = 0
+
+        # proactive drift point prediction
+        drift_interval_seq_len = 8
+        drift_interval_sequence = deque(maxlen=drift_interval_seq_len)
+        last_actual_drift_point = 0
+        num_request = 0
+
+        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
+
+        classifier.init_data_source(stream);
+
+        with grpc.insecure_channel('localhost:50051') as channel:
+
+            stub = seqprediction_pb2_grpc.PredictorStub(channel)
+
+            for count in range(0, max_samples):
+                if not classifier.get_next_instance():
+                    break
+
+                correct += 1 if classifier.process() else 0
+
+                if classifier.drift_detected:
+                    if classifier.is_state_graph_stable():
+                        exit()
+
+                # else:
+                #     stub.train(seqprediction_pb2.SequenceMessage(seqId=num_request, seq=drift_interval_sequence))
+
+                if count % sample_freq == 0 and count != 0:
+                    accuracy = correct / sample_freq
+                    candidate_tree_size = classifier.get_candidate_tree_group_size()
+                    tree_pool_size = classifier.get_tree_pool_size()
+
+                    print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
+                    metrics_logger.info(f"{count},{accuracy}," \
+                                        f"{candidate_tree_size},{tree_pool_size}")
+
+                    correct = 0
