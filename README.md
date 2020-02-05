@@ -24,9 +24,13 @@ python src/main.py -h
 
 ### Speed Optimization with C++
 
+Make sure [log4cpp](http://log4cpp.sourceforge.net/) has been installed.
+
 ```
-pip3 install pybind11
 cd src/cpp
+mkdir build
+cd build
+cmake ..
 make
 ```
 
