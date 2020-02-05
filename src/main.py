@@ -13,8 +13,8 @@ from skmultiflow.data.file_stream import FileStream
 
 from evaluator import Evaluator
 from pearl import Pearl
-from cpp.pearl import pearl
-from cpp.pearl import pro_pearl
+from cpp.build.pearl import pearl
+from cpp.build.pearl import pro_pearl
 
 
 formatter = logging.Formatter('%(message)s')
