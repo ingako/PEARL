@@ -521,7 +521,7 @@ void pearl::adaptive_tree::update_kappa(const deque<int>& actual_labels, int cla
         return;
     }
 
-    int confusion_matrix[class_count][class_count] = {};
+    vector<vector<int>> confusion_matrix(class_count, vector<int>(class_count, 0));
     int correct = 0;
 
     for (int i = 0; i < kappa_window_size; i++) {
@@ -533,10 +533,10 @@ void pearl::adaptive_tree::update_kappa(const deque<int>& actual_labels, int cla
 
     double accuracy = (double) correct / kappa_window_size;
 
-    kappa = compute_kappa(&(confusion_matrix[0][0]), accuracy, kappa_window_size, class_count);
+    kappa = compute_kappa(confusion_matrix, accuracy, kappa_window_size, class_count);
 }
 
-double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
+double pearl::adaptive_tree::compute_kappa(const vector<vector<int>>& confusion_matrix,
                                            double accuracy,
                                            int sample_count,
                                            int class_count) {
@@ -549,12 +549,12 @@ double pearl::adaptive_tree::compute_kappa(int* confusion_matrix,
     for (int i = 0; i < row_count; i++) {
         double row_sum = 0;
         for (int j = 0; j < col_count; j++) {
-            row_sum += confusion_matrix[i * col_count + j];
+            row_sum += confusion_matrix[i][j];
         }
 
         double col_sum = 0;
         for (int j = 0; j < row_count; j++) {
-            col_sum += confusion_matrix[j * row_count + i];
+            col_sum += confusion_matrix[j][i];
         }
 
         pc += (row_sum / sample_count) * (col_sum / sample_count);

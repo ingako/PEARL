@@ -54,7 +54,7 @@ class pearl {
                 double warning_delta;
                 double drift_delta;
 
-                double compute_kappa(int* confusion_matrix,
+                double compute_kappa(const vector<vector<int>>& confusion_matrix,
                                      double accuracy,
                                      int sapmle_count,
                                      int class_count);
