@@ -7,7 +7,7 @@ set<int> lru_state::get_closest_state(set<int> target_pattern,
                                       set<int> ids_to_exclude) {
     int min_edit_distance = INT_MAX;
     int max_freq = 0;
-    set<int>* closest_pattern;
+    set<int>* closest_pattern = nullptr;
 
     // find the smallest edit distance
     for (auto& cur_state : queue) {
