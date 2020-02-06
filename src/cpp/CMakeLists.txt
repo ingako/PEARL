@@ -64,10 +64,11 @@ code/src/learners/Classifiers/Bayes/observer/
 code/src/learners/Classifiers/Meta/
 code/src/learners/Classifiers/Functions/
 code/src/evaluation/
-code/src/streams/)
+code/src/streams/
+/usr/local/include/
+)
 
 # log4cpp
-include_directories(/usr/local/include/log4cpp)
 link_directories(/usr/local/lib/)
 find_package(Threads REQUIRED)
 
