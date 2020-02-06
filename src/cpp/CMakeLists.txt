@@ -69,6 +69,7 @@ code/src/streams/
 )
 
 # log4cpp
+find_library(LOG4CPP_LIBRARY log4cpp)
 link_directories(/usr/local/lib/)
 find_package(Threads REQUIRED)
 
@@ -83,4 +84,4 @@ add_library(streamDM STATIC ${sourcefiles})
 add_subdirectory(pybind11)
 pybind11_add_module(pearl pearl_bindings.cpp pearl.cpp pro_pearl.cpp lru_state.cpp lossy_state_graph.cpp)
 
-target_link_libraries(pearl PRIVATE streamDM liblog4cpp.so)
+target_link_libraries(pearl PRIVATE streamDM ${LOG4CPP_LIBRARY})
