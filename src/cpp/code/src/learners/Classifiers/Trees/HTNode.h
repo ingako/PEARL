@@ -58,16 +58,16 @@ enum NodeType {
 
 class Node : public RTTI{
 public:
-	vector<double>* observedClassDistribution;
+	vector<double> observedClassDistribution;
 
 	Node(const vector<double>& classObservations);
 	Node(const Json::Value& jv);
-	virtual ~Node();
+	// virtual ~Node();
 	virtual bool isLeaf();
 	virtual FoundNode* filterInstanceToLeaf(const Instance* inst, SplitNode* parent,
 			int parentBranch);
-	virtual vector<double>* getObservedClassDistribution() ;
-	virtual vector<double>* getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
+	virtual vector<double> getObservedClassDistribution() ;
+	virtual vector<double> getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
 	virtual bool isPure();
 	virtual void toJson(Json::Value& jv);
 	virtual int subtreeDepth();
@@ -146,10 +146,10 @@ public:
 	LearningNodeNB(const vector<double>& initialClassObservations);
 	LearningNodeNB(const Json::Value& jv);
 	~LearningNodeNB();
-	virtual vector<double>* getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
+	virtual vector<double> getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
 	virtual void disableAttribute(int attIndex);
 	virtual void toJson(Json::Value& jv);
-	vector<double>* doNaiveBayesPrediction(const Instance* inst,
+	vector<double>& doNaiveBayesPrediction(const Instance* inst,
 	            const vector<double>& observedClassDistribution,
 	            const list<AttributeClassObserver*>& attributeObservers)  ;
 };
@@ -161,7 +161,7 @@ public:
 	LearningNodeNBAdaptive(const vector<double>& initialClassObservations);
 	LearningNodeNBAdaptive(const Json::Value& jv);
 	virtual void learnFromInstance(const Instance* inst, HoeffdingTree* ht);
-	virtual vector<double>* getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
+	virtual vector<double> getClassVotes(const Instance* inst, HoeffdingTree* ht) ;
 	virtual void toJson(Json::Value& jv);
 };
 

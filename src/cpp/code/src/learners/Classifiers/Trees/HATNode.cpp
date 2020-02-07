@@ -153,8 +153,8 @@ void AdaSplitNode::learnFromInstance(const Instance* inst,
 	int ClassPrediction = 0;
 	FoundNode* tempNodes = filterInstanceToLeaf(inst, parent, parentBranch);
 	if (tempNodes->node != nullptr) {
-		ClassPrediction = Utils::maxIndex(
-				*(tempNodes->node->getClassVotes(inst, ht)));
+        const vector<double>& votes = tempNodes->node->getClassVotes(inst, ht);
+		ClassPrediction = Utils::maxIndex(votes);
 	}
 	delete tempNodes;
 	bool blCorrect = (trueClass == ClassPrediction);
@@ -284,10 +284,13 @@ void AdaSplitNode::killTreeChilds(HoeffdingAdaptiveTree* ht) {
 void AdaSplitNode::filterInstanceToLeaves(const Instance* inst,
 		SplitNode* myparent, int parentBranch, list<FoundNode*>*& foundNodes,
 		bool updateSplitterCounts) {
+
 	if (updateSplitterCounts) {
-		Utils::addToValue(*this->observedClassDistribution, inst->getLabel(),
-				inst->getWeight());
+		Utils::addToValue(this->observedClassDistribution,
+                          inst->getLabel(),
+                          inst->getWeight());
 	}
+
 	int childIndex = instanceChildIndex(inst);
 	if (childIndex >= 0) {
 		Node* child = getChild(childIndex);
@@ -376,7 +379,8 @@ void AdaLearningNode::learnFromInstance(const Instance* inst,
 	}
 
 	//Compute ClassPrediction using filterInstanceToLeaf
-	int ClassPrediction = Utils::maxIndex(*(this->getClassVotes(inst, ht)));
+    const vector<double> votes = this->getClassVotes(inst, ht);
+	int ClassPrediction = Utils::maxIndex(votes);
 	bool blCorrect = (trueClass == ClassPrediction);
 
 	if (this->estimationErrorWeight == nullptr) {
@@ -412,32 +416,34 @@ void AdaLearningNode::learnFromInstance(const Instance* inst,
 	 }*/
 }
 
-vector<double>* AdaLearningNode::getClassVotes(const Instance* inst,
-		HoeffdingTree* ht) {
-	vector<double>* dist = &this->classVotes;
+vector<double> AdaLearningNode::getClassVotes(const Instance* inst, HoeffdingTree* ht) {
+	vector<double>& dist = this->classVotes;
 	int predictionOption = ((HoeffdingAdaptiveTree*) ht)->params.leafPrediction;
+
 	if (predictionOption == 0) { //MC
-		(*dist) = (*this->observedClassDistribution);
+		dist = this->observedClassDistribution;
 	} else if (predictionOption == 1) { //NB
-		(*dist) = *doNaiveBayesPrediction(inst,
-				*this->observedClassDistribution, *this->attributeObservers);
-	} else { //NBAdaptive
+		dist = doNaiveBayesPrediction(inst,
+                                      this->observedClassDistribution,
+                                      *this->attributeObservers);
+	} else {
+        //NBAdaptive
 		if (this->mcCorrectWeight > this->nbCorrectWeight) {
-			*dist = *this->observedClassDistribution;
+			dist = this->observedClassDistribution;
 		} else {
-			*dist = *doNaiveBayesPrediction(inst,
-					*this->observedClassDistribution,
-					*this->attributeObservers);
+			dist = doNaiveBayesPrediction(inst,
+                                          this->observedClassDistribution,
+                                          *this->attributeObservers);
 		}
 	}
 
 	//New for option votes
-	double distSum = Utils::sum(*dist);
+	double distSum = Utils::sum(dist);
 	if (distSum * this->getErrorEstimation() * this->getErrorEstimation()
 			> 0.0) {
-		Utils::normalize(*dist,
-				distSum * this->getErrorEstimation()
-						* this->getErrorEstimation()); //Adding weight
+		Utils::normalize(dist,
+                         distSum * this->getErrorEstimation()
+                                 * this->getErrorEstimation()); //Adding weight
 	}
 
 	return dist;

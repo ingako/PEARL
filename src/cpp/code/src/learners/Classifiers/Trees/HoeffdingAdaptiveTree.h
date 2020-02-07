@@ -47,7 +47,7 @@ public:
 	void trainOnInstanceImpl(const Instance* inst);
 	list<FoundNode*>* filterInstanceToLeaves(const Instance* inst,
 			SplitNode* parent, int parentBranch, bool updateSplitterCounts);
-	vector<double>* getVotesForInstance(const Instance* inst);
+	vector<double> getVotesForInstance(const Instance* inst);
 
 	virtual void toJson(Json::Value& jv);
 

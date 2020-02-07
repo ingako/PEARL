@@ -86,7 +86,7 @@ public:
 	void killTreeChilds(HoeffdingAdaptiveTree* ht);
 	virtual void learnFromInstance(const Instance* inst, HoeffdingAdaptiveTree* ht,
 			SplitNode* parent, int parentBranch);
-	vector<double>* getClassVotes(const Instance* inst, HoeffdingTree* ht);
+	vector<double> getClassVotes(const Instance* inst, HoeffdingTree* ht);
 	void filterInstanceToLeaves(const Instance* inst, SplitNode* splitparent,
 			int parentBranch, list<FoundNode*>*& foundNodes,
 			bool updateSplitterCounts);

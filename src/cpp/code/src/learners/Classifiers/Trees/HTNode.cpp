@@ -46,10 +46,12 @@ void FoundNode::toJson(Json::Value& jv) {
 }
 
 Node::Node(const vector<double>& classObservations) {
-	observedClassDistribution = new vector<double>(classObservations.size());
-	for (unsigned int i = 0; i < observedClassDistribution->size(); i++) {
-		(*observedClassDistribution)[i] = classObservations[i];
-	}
+
+    observedClassDistribution = classObservations;
+
+	// for (unsigned int i = 0; i < observedClassDistribution->size(); i++) {
+	// 	(*observedClassDistribution)[i] = classObservations[i];
+	// }
 
 	this->mClassTypes = {NT_Node};
 	this->mLevel = 0;	// debug
@@ -58,19 +60,18 @@ Node::Node(const vector<double>& classObservations) {
 Node::Node(const Json::Value& jv) {
 	if (!jv["observedClassDistribution"].isNull()) {
 		int size = jv["observedClassDistribution"].size();
-		this->observedClassDistribution = new vector<double>(size);
+		this->observedClassDistribution = vector<double>(size);
 		for (int i = 0; i < size; i++) {
-			(*(this->observedClassDistribution))[i] =
-					jv["observedClassDistribution"][i].asDouble();
+			observedClassDistribution[i] = jv["observedClassDistribution"][i].asDouble();
 		}
 	}
 	this->mClassTypes = {NT_Node};
 	this->mLevel = 0;	// debug
 }
 
-Node::~Node() {
-	delete observedClassDistribution;
-}
+// Node::~Node() {
+// 	delete observedClassDistribution;
+// }
 
 FoundNode* Node::filterInstanceToLeaf(const Instance* inst, SplitNode* parent,
 		int parentBranch) {
@@ -81,19 +82,18 @@ bool Node::isLeaf() {
 	return true;
 }
 
-vector<double>* Node::getObservedClassDistribution() {
+vector<double> Node::getObservedClassDistribution() {
 	return observedClassDistribution;
 }
 
-vector<double>* Node::getClassVotes(const Instance* inst, HoeffdingTree* ht) {
+vector<double> Node::getClassVotes(const Instance* inst, HoeffdingTree* ht) {
 	return observedClassDistribution;
 }
 
 bool Node::isPure() {
-	const vector<double> &vec = (*observedClassDistribution);
 	int count = 0;
-	for (unsigned int i = 0; i < vec.size(); i++) {
-		if (vec[i] != 0.0) {
+	for (unsigned int i = 0; i < observedClassDistribution.size(); i++) {
+		if (observedClassDistribution[i] != 0.0) {
 			count++;
 		}
 	}
@@ -102,11 +102,11 @@ bool Node::isPure() {
 
 void Node::toJson(Json::Value& jv) {
 	jv["type"] = "Node";
-	if (observedClassDistribution == nullptr) {
+	if (observedClassDistribution.size() == 0) {
 		jv["observedClassDistribution"] = "nullptr";
 	} else {
 		int i = 0;
-		for (double d : *observedClassDistribution) {
+		for (double d : observedClassDistribution) {
 			jv["observedClassDistribution"][i] = d;
 			i++;
 		}
@@ -118,18 +118,17 @@ int Node::subtreeDepth() {
 }
 
 double Node::calculatePromise() {
-	const vector<double> &vec = (*observedClassDistribution);
 	// get the max value index and sum of all values.
 	double sum = 0.0f;
 	unsigned int maxIndex = 0;
-	for (unsigned int i = 0; i < vec.size(); i++) {
-		sum += vec[i];
-		if (vec[i] > vec[maxIndex]) {
+	for (unsigned int i = 0; i < observedClassDistribution.size(); i++) {
+		sum += observedClassDistribution[i];
+		if (observedClassDistribution[i] > observedClassDistribution[maxIndex]) {
 			maxIndex = i;
 		}
 	}
 
-	return sum - vec[maxIndex];
+	return sum - observedClassDistribution[maxIndex];
 }
 
 //void Node::addToValue(int index, double value) {
@@ -333,7 +332,9 @@ void InactiveLearningNode::toJson(Json::Value& jv) {
 
 void InactiveLearningNode::learnFromInstance(const Instance* inst,
 		HoeffdingTree* ht) {
-	Utils::addToValue(*this->observedClassDistribution, (int) inst->getLabel(),
+
+    cout << "inactive learning node learnfrominstance" << endl;
+	Utils::addToValue(this->observedClassDistribution, (int) inst->getLabel(),
 			inst->getWeight());
 }
 
@@ -422,7 +423,7 @@ void ActiveLearningNode::learnFromInstance(const Instance* inst,
 		isInitialized = true;
 	}
 
-	Utils::addToValue(*this->observedClassDistribution, (int) inst->getLabel(),
+	Utils::addToValue(this->observedClassDistribution, (int) inst->getLabel(),
 			inst->getWeight());
 
 	if (inst->getNumberInputAttributes() > this->attrObsSize) {
@@ -435,6 +436,7 @@ void ActiveLearningNode::learnFromInstance(const Instance* inst,
 //	for (int i = 0; i < attrObsSize; i++, iter++) {
 	for (int i = 0; i < inst->getNumberInputAttributes(); i++, iter++) {
 		int instAttIndex = i;
+
 		AttributeClassObserver* obs = (*iter);
 		if (obs == nullptr) {
 			obs = inst->getInputAttribute(instAttIndex)->isNominal() ?
@@ -457,8 +459,8 @@ void ActiveLearningNode::showActiveLearningNode() {
 
 	// show observedClassDistribution
 	sb << "ocd: ";
-	for (unsigned int i = 0; i < observedClassDistribution->size(); i++) {
-		sb << (*observedClassDistribution)[i];
+	for (unsigned int i = 0; i < observedClassDistribution.size(); i++) {
+		sb << observedClassDistribution[i];
 		sb << " ";
 	}
 	sb << "\n";
@@ -544,7 +546,7 @@ void ActiveLearningNode::showActiveLearningNode() {
 }
 
 double ActiveLearningNode::getWeightSeen() const {
-	return Utils::sum(*this->observedClassDistribution);
+	return Utils::sum(this->observedClassDistribution);
 }
 
 double ActiveLearningNode::getWeightSeenAtLastSplitEvaluation() {
@@ -559,7 +561,7 @@ list<AttributeSplitSuggestion*>* ActiveLearningNode::getBestSplitSuggestions(
 		SplitCriterion* criterion, HoeffdingTree* ht) {
 	list<AttributeSplitSuggestion*>* bestSuggestions = new list<
 			AttributeSplitSuggestion*>();
-	vector<double>& preSplitDist = (*observedClassDistribution);
+	vector<double>& preSplitDist = observedClassDistribution;
 
 	if (!ht->params.noPrePrune) {
 		vector<vector<double>> * vvd = new vector<vector<double>>(1);
@@ -605,11 +607,12 @@ LearningNodeNB::LearningNodeNB(const Json::Value& jv) :
 	this->mClassTypes = {NT_LearningNodeNB,NT_ActiveLearningNode,NT_LearningNode,NT_Node};
 }
 
-vector<double>* LearningNodeNB::getClassVotes(const Instance* inst,
+vector<double> LearningNodeNB::getClassVotes(const Instance* inst,
 		HoeffdingTree* ht) {
 	if (getWeightSeen() >= ht->params.nbThreshold) {
 		auto pred = doNaiveBayesPrediction(inst,
-				*this->observedClassDistribution, *this->attributeObservers);
+				                           this->observedClassDistribution,
+                                           *this->attributeObservers);
 		return pred;
 	}
 	return ActiveLearningNode::getClassVotes(inst, ht);
@@ -627,9 +630,10 @@ void LearningNodeNB::disableAttribute(int attIndex) {
 //
 }
 
-vector<double>* LearningNodeNB::doNaiveBayesPrediction(const Instance* inst,
-		const vector<double>& observedClassDistribution,
-		const list<AttributeClassObserver*>& attributeObservers) {
+vector<double>& LearningNodeNB::doNaiveBayesPrediction(const Instance* inst,
+                                                       const vector<double>& observedClassDistribution,
+                                                       const list<AttributeClassObserver*>& attributeObservers) {
+
 	vector<double>* votes = &(this->classVotes);
 	votes->resize(observedClassDistribution.size(), 0);
 
@@ -647,9 +651,10 @@ vector<double>* LearningNodeNB::doNaiveBayesPrediction(const Instance* inst,
 
 			int instAttIndex = attIndex;
 
-            if (!inst->isAttributeEnabled(instAttIndex)) {
-                continue;
-            }
+            // cout << "doNaiveBayesPrediction" << endl;
+            // if (!inst->isAttributeEnabled(instAttIndex)) {
+            //     continue;
+            // }
 
 			AttributeClassObserver* obs = (*iter);
 			double v = inst->getInputAttributeValue(instAttIndex);
@@ -661,7 +666,7 @@ vector<double>* LearningNodeNB::doNaiveBayesPrediction(const Instance* inst,
 		}
 	}
 
-	return votes;
+	return *votes;
 }
 
 LearningNodeNBAdaptive::LearningNodeNBAdaptive(
@@ -686,27 +691,25 @@ void LearningNodeNBAdaptive::toJson(Json::Value& jv) {
 	jv["nbCorrectWeight"] = this->nbCorrectWeight;
 }
 
-void LearningNodeNBAdaptive::learnFromInstance(const Instance* inst,
-		HoeffdingTree* ht) {
+void LearningNodeNBAdaptive::learnFromInstance(const Instance* inst, HoeffdingTree* ht) {
 	int trueClass = (int) inst->getLabel();
-	if (Utils::maxIndex(*this->observedClassDistribution) == trueClass) {
+	if (Utils::maxIndex(this->observedClassDistribution) == trueClass) {
 		this->mcCorrectWeight += inst->getWeight();
 	}
-	vector<double>* pred = doNaiveBayesPrediction(inst,
-			*this->observedClassDistribution, *this->attributeObservers);
-	if (Utils::maxIndex(*pred) == trueClass) {
+	vector<double> pred = doNaiveBayesPrediction(inst,
+			                    this->observedClassDistribution, *this->attributeObservers);
+	if (Utils::maxIndex(pred) == trueClass) {
 		this->nbCorrectWeight += inst->getWeight();
 	}
 	LearningNodeNB::learnFromInstance(inst, ht);
 }
 
-vector<double>* LearningNodeNBAdaptive::getClassVotes(const Instance* inst,
-		HoeffdingTree* ht) {
+vector<double> LearningNodeNBAdaptive::getClassVotes(const Instance* inst, HoeffdingTree* ht) {
 	if (this->mcCorrectWeight > this->nbCorrectWeight) {
 		return this->observedClassDistribution;
 	}
-	auto pred = doNaiveBayesPrediction(inst, *this->observedClassDistribution,
-			*this->attributeObservers);
+	auto pred = doNaiveBayesPrediction(inst, this->observedClassDistribution,
+                                       *this->attributeObservers);
 	return pred;
 }
 

@@ -78,7 +78,7 @@ public:
 	void doSetParams();
 	void renew();
 	virtual void trainOnInstanceImpl(const Instance* inst);
-	virtual vector<double>* getVotesForInstance(const Instance* inst);
+	virtual vector<double> getVotesForInstance(const Instance* inst);
 	int measureTreeDepth();
 	double computeHoeffdingBound(double range, double confidence, double n);
 	virtual SplitNode* newSplitNode(InstanceConditionalTest* splitTest,

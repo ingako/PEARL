@@ -153,17 +153,17 @@ double* HoeffdingTree::getPrediction(const Instance& instance) {
 		classPrediction[i] = 0;
 	}
 
-	vector<double>* v = getVotesForInstance(&instance);
-	for (unsigned int i = 0; i < v->size(); i++) {
-		classPrediction[i] = (*v)[i];
+	vector<double> v = getVotesForInstance(&instance);
+	for (unsigned int i = 0; i < v.size(); i++) {
+		classPrediction[i] = v[i];
 	}
 
 	if (this->mShowTreePath) {
 		static int rowNumber = 0;
 		rowNumber++;
 		int predictResult = 0;
-		for (unsigned int i = 0; i < v->size(); i++) {
-			if ((*v)[i] > (*v)[predictResult]) {
+		for (unsigned int i = 0; i < v.size(); i++) {
+			if (v[i] > v[predictResult]) {
 				predictResult = i;
 			}
 		}
@@ -301,7 +301,7 @@ void HoeffdingTree::trainOnInstanceImpl(const Instance* inst) {
 //	}
 }
 
-vector<double>* HoeffdingTree::getVotesForInstance(const Instance* inst) {
+vector<double> HoeffdingTree::getVotesForInstance(const Instance* inst) {
 	if (this->treeRoot != nullptr) {
 		FoundNode* foundNode = this->treeRoot->filterInstanceToLeaf(inst,
 				nullptr, -1);
@@ -312,7 +312,7 @@ vector<double>* HoeffdingTree::getVotesForInstance(const Instance* inst) {
 		delete foundNode;
 		return leafNode->getClassVotes(inst, this);
 	}
-	return new vector<double> ;
+	return vector<double>();
 }
 
 int HoeffdingTree::measureTreeDepth() {
@@ -402,7 +402,7 @@ void HoeffdingTree::attemptToSplit(ActiveLearningNode* node, SplitNode* parent,
 	} else {
 		double hoeffdingBound = computeHoeffdingBound(
 				splitCriterion->getRangeOfMerit(
-						*node->getObservedClassDistribution()),
+						node->getObservedClassDistribution()),
 				this->params.splitConfidence, node->getWeightSeen());
 
 		// debug: show hoeffdingBound
@@ -433,7 +433,7 @@ void HoeffdingTree::attemptToSplit(ActiveLearningNode* node, SplitNode* parent,
 			deactivateLearningNode(node, parent, parentIndex);
 		} else {
 			SplitNode* newSplit = newSplitNode(splitDecision->splitTest,
-					*node->getObservedClassDistribution(),
+					node->getObservedClassDistribution(),
 					splitDecision->numSplits());
 			for (int i = 0; i < splitDecision->numSplits(); i++) {
 
@@ -635,9 +635,8 @@ void HoeffdingTree::deactivateAllLeaves() {
 }
 
 void HoeffdingTree::deactivateLearningNode(ActiveLearningNode* toDeactivate,
-		SplitNode* parent, int parentBranch) {
-	Node* newLeaf = new InactiveLearningNode(
-			*toDeactivate->getObservedClassDistribution());
+		                                   SplitNode* parent, int parentBranch) {
+	Node* newLeaf = new InactiveLearningNode(toDeactivate->getObservedClassDistribution());
 	if (parent == nullptr) {
 		this->treeRoot = newLeaf;
 	} else {
@@ -649,9 +648,8 @@ void HoeffdingTree::deactivateLearningNode(ActiveLearningNode* toDeactivate,
 }
 
 void HoeffdingTree::activateLearningNode(InactiveLearningNode* toActivate,
-		SplitNode* parent, int parentBranch) {
-	Node* newLeaf = newLearningNode(
-			*toActivate->getObservedClassDistribution());
+		                                 SplitNode* parent, int parentBranch) {
+	Node* newLeaf = newLearningNode(toActivate->getObservedClassDistribution());
 	if (parent == nullptr) {
 		this->treeRoot = newLeaf;
 	} else {

@@ -95,8 +95,7 @@ list<FoundNode*>* HoeffdingAdaptiveTree::filterInstanceToLeaves(
 	return nodes;
 }
 
-vector<double>* HoeffdingAdaptiveTree::getVotesForInstance(
-		const Instance* inst) {
+vector<double> HoeffdingAdaptiveTree::getVotesForInstance(const Instance* inst) {
 	this->voteArray.resize(0);
 	if (this->treeRoot != nullptr) {
 		list<FoundNode*>* foundNodes = filterInstanceToLeaves(inst, nullptr, -1,
@@ -107,13 +106,13 @@ vector<double>* HoeffdingAdaptiveTree::getVotesForInstance(
 				if (leafNode == nullptr) {
 					leafNode = foundNode->parent;
 				}
-				vector<double>* dist = leafNode->getClassVotes(inst, this);
+				vector<double> dist = leafNode->getClassVotes(inst, this);
 
-				if (dist->size() > this->voteArray.size()) {
-					this->voteArray.resize(dist->size(), 0);
+				if (dist.size() > this->voteArray.size()) {
+					this->voteArray.resize(dist.size(), 0);
 				}
-				for (unsigned int i = 0; i < dist->size(); i++) {
-					this->voteArray[i] += (*dist)[i];
+				for (unsigned int i = 0; i < dist.size(); i++) {
+					this->voteArray[i] += dist[i];
 				}
 			}
 		}
@@ -127,9 +126,9 @@ vector<double>* HoeffdingAdaptiveTree::getVotesForInstance(
 //		cout << "]";
 //		cout << endl;
 
-		return &this->voteArray;
+		return this->voteArray;
 	}
-	return &this->voteArray;
+	return this->voteArray;
 }
 
 
