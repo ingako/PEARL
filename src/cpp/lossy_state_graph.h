@@ -3,11 +3,12 @@
 
 #include <iostream>
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <queue>
 #include <sstream>
 #include <string>
+#include <random>
 
 using std::cout;
 using std::endl;
@@ -15,7 +16,7 @@ using std::to_string;
 using std::unique_ptr;
 using std::shared_ptr;
 using std::make_unique;
-using std::unordered_map;
+using std::map;
 using std::vector;
 using std::queue;
 using std::string;
@@ -24,7 +25,7 @@ using std::stringstream;
 class lossy_state_graph {
     public:
 
-        lossy_state_graph(int capacity, int window_size);
+        lossy_state_graph(int capacity, int window_size, std::mt19937 mrand);
         int get_next_tree_id(int src);
         bool update(int warning_tree_count);
 
@@ -41,13 +42,15 @@ class lossy_state_graph {
         struct node_t {
             int indegree;
             int total_weight;
-            unordered_map<int, int> neighbors; // <tree_id, freq>
+            map<int, int> neighbors; // <tree_id, freq>
         };
 
         vector<unique_ptr<node_t>> graph;
         int capacity;
         int window_size;
-        int drifted_tree_counter;
+        std::mt19937 mrand;
+
+        int drifted_tree_counter = 0;
         bool is_stable;
 };
 

@@ -55,7 +55,9 @@ void pearl::init() {
     state_queue->enqueue(cur_state);
 
     // initialize state graph with lossy counting
-    state_graph = make_shared<lossy_state_graph>(repo_size, lossy_window_size);
+    state_graph = make_shared<lossy_state_graph>(repo_size,
+                                                 lossy_window_size,
+                                                 mrand);
 
     // graph_switch keeps track of tree reuse rate and turns on/off state_graph
     graph_switch = make_unique<state_graph_switch>(state_graph,

@@ -1,13 +1,14 @@
 #include "lossy_state_graph.h" 
 
 lossy_state_graph::lossy_state_graph(int capacity,
-                                     int window_size) 
+                                     int window_size,
+                                     std::mt19937 mrand)
         : capacity(capacity), 
-          window_size(window_size) {
+          window_size(window_size),
+          mrand(mrand) {
 
     is_stable = false;
     graph = vector<unique_ptr<node_t>>(capacity);
-    srand(0);
 }
 
 int lossy_state_graph::get_next_tree_id(int src) {
@@ -15,7 +16,8 @@ int lossy_state_graph::get_next_tree_id(int src) {
         return -1;
     }
 
-    int r = rand() % graph[src]->total_weight;
+    std::uniform_int_distribution<> uniform_distr(0, graph[src]->total_weight);
+    int r = uniform_distr(mrand);
     int sum = 0;
 
     // weighted selection
