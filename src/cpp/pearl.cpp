@@ -90,7 +90,9 @@ void pearl::prepare_instance(Instance& instance) {
 
     // select random features
     for (int i = 0; i < arf_max_features; i++) {
-        attribute_indices.push_back(rand() % num_features);
+        std::uniform_int_distribution<> uniform_distr(0, num_features);
+        int feature_idx = uniform_distr(mrand);
+        attribute_indices.push_back(feature_idx);
     }
 
     instance.setAttributeStatus(attribute_indices);
