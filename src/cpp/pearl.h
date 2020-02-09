@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <climits>
+#include <random>
 
 #include "code/src/streams/ArffReader.h"
 #include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
@@ -26,6 +27,8 @@ using std::set;
 class pearl {
 
     public:
+
+        std::mt19937 mrand;
 
         class adaptive_tree {
             public:

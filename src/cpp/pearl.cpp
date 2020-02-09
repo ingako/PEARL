@@ -32,6 +32,7 @@ pearl::pearl(int num_trees,
         enable_state_graph(enable_state_graph) {
 
     init();
+    mrand = std::mt19937(0);
 }
 
 void pearl::init() {
@@ -222,7 +223,10 @@ void pearl::train(Instance& instance) {
 
 void pearl::online_bagging(Instance& instance, adaptive_tree& tree) {
     prepare_instance(instance);
-    int weight = Utils::poisson(1.0);
+
+    std::poisson_distribution<int> poisson_distr(1.0);
+    int weight = poisson_distr(mrand);
+
     while (weight > 0) {
         weight--;
         tree.train(instance);
