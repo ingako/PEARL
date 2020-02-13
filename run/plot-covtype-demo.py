@@ -29,3 +29,4 @@ plt.xlabel("no. of instances")
 plt.ylabel("accuracy")
 
 plt.show()
+# plt.savefig('covtype-results.png', bbox_inches='tight', dpi=100)
