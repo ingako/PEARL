@@ -34,7 +34,12 @@ cmake ..
 make
 ```
 
-See `run/run-covtype-cpp.sh` for an example.
+### Example
+See `run/run-covtype-cpp.sh` for an example of running PEARL in C++.
+
+Run `run/plot-covtype-demo.py` to plot the results. It should give you results look like the following:
+
+[covtype results](https://github.com/ingako/PEARL/run/covtype-results.png)
 
 ### Data Preparation
 
