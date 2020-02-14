@@ -7,9 +7,9 @@
 #include <climits>
 #include <random>
 
-#include "code/src/streams/ArffReader.h"
-#include "code/src/learners/Classifiers/Trees/HoeffdingTree.h"
-#include "code/src/learners/Classifiers/Trees/ADWIN.h"
+#include "streamDM/src/streams/ArffReader.h"
+#include "streamDM/src/learners/Classifiers/Trees/HoeffdingTree.h"
+#include "streamDM/src/learners/Classifiers/Trees/ADWIN.h"
 #include "lru_state.h"
 #include "lossy_state_graph.h"
 

@@ -2,7 +2,7 @@
 
 ![build](https://github.com/ingako/PEARL/workflows/build/badge.svg)
 
-Implementation of the paper "PEARL: Probabilistic Exact Adaptive Random Forest with Lossy Counting for Data Streams".
+THe implementation for the paper "PEARL: Probabilistic Exact Adaptive Random Forest with Lossy Counting for Data Streams".
 
 > In order to adapt random forests to the dynamic nature of data streams, the state-of-the-art technique discards trained trees and grows new trees when concept drifts are detected. This is particularly wasteful when recurrent patterns exist. In this work, we introduce a novel framework called PEARL, which uses both an exact technique and a probabilistic graphical model with Lossy Counting, to replace drifted trees with relevant trees built from the past. The exact technique utilizes pattern matching to find the set of drifted trees, that co-occurred in predictions in the past. Meanwhile, a probabilistic graphical model is being built to capture the tree replacements among recurrent concept drifts. Once the graphical model becomes stable, it replaces the exact technique and finds relevant trees in a probabilistic fashion. Further, Lossy Counting is applied to the graphical model which brings an added theoretical guarantee on both error rate and space complexity. We empirically show our technique has outperforms baselines in terms of cumulative accuracy on both synthetic and real-world datasets.
 
