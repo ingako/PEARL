@@ -1,0 +1,21 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Checkout submodules
+      uses: srt32/git-actions@v0.0.3
+      with:
+        args: git submodule update --init --recursive
+    - name: configure
+      run: mkdir build && cd build && cmake ..
+      working-directory: src/cpp
+    - name: build
+      run: cmake --build build
+      working-directory: src/cpp
