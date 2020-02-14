@@ -40,7 +40,6 @@
 
 #include <unistd.h>
 
-#include "utils/Log.h"
 #include "utils/Utils.h"
 #include "utils/json.h"
 #include "utils/Configurable.h"
@@ -62,6 +61,9 @@
 #include "tasks/Task.h"
 #include "streams/Reader.h"
 #include "learners/Learner.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 // #define max(A,B) ((A)>(B) ? (A) : (B))
 // #define min(A,B) ((A)>(B) ? (B) : (A))

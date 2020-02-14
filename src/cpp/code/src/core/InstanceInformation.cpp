@@ -108,7 +108,7 @@ double InstanceInformation::getOutputAttributeIndex(int index, const string& str
 		}
 	}
 
-	LOG_ERROR("%s is not a output attribute value!", strValue.c_str());
+	spdlog::error("%s is not a output attribute value!", strValue.c_str());
 	return -1.0;
 }
 

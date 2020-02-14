@@ -79,7 +79,7 @@ void CSVReader::doSetParams() {
 	if (!attrValueList.empty()) {
 		bool ret = reader.parse( attrValueList, jv );
 		if (!ret) {
-			LOG_ERROR("CSV Reader file attribute value configuration error!");
+			spdlog::error("CSV Reader file attribute value configuration error!");
 			return;
 		}
 
@@ -94,7 +94,7 @@ void CSVReader::doSetParams() {
 	if (!attridList.empty()) {
 		bool ret = reader.parse( attridList, jv );
 		if (!ret) {
-			LOG_ERROR("CSV Reader file attribute id configuration error!");
+			spdlog::error("CSV Reader file attribute id configuration error!");
 			return;
 		}
 
@@ -116,7 +116,7 @@ void CSVReader::doSetParams() {
 	string clsList = getParam("classes").asString();
 	bool ret = reader.parse( clsList, jv );
 	if (!ret) {
-		LOG_ERROR("CSV Reader file classes number configuration error!");
+		spdlog::error("CSV Reader file classes number configuration error!");
 		return;
 	}
 
@@ -132,7 +132,7 @@ void CSVReader::doSetParams() {
 	string strTmp = getParam("delimiter", ",");
 	mDelimiter = strTmp[0];
 
-	LOG_DEBUG("CSVReader numAttr=%d, cls=%d, first=%d, deli=%c",
+	spdlog::debug("CSVReader numAttr=%d, cls=%d, first=%d, deli=%c",
 			mNumAttributes, vals.size(), mFisrtLine, mDelimiter);
 }
 
@@ -230,14 +230,14 @@ bool CSVReader::setFile(const string& fileName) {
 	//mDataFile->open(fileName.c_str());
 	this->mDataFile = new fstream(fileName.c_str(), ios::in);
 	if (!mDataFile->is_open()) {
-		//LOG_ERROR("Failed to open file: %s .", fileName.c_str());
+		//spdlog::error("Failed to open file: %s .", fileName.c_str());
 		return false;
 	}
 
 	if (mFisrtLine) {
 		string line;
 		if (getline(*mDataFile, line)) {
-			LOG_INFO("first line of file is attrib name line.");
+			spdlog::info("first line of file is attrib name line.");
 		}
 		else {
 			return false;

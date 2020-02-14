@@ -225,7 +225,7 @@ void ADList::toJson(Json::Value& jv) {
 	if (this->headItem == nullptr || this->tailItem == nullptr) {
 		jv["items"] = "emplty";
 		if (this->headItem != nullptr || this->tailItem != nullptr) {
-			LOG_ERROR(
+			spdlog::error(
 					"ADList, the headItem and tailItem are not both nullptr.");
 		}
 	} else {

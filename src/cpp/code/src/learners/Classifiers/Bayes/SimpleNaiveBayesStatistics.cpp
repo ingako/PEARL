@@ -47,7 +47,7 @@ double SimpleNaiveBayesStatistics::probabilityOfClassAttrValue(int classLabel,
     //if (attribute >= m_attributeClassObservers.size())
 	if (NULL == m_attributeClassObservers[attribute])
 	{
-        //LOG_DEBUG( "SimpleNBS::probabilityOfClassAttrValue>>attribute(%d), ob size(%d)",
+        //spdlog::debug( "SimpleNBS::probabilityOfClassAttrValue>>attribute(%d), ob size(%d)",
         //    classLabel, m_attributeClassObservers.size());
 
         return 1.0;
@@ -63,7 +63,7 @@ double SimpleNaiveBayesStatistics::probabilityOfClass(int classLabel)
         //LOG_ERROR( "SimpleNBS::probabilityOfClass>>classLabel(%d), classCounts size(%d)", classLabel, m_classCounts.size());
         return 0.0;
     }
-    //LOG_DEBUG( "SimpleNBS::probabilityOfClass>>classLabel(%d), classCounts size(%d)", classLabel, m_classCounts.size());
+    //spdlog::debug( "SimpleNBS::probabilityOfClass>>classLabel(%d), classCounts size(%d)", classLabel, m_classCounts.size());
 
 	return (double) m_classCounts[classLabel] / (double) m_sumWeight;
 }
@@ -133,7 +133,7 @@ bool SimpleNaiveBayesStatistics::importFromJson(const Json::Value& jv)
 {
 	m_sumWeight = jv["sumWeight"].asInt();
 
-	LOG_DEBUG("m_sumWeight = %d", m_sumWeight);
+	spdlog::debug("m_sumWeight = %d", m_sumWeight);
 
 	int iClsSize = jv["classCounts"].size();
 	m_classCounts.resize(iClsSize);

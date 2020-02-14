@@ -71,7 +71,7 @@ void EvaluatePrequential::doSetParams() {
 int EvaluatePrequential::doUnifiedTask(Learner& learner, Reader& reader)
 {
     if (!reader.setFile(mDataSource)) {
-        LOG_ERROR("Failed to open file: %s ", mDataSource.c_str());
+        spdlog::error("Failed to open file: %s ", mDataSource.c_str());
         return TASK_READFILE_FAILED;
     }
 
@@ -91,7 +91,7 @@ int EvaluatePrequential::doTask()
 {
 	if (mLearnerName == "" || mLearnerParams == "" ||
 			mReaderName == "" || mDataSource == "") {
-		LOG_ERROR("EvaluatePrequential need required Parameter, "
+		spdlog::error("EvaluatePrequential need required Parameter, "
 				"Learner: %s , Reader: %s, Data source: %s, Learner Parameters: %s .",
 				mLearnerName.c_str(), mReaderName.c_str(), mDataSource.c_str(), mLearnerParams.c_str());
 		return TASK_PARAMETER_FAILED;
@@ -105,18 +105,18 @@ int EvaluatePrequential::doTask()
 	// learner
 	learner = (Learner*) CREATE_CLASS(mLearnerName);
 	if (learner == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .", mLearnerName.c_str());
+		spdlog::error("Parameter error, not defined class: %s .", mLearnerName.c_str());
 		return TASK_PARAMETER_FAILED;
 	}
 	if (mLearnerParams != "") {
 		learner->setParams(mLearnerParams);
 	}
-	LOG_INFO( "learner: %s ", mLearnerName.c_str() );
+	spdlog::info( "learner: %s ", mLearnerName.c_str() );
 
 	// evaluator
 	eval = (Evaluator*) CREATE_CLASS(mEvaluatorName);
 	if (eval == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .", mEvaluatorName.c_str());
+		spdlog::error("Parameter error, not defined class: %s .", mEvaluatorName.c_str());
 		delete learner;
 		return TASK_PARAMETER_FAILED;
 	}
@@ -128,7 +128,7 @@ int EvaluatePrequential::doTask()
 	// reader
 	reader = (Reader*) CREATE_CLASS(mReaderName) ;
 	if (reader == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .", mReaderName.c_str());
+		spdlog::error("Parameter error, not defined class: %s .", mReaderName.c_str());
 		delete learner;
 		delete eval;
 		return TASK_PARAMETER_FAILED;
@@ -141,7 +141,7 @@ int EvaluatePrequential::doTask()
      
 	if (TASK_SUCCESS == returnCode)
 	{
-		LOG_DEBUG(eval->toString().c_str());
+		spdlog::debug(eval->toString().c_str());
 	}
 
 	delete learner;

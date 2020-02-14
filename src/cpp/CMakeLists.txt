@@ -14,7 +14,6 @@ code/src/core/SparseEstimator.cpp
 code/src/core/SparseInstance.cpp
 code/src/core/SplitCriterion.cpp
 code/src/utils/Utils.cpp
-code/src/utils/Log.cpp
 code/src/utils/CommandLineParser.cpp
 code/src/utils/Configurable.cpp
 code/src/utils/DynamicCreateClass.cpp
@@ -65,13 +64,8 @@ code/src/learners/Classifiers/Meta/
 code/src/learners/Classifiers/Functions/
 code/src/evaluation/
 code/src/streams/
-/usr/local/include/
+spdlog/include
 )
-
-# log4cpp
-find_library(LOG4CPP_LIBRARY log4cpp)
-link_directories(/usr/local/lib/)
-find_package(Threads REQUIRED)
 
 set(glog "-lglog -lpthread")
 set(warning "-Wall -Wextra -Wno-sign-compare -Wno-nonnull -Wno-unused-variable")
@@ -84,4 +78,7 @@ add_library(streamDM STATIC ${sourcefiles})
 add_subdirectory(pybind11)
 pybind11_add_module(pearl pearl_bindings.cpp pearl.cpp pro_pearl.cpp lru_state.cpp lossy_state_graph.cpp)
 
-target_link_libraries(pearl PRIVATE streamDM ${LOG4CPP_LIBRARY})
+add_subdirectory(spdlog)
+spdlog_enable_warnings(pearl)
+
+target_link_libraries(pearl PRIVATE streamDM spdlog::spdlog)

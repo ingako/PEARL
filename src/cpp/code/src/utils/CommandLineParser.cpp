@@ -40,7 +40,7 @@ CommandLineParser::~CommandLineParser() {
 bool CommandLineParser::parser(int argc, char* argv[], string& taskName, string& taskParam) {
 
 	if (argc != 2 && argc != 3) {
-		LOG_ERROR("Command line arguments error.");
+		spdlog::error("Command line arguments error.");
 		return false;
 	}
 
@@ -52,10 +52,10 @@ bool CommandLineParser::parser(int argc, char* argv[], string& taskName, string&
 		string param(argv[1]);
 		string value(argv[2]);
 		if (param != "-f") {
-			LOG_ERROR("Command option: smartdm -f file.json");
+			spdlog::error("Command option: smartdm -f file.json");
 			return false;
 		}else if (! Utils::checkFileExist(value)) {
-			LOG_ERROR("File is not existed. %s", value.c_str());
+			spdlog::error("File is not existed. %s", value.c_str());
 			return false;
 		}else{
 			return parserJsonFile(argv[1], taskName, taskParam);
@@ -157,7 +157,7 @@ bool CommandLineParser::parser(vector<string>& vec, const string& type,
 	string className = vec[pos];
 	jv["Name"] = className;
 	if (names.data.find(className) == names.data.end()) {
-		LOG_ERROR("Not defined class: %s .", className.c_str());
+		spdlog::error("Not defined class: %s .", className.c_str());
 		return false;
 	}
 	auto &classParams = names.data[className];
@@ -173,12 +173,12 @@ bool CommandLineParser::parser(vector<string>& vec, const string& type,
 		// get name
 		string name = vec[pos];
 		if (name[0] != '-') {
-			LOG_ERROR("Error command line parameter: %s .", name.c_str());
+			spdlog::error("Error command line parameter: %s .", name.c_str());
 			return false;
 		}
 		auto iter = classParams.find(name);
 		if (iter == classParams.end()) {
-			LOG_ERROR("Not define class parameter, class: %s, parameter: %s .",
+			spdlog::error("Not define class parameter, class: %s, parameter: %s .",
 					className.c_str(), name.c_str());
 			return false;
 		}
@@ -187,7 +187,7 @@ bool CommandLineParser::parser(vector<string>& vec, const string& type,
 		// get value
 		pos++;
 		if (pos == vec.size()) {
-			LOG_ERROR("Require command line parameter value: %s .", name.c_str());
+			spdlog::error("Require command line parameter value: %s .", name.c_str());
 			return false;
 		}
 		string value = vec[pos];
@@ -197,7 +197,7 @@ bool CommandLineParser::parser(vector<string>& vec, const string& type,
 			Json::Value jv2;
 			pos++;
 			if (pos+1 == vec.size() ) {
-				LOG_ERROR("Not enough command line parameter.");
+				spdlog::error("Not enough command line parameter.");
 				return false;
 			}
 			bool ret = parser(vec, name, pos, jv2 );

@@ -153,7 +153,7 @@ int AsciiReader::input(string& s) {
 bool AsciiReader::openFile(const string& fileName) {
 	mFile->open(fileName.c_str());
 	if (! mFile->is_open()) {
-		LOG_ERROR("Failed to open file: %s .", fileName.c_str());
+		spdlog::error("Failed to open file: %s .", fileName.c_str());
 		return false;
 	}
 	return true;

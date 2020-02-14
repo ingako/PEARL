@@ -176,7 +176,7 @@ double* HoeffdingTree::getPrediction(const Instance& instance) {
 					<< " " << predictResult << " ";
 		}
 		this->showTreePath(instance, this->treeRoot);
-		LOG_INFO("path: %s", this->mTreePath.str().c_str());
+		spdlog::info("path: %s", this->mTreePath.str().c_str());
 	}
 
 	return classPrediction;

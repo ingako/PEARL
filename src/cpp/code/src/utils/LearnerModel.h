@@ -19,6 +19,7 @@
 #define LEARNERMODEL_H_
 
 #include <string>
+#include <spdlog/spdlog.h>
 
 #include "json.h"
 using namespace std;

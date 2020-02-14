@@ -221,7 +221,7 @@ bool ArffReader::readHeader() {
 		}
 
 		// mHeaderLoad is changed to true in parseHeaderData() 
-		// when all header information is read
+        // when all header information is read
 		// and find the string "@DATA"
 		if (!parseHeaderData(s)) {
 			return false;
@@ -324,13 +324,13 @@ bool ArffReader::parseHeaderData(const string& row) {
 		}
 	}
 
-	LOG_WARN("Symbal not defind. (%s)", s.c_str());
+	spdlog::warn("Symbal not defind. (%s)", s.c_str());
 	return true;
 }
 
 bool ArffReader::readData() {
 	if (!mHeaderLoaded) {
-		LOG_ERROR("You must call setFile() function before read data.");
+		spdlog::error("You must call setFile() function before read data.");
 		return false;
 	}
 
@@ -374,7 +374,7 @@ int ArffReader::input(string& s) {
 	}
 
 	if (index != this->mAttributes->count - 1) {
-		LOG_ERROR("Data error (%s).", s.c_str());
+		spdlog::error("Data error (%s).", s.c_str());
 		return -1;
 	}
 
@@ -421,7 +421,7 @@ int ArffReader::inputForDynamicAttributes(string& s) {
 	}
 
 	if (index != this->mAttributes->count - 1) {
-		LOG_ERROR("Data number error (%s).", s.c_str());
+		spdlog::error("Data number error (%s).", s.c_str());
 		return -1;
 	}
 
@@ -437,7 +437,7 @@ int ArffReader::inputForDynamicAttributes(string& s) {
 bool ArffReader::openFile(const string& fileName) {
 	mFile->open(fileName.c_str());
 	if (!mFile->is_open()) {
-		LOG_ERROR("Failed to open file: %s .", fileName.c_str());
+		spdlog::error("Failed to open file: %s .", fileName.c_str());
 		return false;
 	}
 	return true;

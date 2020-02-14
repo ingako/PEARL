@@ -16,7 +16,6 @@
  */
 
 #include "LearnerModel.h"
-#include "Log.h"
 #include "Utils.h"
 #include <fstream>
 #include <sstream>
@@ -40,7 +39,7 @@ bool LearnerModel::exportToFile(const string& fileName) {
 
 bool LearnerModel::importFromFile(const string& fileName) {
 	if (!Utils::checkFileExist(fileName)) {
-		LOG_ERROR("File not existed. %s", fileName.c_str());
+		spdlog::error("File not existed. %s", fileName.c_str());
 		return false;
 	}
 
@@ -56,7 +55,7 @@ bool LearnerModel::saveJsonToFile(const string& fileName, Json::Value& jv) {
 	ofstream ofs(fileName);
 
 	if (!ofs.is_open()) {
-		LOG_ERROR("Can not create file: %s", fileName.c_str());
+		spdlog::error("Can not create file: %s", fileName.c_str());
 		return false;
 	}
 
@@ -83,13 +82,13 @@ bool LearnerModel::importFromJson(const Json::Value& jv) {
 bool LearnerModel::loadJsonFromFile(const string& fileName, Json::Value& jv) {
 	ifstream ifs(fileName);
 	if (!ifs.is_open()) {
-		LOG_ERROR("Can not read from file: %s", fileName.c_str());
+		spdlog::error("Can not read from file: %s", fileName.c_str());
 		return false;
 	}
 
 	Json::Reader reader;
 	if (!reader.parse(ifs, jv)) {
-		LOG_ERROR("File format error: %s", fileName.c_str());
+		spdlog::error("File format error: %s", fileName.c_str());
 		ifs.close();
 		return false;
 	}

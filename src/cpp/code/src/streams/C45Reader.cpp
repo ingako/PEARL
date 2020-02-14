@@ -181,7 +181,7 @@ int C45Reader::trimNamesRowData(string& data) {
 		return 0;
 	}
 	if (data.length() <= 2) {
-		LOG_ERROR(".names file has not enough data.");
+		spdlog::error(".names file has not enough data.");
 		return -1;
 	}
 
@@ -264,13 +264,13 @@ int C45Reader::loadAttributes(const string& data, const int index) {
 
 	int pos = s.find(":");
 	if (pos < 0) {
-		LOG_ERROR("The .names data format error(%s). ", data.c_str());
+		spdlog::error("The .names data format error(%s). ", data.c_str());
 		return -1;
 	}
 
 	if (s[0] == ':' || s[0] == ',' || s[s.length() - 1] == ':'
 			|| s[s.length() - 1] == ',') {
-		LOG_ERROR("The .names data format error(%s).", data.c_str());
+		spdlog::error("The .names data format error(%s).", data.c_str());
 		return -1;
 	}
 
@@ -308,7 +308,7 @@ int C45Reader::loadAttributes(const string& data, const int index) {
 int C45Reader::readData() {
 
 	if (!mNamesLoaded) {
-		LOG_ERROR("You must call setFile() function before read data.");
+		spdlog::error("You must call setFile() function before read data.");
 		return -1;
 	}
 
@@ -354,7 +354,7 @@ int C45Reader::input(string& s) {
 	}
 
 	if (index + 1 != this->mAttributes->count) {
-		LOG_ERROR("Data number error (%d).", index);
+		spdlog::error("Data number error (%d).", index);
 		return -1;
 	}
 
@@ -401,7 +401,7 @@ int C45Reader::inputForDynamicAttributes(string& s) {
 	}
 
 	if (index != this->mAttributes->count - 1) {
-		LOG_ERROR("Data number error (%s).", s.c_str());
+		spdlog::error("Data number error (%s).", s.c_str());
 		return -1;
 	}
 
@@ -418,7 +418,7 @@ int C45Reader::readAllDataFromNamesFile(const string& fileName) {
 
 	ifstream f(fileName.c_str());
 	if (!f.is_open()) {
-		LOG_ERROR("Failed to open file: %s .", fileName.c_str());
+		spdlog::error("Failed to open file: %s .", fileName.c_str());
 		return -1;
 	}
 
@@ -434,7 +434,7 @@ int C45Reader::readAllDataFromNamesFile(const string& fileName) {
 	f.close();
 
 	if (allData.size() <= 1) {
-		LOG_ERROR(".names file(%s) is empty. ", fileName.c_str());
+		spdlog::error(".names file(%s) is empty. ", fileName.c_str());
 		return -1;
 	}
 
@@ -444,12 +444,12 @@ int C45Reader::readAllDataFromNamesFile(const string& fileName) {
 	for (size_t i = 1; i < allData.size(); i++) {
 		data = allData[i];
 		if (trimNamesRowData(data) < 0) {
-			LOG_ERROR(".names data error(%s). ", data.c_str());
+			spdlog::error(".names data error(%s). ", data.c_str());
 			return -1;
 		}
 		index = i - 1;
 		if (loadAttributes(data, index) < 0) {
-			LOG_ERROR(".names data error(%s). ", data.c_str());
+			spdlog::error(".names data error(%s). ", data.c_str());
 			return -1;
 		}
 	}
@@ -457,12 +457,12 @@ int C45Reader::readAllDataFromNamesFile(const string& fileName) {
 	// deal with class names
 	data = allData[0];
 	if (trimNamesRowData(data) < 0) {
-		LOG_ERROR(".names data error(%s). ", data.c_str());
+		spdlog::error(".names data error(%s). ", data.c_str());
 		return -1;
 	}
 	index++;
 	if (loadClassNames(data, index) < 0) {
-		LOG_ERROR(".names data error(%s). ", data.c_str());
+		spdlog::error(".names data error(%s). ", data.c_str());
 		return -1;
 	}
 
@@ -478,7 +478,7 @@ int C45Reader::readAllDataFromNamesFile(const string& fileName) {
 int C45Reader::openDataFile(const string& fileName) {
 	mDataFile->open(fileName.c_str());
 	if (!mDataFile->is_open()) {
-		LOG_ERROR("Failed to open file: %s .", fileName.c_str());
+		spdlog::error("Failed to open file: %s .", fileName.c_str());
 		return -1;
 	}
 	return 0;
@@ -488,7 +488,7 @@ int C45Reader::readDataFile(const string& fileName) {
 
 	ifstream f(fileName.c_str());
 	if (!f.is_open()) {
-		LOG_ERROR("Failed to open file: %s . ", fileName.c_str());
+		spdlog::error("Failed to open file: %s . ", fileName.c_str());
 		return -1;
 	}
 
@@ -502,7 +502,7 @@ int C45Reader::readDataFile(const string& fileName) {
 	f.close();
 
 	if (allData.size() <= 1) {
-		LOG_WARN("Data file(%s) is empty.", fileName.c_str());
+		spdlog::warn("Data file(%s) is empty.", fileName.c_str());
 		return 0;
 	}
 
@@ -510,7 +510,7 @@ int C45Reader::readDataFile(const string& fileName) {
 	for (size_t i = 0; i < allData.size(); i++) {
 		data = allData[i];
 		if (readData() < 0) {
-			LOG_ERROR("Failed to read data from data file(%s).",
+			spdlog::error("Failed to read data from data file(%s).",
 					fileName.c_str());
 			return -1;
 		}

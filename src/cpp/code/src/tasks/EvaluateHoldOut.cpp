@@ -74,7 +74,7 @@ void EvaluateHoldOut::doSetParams() {
 int EvaluateHoldOut::doUnifiedTask(Learner& learner, Reader& reader) {
 	//Train
 	if (!reader.setFile(mTrainFile)) {
-		LOG_ERROR("Failed to open file: %s ", mTrainFile.c_str());
+		spdlog::error("Failed to open file: %s ", mTrainFile.c_str());
 		return TASK_READFILE_FAILED;
 	}
 
@@ -89,9 +89,9 @@ int EvaluateHoldOut::doUnifiedTask(Learner& learner, Reader& reader) {
 
 	// output model
 	if (this->mOutputModelFile != "") {
-		LOG_INFO("Output model to file: %s .", this->mOutputModelFile.c_str());
+		spdlog::info("Output model to file: %s .", this->mOutputModelFile.c_str());
 		if (!learner.exportToFile(this->mOutputModelFile)) {
-			LOG_ERROR("Failed to export model to file: %s .",
+			spdlog::error("Failed to export model to file: %s .",
 					this->mOutputModelFile.c_str());
 			return TASK_READFILE_FAILED;
 		}
@@ -99,7 +99,7 @@ int EvaluateHoldOut::doUnifiedTask(Learner& learner, Reader& reader) {
 
 	//Test
 	if (!reader.setFile(mTestFile)) {
-		LOG_ERROR("Failed to open file: %s ", mTestFile.c_str());
+		spdlog::error("Failed to open file: %s ", mTestFile.c_str());
 		return TASK_READFILE_FAILED;
 	}
 
@@ -125,19 +125,19 @@ int EvaluateHoldOut::doTask() {
 
 	learner = (Learner*) CREATE_CLASS(mLearnerName);
 	if (learner == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .",
+		spdlog::error("Parameter error, not defined class: %s .",
 				mLearnerName.c_str());
 		return TASK_PARAMETER_FAILED;
 	}
 	if (mLearnerParams != "") {
 		learner->setParams(mLearnerParams);
 	}
-	LOG_INFO("learner: %s ", mLearnerName.c_str());
+	spdlog::info("learner: %s ", mLearnerName.c_str());
 
 	// evaluator
 	eval = (Evaluator*) CREATE_CLASS(mEvaluatorName);
 	if (eval == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .",
+		spdlog::error("Parameter error, not defined class: %s .",
 				mEvaluatorName.c_str());
 		delete learner;
 		return TASK_PARAMETER_FAILED;
@@ -150,7 +150,7 @@ int EvaluateHoldOut::doTask() {
 	// reader
 	reader = (Reader*) CREATE_CLASS(mReaderName);
 	if (reader == nullptr) {
-		LOG_ERROR("Parameter error, not defined class: %s .",
+		spdlog::error("Parameter error, not defined class: %s .",
 				mReaderName.c_str());
 		delete learner;
 		delete eval;
@@ -163,7 +163,7 @@ int EvaluateHoldOut::doTask() {
 	returnCode = doUnifiedTask(*learner, *reader);
 
 	if (TASK_SUCCESS == returnCode) {
-		LOG_DEBUG(eval->toString());
+		spdlog::debug(eval->toString());
 	}
 
 	delete learner;
