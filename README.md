@@ -6,18 +6,33 @@ Implementation of the paper "PEARL: Probabilistic Exact Adaptive Random Forest w
 
 > In order to adapt random forests to the dynamic nature of data streams, the state-of-the-art technique discards trained trees and grows new trees when concept drifts are detected. This is particularly wasteful when recurrent patterns exist. In this work, we introduce a novel framework called PEARL, which uses both an exact technique and a probabilistic graphical model with Lossy Counting, to replace drifted trees with relevant trees built from the past. The exact technique utilizes pattern matching to find the set of drifted trees, that co-occurred in predictions in the past. Meanwhile, a probabilistic graphical model is being built to capture the tree replacements among recurrent concept drifts. Once the graphical model becomes stable, it replaces the exact technique and finds relevant trees in a probabilistic fashion. Further, Lossy Counting is applied to the graphical model which brings an added theoretical guarantee on both error rate and space complexity. We empirically show our technique has outperforms baselines in terms of cumulative accuracy on both synthetic and real-world datasets.
 
-### Prerequisites
+### About the Code
 
-Python &ge; 3.6
+PEARL was originally implemented in Python for quick PoC of the paper. Since the algorithm and the random forest is CPU-intensive, the code has been rewritten in C++ for efficiency, along with a Python wrapper for ease of use.
 
-g++ 7.4.0
+The C++ implementation has reduced the runtime from over 10 hours down to 10 minutes for the Covertype dataset, as an example. As a result, the Python code is no longer maintained, but it may be helpful for understanding the PEARL framework.
+
+### Requirements
+
+Make sure the following dependencies are installed:
+
+* Python &ge; 3.6
+
+* C++ toolchain supporting C++14 (g++ 7+)
 
 ### Installing
 
-Run
+```bash
+git clone https://github.com/ingako/pearl.git --recursive
+pip install -r requirements.txt
+```
+##### Speed Optimization with C++
 
 ```bash
-pip install -r requirements.txt
+cd src/cpp
+mkdir build && cd build
+cmake ..
+make -j8
 ```
 
 ### Options
@@ -28,17 +43,8 @@ For a list of available options, run
 python src/main.py -h
 ```
 
-### Speed Optimization with C++
-
-```bash
-cd src/cpp
-mkdir build && cd build
-cmake ..
-make -j8
-```
-
 ### Example
-See `run/run-covtype-cpp.sh` for an example of running PEARL in C++.
+See `run/run-covtype-cpp.sh` for an example of running PEARL and the baseline adaptive random forest (ARF) in C++.
 
 Run `run/plot-covtype-demo.py` to plot the results. It should give you results look like the following:
 
