@@ -29,7 +29,6 @@ pip install -r requirements.txt
 ##### Speed Optimization with C++
 
 ```bash
-cd src/cpp
 mkdir build && cd build
 cmake ..
 make -j8

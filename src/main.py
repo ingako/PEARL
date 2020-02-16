@@ -13,9 +13,12 @@ from skmultiflow.data.file_stream import FileStream
 
 from evaluator import Evaluator
 from pearl import Pearl
-from cpp.build.pearl import pearl
-from cpp.build.pearl import pro_pearl
 
+import sys
+path = r'../'
+if path not in sys.path:
+    sys.path.append(path)
+from build.pearl import pearl
 
 formatter = logging.Formatter('%(message)s')
 

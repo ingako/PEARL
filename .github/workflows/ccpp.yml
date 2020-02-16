@@ -15,7 +15,5 @@ jobs:
         args: git submodule update --init --recursive
     - name: configure
       run: mkdir build && cd build && cmake ..
-      working-directory: src/cpp
     - name: build
       run: cmake --build build
-      working-directory: src/cpp
