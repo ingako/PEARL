@@ -21,7 +21,7 @@ add_definitions(${flags})
 
 add_subdirectory(third_party/streamDM)
 add_subdirectory(third_party/pybind11)
-pybind11_add_module(pearl ${sourcefiles})
+pybind11_add_module(pearl SHARED ${sourcefiles})
 
-target_link_libraries(pearl PRIVATE streamDM)
+target_link_libraries(pearl PUBLIC streamDM)
 target_include_directories(pearl PUBLIC ${include_dirs})

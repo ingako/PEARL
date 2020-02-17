@@ -78,5 +78,5 @@ add_subdirectory(spdlog)
 
 add_library(streamDM STATIC ${sourcefiles})
 
-target_link_libraries(streamDM PRIVATE spdlog::spdlog)
+target_link_libraries(streamDM PUBLIC spdlog::spdlog)
 target_include_directories(streamDM PUBLIC ${include_dirs})
