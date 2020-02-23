@@ -96,8 +96,9 @@ double ArffReader::LocalAttributes::getIndex(const int& sequence,
 		// return atof(value.c_str());
 	} else {
 		if (this->values[sequence].find(value)
-				!= this->values[sequence].end()) {
+                != this->values[sequence].end()) {
 			return this->values[sequence][value];
+
 		} else {
 			return -1; // this condition must refresh the attributes, modify it later.
 		}
@@ -360,10 +361,13 @@ int ArffReader::input(string& s) {
 	stringstream ss(s);
 	vector<double> labels(1);
 	vector<double> values(mAttributes->count - 1);
+
 	while (getline(ss, item, ',')) {
-//		item.erase(0, item.find_first_not_of(" \r\n\t"));
-//        item.erase(item.find_last_not_of(" \r\n\t") + 1);
-		d = mAttributes->getIndex(index, item);
+        item.erase(0, item.find_first_not_of(" \r\n\t"));
+        item.erase(item.find_last_not_of(" \r\n\t") + 1);
+
+        d = mAttributes->getIndex(index, item);
+
 		if (index == this->mAttributes->count - 1) {
 			labels[0] = d;
 			break;
