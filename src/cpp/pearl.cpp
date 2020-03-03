@@ -100,28 +100,32 @@ void pearl::prepare_instance(Instance& instance) {
     instance.setAttributeStatus(attribute_indices);
 }
 
-bool pearl::process() {
+int pearl::predict() {
     int actual_label = instance->getLabel();
 
     int num_classes = instance->getNumberClasses();
     vector<int> votes(num_classes, 0);
 
     if (enable_state_adaption) {
-        process_with_state_adaption(votes, actual_label);
+        predict_with_state_adaption(votes, actual_label);
 
     } else {
-        process_basic(votes, actual_label);
+        predict_basic(votes, actual_label);
     }
 
-    train(*instance);
-    delete instance;
-
-    int predicted_label = vote(votes);
-
-    return predicted_label == actual_label;
+    // return vote(votes) == actual_label;
+    return vote(votes);
 }
 
-void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
+int pearl::get_cur_instance_label() {
+    return instance->getLabel();
+}
+
+void pearl::delete_cur_instance() {
+    delete instance;
+}
+
+void pearl::predict_with_state_adaption(vector<int>& votes, int actual_label) {
 
     // keep track of actual labels for candidate tree evaluations
     if (actual_labels.size() >= kappa_window_size) {
@@ -178,7 +182,7 @@ void pearl::process_with_state_adaption(vector<int>& votes, int actual_label) {
     }
 }
 
-void pearl::process_basic(vector<int>& votes, int actual_label) {
+void pearl::predict_basic(vector<int>& votes, int actual_label) {
     int predicted_label;
 
     for (int i = 0; i < num_trees; i++) {
@@ -219,9 +223,9 @@ int pearl::vote(const vector<int>& votes) {
     return predicted_label;
 }
 
-void pearl::train(Instance& instance) {
+void pearl::train() {
     for (int i = 0; i < num_trees; i++) {
-        online_bagging(instance, *adaptive_trees[i]);
+        online_bagging(*instance, *adaptive_trees[i]);
     }
 }
 

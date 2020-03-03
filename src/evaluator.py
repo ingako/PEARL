@@ -51,7 +51,7 @@ class Evaluator:
 
 
     @staticmethod
-    def prequential_evaluation_cpp(classifier,
+    def _prequential_evaluation_cpp(classifier,
                                    stream,
                                    max_samples,
                                    sample_freq,
@@ -82,3 +82,51 @@ class Evaluator:
                 correct = 0
                 window_actual_labels = []
                 window_predicted_labels = []
+
+    @staticmethod
+    def prequential_evaluation_cpp(classifier,
+                                   stream,
+                                   max_samples,
+                                   sample_freq,
+                                   metrics_logger):
+        correct = 0
+        window_actual_labels = []
+        window_predicted_labels = []
+
+        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
+
+        classifier.init_data_source(stream);
+
+        for count in range(0, max_samples):
+            if not classifier.get_next_instance():
+                break
+
+            # test
+            prediction = classifier.predict()
+
+            actual_label = classifier.get_cur_instance_label()
+            if prediction == actual_label:
+                correct += 1
+
+            window_actual_labels.append(actual_label)
+            window_predicted_labels.append(prediction)
+
+            # classifier.handle_drift(count)
+
+            if count % sample_freq == 0 and count != 0:
+                accuracy = correct / sample_freq
+                candidate_tree_size = classifier.get_candidate_tree_group_size()
+                tree_pool_size = classifier.get_tree_pool_size()
+
+                print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
+                metrics_logger.info(f"{count},{accuracy}," \
+                                    f"{candidate_tree_size},{tree_pool_size}")
+
+                correct = 0
+                window_actual_labels = []
+                window_predicted_labels = []
+
+            # train
+            classifier.train()
+
+            classifier.delete_cur_instance()

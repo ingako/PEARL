@@ -87,10 +87,12 @@ class pearl {
 
         bool init_data_source(const string& filename);
         bool get_next_instance();
+        int get_cur_instance_label();
+        void delete_cur_instance();
         void prepare_instance(Instance& instance);
 
-        virtual bool process();
-        virtual void train(Instance& instance);
+        virtual int predict();
+        virtual void train();
         int vote(const vector<int>& votes);
 
         void select_candidate_trees(const vector<int>& warning_tree_pos_list);
@@ -139,8 +141,8 @@ class pearl {
         shared_ptr<adaptive_tree> make_adaptive_tree(int tree_pool_id);
         void online_bagging(Instance& instance, adaptive_tree& tree);
 
-        void process_basic(vector<int>& votes, int actual_label);
-        void process_with_state_adaption(vector<int>& votes, int actual_label);
+        void predict_basic(vector<int>& votes, int actual_label);
+        void predict_with_state_adaption(vector<int>& votes, int actual_label);
         virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
 
 };

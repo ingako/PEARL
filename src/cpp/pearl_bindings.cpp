@@ -26,7 +26,10 @@ PYBIND11_MODULE(pearl, m) {
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("init_data_source", &pearl::init_data_source)
         .def("get_next_instance", &pearl::get_next_instance)
-        .def("process", &pearl::process)
+        .def("get_cur_instance_label", &pearl::get_cur_instance_label)
+        .def("delete_cur_instance", &pearl::delete_cur_instance)
+        .def("predict", &pearl::predict)
+        .def("train", &pearl::train)
         .def("is_state_graph_stable", &pearl::is_state_graph_stable)
         .def("__repr__",
             [](const pearl &p) {
