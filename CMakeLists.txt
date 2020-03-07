@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(pearl VERSION 0.0.1)
 
 set(sourcefiles
+src/cpp/adaptive_random_forest.cpp
 src/cpp/pearl.cpp
 src/cpp/lru_state.cpp
 src/cpp/lossy_state_graph.cpp
