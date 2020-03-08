@@ -36,7 +36,7 @@ void pearl::init() {
 
     for (int i = 0; i < num_trees; i++) {
         tree_pool[i] = make_pearl_tree(i);
-        arf_trees.push_back(tree_pool[i]);
+        foreground_trees.push_back(tree_pool[i]);
     }
 
     // initialize LRU state pattern queue
@@ -69,7 +69,7 @@ shared_ptr<pearl_tree> pearl::make_pearl_tree(int tree_pool_id) {
 }
 
 int pearl::predict() {
-    if (arf_trees.empty()) {
+    if (foreground_trees.empty()) {
         init();
     }
 
@@ -98,7 +98,7 @@ void pearl::predict_with_state_adaption(vector<int>& votes, int actual_label) {
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
     for (int i = 0; i < num_trees; i++) {
-        cur_tree = static_pointer_cast<pearl_tree>(arf_trees[i]);
+        cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[i]);
 
         predicted_label = cur_tree->predict(*instance, true);
 
@@ -169,7 +169,7 @@ void pearl::select_candidate_trees(const vector<int>& warning_tree_pos_list) {
 void pearl::tree_transition(const vector<int>& warning_tree_pos_list) {
     shared_ptr<pearl_tree> cur_tree = nullptr;
     for (auto warning_tree_pos : warning_tree_pos_list) {
-        cur_tree = static_pointer_cast<pearl_tree>(arf_trees[warning_tree_pos]);
+        cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[warning_tree_pos]);
 
         int warning_tree_id = cur_tree->tree_pool_id;
         int next_id = state_graph->get_next_tree_id(warning_tree_id);
@@ -196,7 +196,7 @@ void pearl::pattern_match_candidate_trees(const vector<int>& warning_tree_pos_li
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
     for (int tree_pos : warning_tree_pos_list) {
-        cur_tree = static_pointer_cast<pearl_tree>(arf_trees[tree_pos]);
+        cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[tree_pos]);
 
         if (cur_tree->tree_pool_id == -1) {
             LOG("Error: tree_pool_id is not updated");
@@ -248,7 +248,7 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
 
         int drifted_pos = drifted_tree_pos_list[i];
         shared_ptr<pearl_tree> drifted_tree =
-            static_pointer_cast<pearl_tree>(arf_trees[drifted_pos]);
+            static_pointer_cast<pearl_tree>(foreground_trees[drifted_pos]);
         shared_ptr<pearl_tree> swap_tree = nullptr;
 
         drifted_tree->update_kappa(actual_labels, class_count);
@@ -326,7 +326,7 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
         cur_state.insert(swap_tree->tree_pool_id);
 
         // replace drifted_tree with swap tree
-        arf_trees[drifted_pos] = swap_tree;
+        foreground_trees[drifted_pos] = swap_tree;
 
         drifted_tree->reset();
     }

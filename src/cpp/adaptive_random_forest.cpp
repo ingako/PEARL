@@ -14,7 +14,7 @@ adaptive_random_forest::adaptive_random_forest(int num_trees,
 
 void adaptive_random_forest::init() {
     for (int i = 0; i < num_trees; i++) {
-        arf_trees.push_back(make_arf_tree());
+        foreground_trees.push_back(make_arf_tree());
     }
 }
 
@@ -24,7 +24,7 @@ shared_ptr<arf_tree> adaptive_random_forest::make_arf_tree() {
 }
 
 int adaptive_random_forest::predict() {
-    if (arf_trees.empty()) {
+    if (foreground_trees.empty()) {
         init();
     }
 
@@ -35,23 +35,23 @@ int adaptive_random_forest::predict() {
 
     for (int i = 0; i < num_trees; i++) {
 
-        int predicted_label = arf_trees[i]->predict(*instance, true);
+        int predicted_label = foreground_trees[i]->predict(*instance, true);
 
         votes[predicted_label]++;
         int error_count = (int)(actual_label != predicted_label);
 
         // detect warning
-        if (detect_change(error_count, arf_trees[i]->warning_detector)) {
-            arf_trees[i]->bg_arf_tree = make_arf_tree();
-            arf_trees[i]->warning_detector->resetChange();
+        if (detect_change(error_count, foreground_trees[i]->warning_detector)) {
+            foreground_trees[i]->bg_arf_tree = make_arf_tree();
+            foreground_trees[i]->warning_detector->resetChange();
         }
 
         // detect drift
-        if (detect_change(error_count, arf_trees[i]->drift_detector)) {
-            if (arf_trees[i]->bg_arf_tree) {
-                arf_trees[i] = move(arf_trees[i]->bg_arf_tree);
+        if (detect_change(error_count, foreground_trees[i]->drift_detector)) {
+            if (foreground_trees[i]->bg_arf_tree) {
+                foreground_trees[i] = move(foreground_trees[i]->bg_arf_tree);
             } else {
-                arf_trees[i] = make_arf_tree();
+                foreground_trees[i] = make_arf_tree();
             }
         }
     }
@@ -60,12 +60,12 @@ int adaptive_random_forest::predict() {
 }
 
 void adaptive_random_forest::train() {
-    if (arf_trees.empty()) {
+    if (foreground_trees.empty()) {
         init();
     }
 
     for (int i = 0; i < num_trees; i++) {
-        online_bagging(*instance, *arf_trees[i]);
+        online_bagging(*instance, *foreground_trees[i]);
     }
 }
 

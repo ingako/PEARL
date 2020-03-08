@@ -55,7 +55,7 @@ class adaptive_random_forest {
         Instance* instance;
         unique_ptr<Reader> reader;
 
-        vector<shared_ptr<arf_tree>> arf_trees;
+        vector<shared_ptr<arf_tree>> foreground_trees;
 
         virtual void init();
         shared_ptr<arf_tree> make_arf_tree();
