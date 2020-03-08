@@ -4,6 +4,12 @@ from collections import deque
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
 
+import sys
+path = r'../'
+if path not in sys.path:
+    sys.path.append(path)
+from build.pearl import adaptive_random_forest, pearl
+
 class Evaluator:
 
     @staticmethod
@@ -92,6 +98,10 @@ class Evaluator:
         correct = 0
         window_actual_labels = []
         window_predicted_labels = []
+        if isinstance(classifier, pearl):
+            print("is an instance of pearl, turn on log_size")
+
+        log_size = isinstance(classifier, pearl)
 
         metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
 
@@ -115,8 +125,12 @@ class Evaluator:
 
             if count % sample_freq == 0 and count != 0:
                 accuracy = correct / sample_freq
-                candidate_tree_size = classifier.get_candidate_tree_group_size()
-                tree_pool_size = classifier.get_tree_pool_size()
+
+                candidate_tree_size = 0
+                tree_pool_size = 60
+                if log_size:
+                    candidate_tree_size = classifier.get_candidate_tree_group_size()
+                    tree_pool_size = classifier.get_tree_pool_size()
 
                 print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
                 metrics_logger.info(f"{count},{accuracy}," \

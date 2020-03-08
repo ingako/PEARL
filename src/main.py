@@ -18,7 +18,7 @@ import sys
 path = r'../'
 if path not in sys.path:
     sys.path.append(path)
-from build.pearl import pearl
+from build.pearl import adaptive_random_forest, pearl
 
 formatter = logging.Formatter('%(message)s')
 
@@ -255,21 +255,30 @@ if __name__ == '__main__':
             eval_func = Evaluator.prequential_evaluation_proactive
 
         else:
-            pearl = pearl(args.num_trees,
-                          args.max_num_candidate_trees,
-                          repo_size,
-                          args.edit_distance_threshold,
-                          args.kappa_window,
-                          args.lossy_window_size,
-                          args.reuse_window_size,
-                          arf_max_features,
-                          args.bg_kappa_threshold,
-                          args.cd_kappa_threshold,
-                          args.reuse_rate_upper_bound,
-                          args.warning_delta,
-                          args.drift_delta,
-                          args.enable_state_adaption,
-                          args.enable_state_graph)
+            if not args.enable_state_adaption and not args.enable_state_graph:
+                pearl = adaptive_random_forest(args.num_trees,
+                                               arf_max_features,
+                                               args.warning_delta,
+                                               args.drift_delta)
+                print("init adaptive_random_forest")
+
+            else:
+                pearl = pearl(args.num_trees,
+                              args.max_num_candidate_trees,
+                              repo_size,
+                              args.edit_distance_threshold,
+                              args.kappa_window,
+                              args.lossy_window_size,
+                              args.reuse_window_size,
+                              arf_max_features,
+                              args.bg_kappa_threshold,
+                              args.cd_kappa_threshold,
+                              args.reuse_rate_upper_bound,
+                              args.warning_delta,
+                              args.drift_delta,
+                              args.enable_state_adaption,
+                              args.enable_state_graph)
+                print("init pearl")
             eval_func = Evaluator.prequential_evaluation_cpp
 
     else:
