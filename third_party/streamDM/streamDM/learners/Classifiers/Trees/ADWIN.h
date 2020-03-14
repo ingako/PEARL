@@ -109,7 +109,7 @@ public:
     // adaptive hoeffding bound
     bool isAdaptive;
     double tension;
-    double expectedDriftProb = INT_MIN;
+    double expectedDriftProb = -1;
 
 	ADList* listRowBuckets;
 
