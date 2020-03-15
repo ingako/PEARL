@@ -1,6 +1,6 @@
 [submodule "src/cpp/pybind11"]
 	path = third_party/pybind11
 	url = https://github.com/pybind/pybind11.git
-[submodule "src/cpp/spdlog"]
-	path = third_party/streamDM/spdlog
-	url = https://github.com/gabime/spdlog.git
+[submodule "third_party/streamDM"]
+	path = third_party/streamDM
+	url = https://github.com/ingako/streamDM
