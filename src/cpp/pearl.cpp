@@ -369,6 +369,20 @@ pearl_tree::pearl_tree(int tree_pool_id,
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
 }
 
+pearl_tree::pearl_tree(int tree_pool_id,
+                       int kappa_window_size,
+                       double warning_delta,
+                       double drift_delta,
+                       double drift_tension) :
+        arf_tree(warning_delta, drift_delta),
+        tree_pool_id(tree_pool_id),
+        kappa_window_size(kappa_window_size) {
+
+    tree = make_unique<HT::HoeffdingTree>();
+    warning_detector = make_unique<HT::ADWIN>(warning_delta, drift_tension);
+    drift_detector = make_unique<HT::ADWIN>(drift_delta, drift_tension);
+}
+
 int pearl_tree::predict(Instance& instance, bool track_performance) {
     double numberClasses = instance.getNumberClasses();
     double* classPredictions = tree->getPrediction(instance);
@@ -466,4 +480,10 @@ void pearl_tree::reset() {
     drift_detector->resetChange();
     predicted_labels.clear();
     kappa = INT_MIN;
+}
+
+void pearl_tree::set_expected_drift_prob(double p) {
+    warning_detector->setExpectedDriftProb(p);
+    drift_detector->setExpectedDriftProb(p);
+
 }

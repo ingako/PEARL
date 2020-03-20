@@ -85,10 +85,17 @@ class pearl_tree : public arf_tree {
                    double warning_delta,
                    double drift_delta);
 
+        pearl_tree(int tree_pool_id,
+                   int kappa_window_size,
+                   double warning_delta,
+                   double drift_delta,
+                   double drift_tension);
+
         virtual void train(Instance& instance);
         virtual int predict(Instance& instance, bool track_performance);
         virtual void reset();
         void update_kappa(const deque<int>& actual_labels, int class_count);
+        void set_expected_drift_prob(double p);
 
         shared_ptr<pearl_tree> bg_pearl_tree;
 
