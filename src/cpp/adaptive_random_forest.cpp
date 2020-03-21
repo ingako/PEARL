@@ -35,7 +35,7 @@ int adaptive_random_forest::predict() {
 
     for (int i = 0; i < num_trees; i++) {
 
-        int predicted_label = foreground_trees[i]->predict(*instance, true);
+        int predicted_label = foreground_trees[i]->predict(*instance);
 
         votes[predicted_label]++;
         int error_count = (int)(actual_label != predicted_label);
@@ -171,9 +171,10 @@ arf_tree::arf_tree(double warning_delta,
     tree = make_unique<HT::HoeffdingTree>();
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
+    bg_arf_tree = nullptr;
 }
 
-int arf_tree::predict(Instance& instance, bool track_performance) {
+int arf_tree::predict(Instance& instance) {
     double numberClasses = instance.getNumberClasses();
     double* classPredictions = tree->getPrediction(instance);
     int result = 0;
@@ -196,10 +197,4 @@ void arf_tree::train(Instance& instance) {
     if (bg_arf_tree) {
         bg_arf_tree->train(instance);
     }
-}
-
-void arf_tree::reset() {
-    bg_arf_tree = nullptr;
-    warning_detector->resetChange();
-    drift_detector->resetChange();
 }

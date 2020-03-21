@@ -69,8 +69,7 @@ class arf_tree {
                  double drift_delta);
 
         virtual void train(Instance& instance);
-        virtual int predict(Instance& instance, bool track_performance);
-        virtual void reset();
+        virtual int predict(Instance& instance);
 
         unique_ptr<HT::HoeffdingTree> tree;
         shared_ptr<arf_tree> bg_arf_tree;
