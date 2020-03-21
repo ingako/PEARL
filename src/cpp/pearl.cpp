@@ -29,15 +29,7 @@ pearl::pearl(int num_trees,
         cd_kappa_threshold(cd_kappa_threshold),
         reuse_rate_upper_bound(reuse_rate_upper_bound),
         enable_state_adaption(enable_state_adaption),
-        enable_state_graph(enable_state_graph) {}
-
-void pearl::init() {
-    tree_pool = vector<shared_ptr<pearl_tree>>(num_trees);
-
-    for (int i = 0; i < num_trees; i++) {
-        tree_pool[i] = make_pearl_tree(i);
-        foreground_trees.push_back(tree_pool[i]);
-    }
+        enable_state_graph(enable_state_graph) {
 
     // initialize LRU state pattern queue
     state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
@@ -59,6 +51,15 @@ void pearl::init() {
                                                    reuse_window_size,
                                                    reuse_rate_upper_bound);
 
+}
+
+void pearl::init() {
+    tree_pool = vector<shared_ptr<pearl_tree>>(num_trees);
+
+    for (int i = 0; i < num_trees; i++) {
+        tree_pool[i] = make_pearl_tree(i);
+        foreground_trees.push_back(tree_pool[i]);
+    }
 }
 
 shared_ptr<pearl_tree> pearl::make_pearl_tree(int tree_pool_id) {
@@ -485,5 +486,4 @@ void pearl_tree::reset() {
 void pearl_tree::set_expected_drift_prob(double p) {
     warning_detector->setExpectedDriftProb(p);
     drift_detector->setExpectedDriftProb(p);
-
 }

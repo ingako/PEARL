@@ -69,7 +69,7 @@ class pearl : public adaptive_random_forest {
 
         void predict_with_state_adaption(vector<int>& votes, int actual_label);
         virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
-        shared_ptr<pearl_tree> make_pearl_tree(int tree_pool_id);
+        virtual shared_ptr<pearl_tree> make_pearl_tree(int tree_pool_id);
         virtual void init();
 };
 
