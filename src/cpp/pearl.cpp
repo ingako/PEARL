@@ -399,10 +399,20 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
     }
 
     if (track_performance) {
-        if (predicted_labels.size() >= kappa_window_size) {
-            predicted_labels.pop_front();
+        if (predicted_labels_right_window.size() >= kappa_window_size) {
+            int right_front_label = predicted_labels_right_window.front();
+            predicted_labels_right_window.pop_front();
+            right_correct_count -= right_front_label;
+
+            if (predicted_labels_left_window.size() >= kappa_window_size) {
+                left_correct_count -= predicted_labels_left_window.front();
+                predicted_labels_left_window.pop_front();
+            }
+            left_correct_count += right_front_label;
+            predicted_labels_left_window.push_back(right_front_label);
         }
-        predicted_labels.push_back(result);
+        right_correct_count += result;
+        predicted_labels_right_window.push_back(result);
 
         // the background tree performs prediction for performance eval
         if (bg_pearl_tree) {
@@ -411,6 +421,38 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
     }
 
     return result;
+}
+
+double pearl_tree::get_variance() {
+    if (predicted_labels_left_window.size() < kappa_window_size) {
+        return 0;
+    }
+
+    double avg =
+        (left_correct_count + right_correct_count) / (kappa_window_size * 2);
+    double sum = 0.0;
+
+    for (int v : predicted_labels_right_window) {
+        sum += ((v - avg) * (v - avg));
+    }
+
+    for (int v : predicted_labels_left_window) {
+        sum += ((v - avg) * (v - avg));
+    }
+    cout << to_string(sum / (kappa_window_size * 2)) << endl;
+
+    return sum / (kappa_window_size * 2);
+}
+
+bool pearl_tree::has_actual_drift(double bound) {
+    if (predicted_labels_left_window.size() < kappa_window_size) {
+        return false;
+    }
+
+    double left_window_accuracy = left_correct_count / kappa_window_size;
+    double right_window_accuracy = right_correct_count / kappa_window_size;
+
+    return (right_window_accuracy - left_window_accuracy) > bound;
 }
 
 void pearl_tree::train(Instance& instance) {
@@ -423,7 +465,7 @@ void pearl_tree::train(Instance& instance) {
 
 void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) {
 
-    if (predicted_labels.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
+    if (predicted_labels_right_window.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
         kappa = INT_MIN;
         return;
     }
@@ -432,8 +474,8 @@ void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) 
     int correct = 0;
 
     for (int i = 0; i < kappa_window_size; i++) {
-        confusion_matrix[actual_labels[i]][predicted_labels[i]]++;
-        if (actual_labels[i] == predicted_labels[i]) {
+        confusion_matrix[actual_labels[i]][predicted_labels_right_window[i]]++;
+        if (actual_labels[i] == predicted_labels_right_window[i]) {
             correct++;
         }
     }
@@ -479,7 +521,10 @@ void pearl_tree::reset() {
     is_candidate = false;
     warning_detector->resetChange();
     drift_detector->resetChange();
-    predicted_labels.clear();
+    predicted_labels_right_window.clear();
+    predicted_labels_left_window.clear();
+    left_correct_count = 0.0;
+    right_correct_count = 0.0;
     kappa = INT_MIN;
 }
 

@@ -78,7 +78,8 @@ class pearl_tree : public arf_tree {
         int tree_pool_id;
         double kappa = INT_MIN;
         bool is_candidate = false;
-        deque<int> predicted_labels;
+        deque<int> predicted_labels_right_window;
+        deque<int> predicted_labels_left_window;
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
@@ -96,12 +97,16 @@ class pearl_tree : public arf_tree {
         virtual void reset();
         void update_kappa(const deque<int>& actual_labels, int class_count);
         void set_expected_drift_prob(double p);
+        bool has_actual_drift(double bound);
 
         shared_ptr<pearl_tree> bg_pearl_tree;
 
     private:
         int kappa_window_size;
+        double left_correct_count = 0.0;
+        double right_correct_count = 0.0;
 
+        double get_variance();
         double compute_kappa(const vector<vector<int>>& confusion_matrix,
                              double accuracy,
                              int sample_count,
