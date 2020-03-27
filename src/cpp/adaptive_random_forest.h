@@ -76,7 +76,7 @@ class arf_tree {
         unique_ptr<HT::ADWIN> warning_detector;
         unique_ptr<HT::ADWIN> drift_detector;
 
-    private:
+    protected:
         double warning_delta;
         double drift_delta;
 };

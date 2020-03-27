@@ -97,7 +97,7 @@ class pearl_tree : public arf_tree {
         virtual void reset();
         void update_kappa(const deque<int>& actual_labels, int class_count);
         void set_expected_drift_prob(double p);
-        bool has_actual_drift(double bound);
+        bool has_actual_drift();
 
         shared_ptr<pearl_tree> bg_pearl_tree;
 
@@ -107,6 +107,8 @@ class pearl_tree : public arf_tree {
         double right_correct_count = 0.0;
 
         double get_variance();
+        double compute_adaptive_bound(double variance, double window_size, double delta);
+
         double compute_kappa(const vector<vector<int>>& confusion_matrix,
                              double accuracy,
                              int sample_count,

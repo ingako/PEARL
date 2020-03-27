@@ -444,13 +444,15 @@ double pearl_tree::get_variance() {
     return sum / (kappa_window_size * 2);
 }
 
-bool pearl_tree::has_actual_drift(double bound) {
+bool pearl_tree::has_actual_drift() {
     if (predicted_labels_left_window.size() < kappa_window_size) {
         return false;
     }
 
     double left_window_accuracy = left_correct_count / kappa_window_size;
     double right_window_accuracy = right_correct_count / kappa_window_size;
+
+    double bound = compute_adaptive_bound(get_variance(), kappa_window_size, drift_delta);
 
     return (right_window_accuracy - left_window_accuracy) > bound;
 }
@@ -462,6 +464,17 @@ void pearl_tree::train(Instance& instance) {
         bg_pearl_tree->train(instance);
     }
 }
+
+double pearl_tree::compute_adaptive_bound(double variance, double window_size, double delta) {
+    double m = 1.0 / ((1.0 / window_size) + (1.0 / window_size));
+    delta = delta / (window_size * 2);
+
+    double epsilon = sqrt((2 / m * variance * log(2 / delta)))
+                        + 2 / (3 * m) * log(2 / delta);
+
+    return epsilon;
+}
+
 
 void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) {
 
