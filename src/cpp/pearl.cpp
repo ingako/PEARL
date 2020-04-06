@@ -531,6 +531,7 @@ double pearl_tree::compute_kappa(const vector<vector<int>>& confusion_matrix,
 
 void pearl_tree::reset() {
     bg_pearl_tree = nullptr;
+    replaced_tree = nullptr;
     is_candidate = false;
     warning_detector->resetChange();
     drift_detector->resetChange();

@@ -67,7 +67,7 @@ class pearl : public adaptive_random_forest {
         set<int> cur_state;
         deque<int> actual_labels;
 
-        void predict_with_state_adaption(vector<int>& votes, int actual_label);
+        virtual void predict_with_state_adaption(vector<int>& votes, int actual_label);
         virtual void adapt_state(const vector<int>& drifted_tree_pos_list);
         virtual shared_ptr<pearl_tree> make_pearl_tree(int tree_pool_id);
         virtual void init();
@@ -99,7 +99,8 @@ class pearl_tree : public arf_tree {
         void set_expected_drift_prob(double p);
         bool has_actual_drift();
 
-        shared_ptr<pearl_tree> bg_pearl_tree;
+        shared_ptr<pearl_tree> bg_pearl_tree = nullptr;
+        shared_ptr<pearl_tree> replaced_tree = nullptr;
 
     private:
         int kappa_window_size;
