@@ -28,32 +28,12 @@ int adaptive_random_forest::predict() {
         init();
     }
 
-    int actual_label = instance->getLabel();
-
     int num_classes = instance->getNumberClasses();
     vector<int> votes(num_classes, 0);
 
     for (int i = 0; i < num_trees; i++) {
-
         int predicted_label = foreground_trees[i]->predict(*instance);
-
         votes[predicted_label]++;
-        int error_count = (int)(actual_label != predicted_label);
-
-        // detect warning
-        if (detect_change(error_count, foreground_trees[i]->warning_detector)) {
-            foreground_trees[i]->bg_arf_tree = make_arf_tree();
-            foreground_trees[i]->warning_detector->resetChange();
-        }
-
-        // detect drift
-        if (detect_change(error_count, foreground_trees[i]->drift_detector)) {
-            if (foreground_trees[i]->bg_arf_tree) {
-                foreground_trees[i] = move(foreground_trees[i]->bg_arf_tree);
-            } else {
-                foreground_trees[i] = make_arf_tree();
-            }
-        }
     }
 
     return vote(votes);
@@ -65,19 +45,30 @@ void adaptive_random_forest::train() {
     }
 
     for (int i = 0; i < num_trees; i++) {
-        online_bagging(*instance, *foreground_trees[i]);
-    }
-}
+        std::poisson_distribution<int> poisson_distr(1);
+        int weight = poisson_distr(mrand);
+        instance->setWeight(weight);
 
-void adaptive_random_forest::online_bagging(Instance& instance, arf_tree& tree) {
-    prepare_instance(instance);
+        foreground_trees[i]->train(*instance);
 
-    std::poisson_distribution<int> poisson_distr(1.0);
-    int weight = poisson_distr(mrand);
+        int predicted_label = foreground_trees[i]->predict(*instance);
+        int error_count = (int)(predicted_label != instance->getLabel());
 
-    while (weight > 0) {
-        weight--;
-        tree.train(instance);
+        // detect warning
+        if (detect_change(error_count, foreground_trees[i]->warning_detector)) {
+            foreground_trees[i]->bg_arf_tree = make_arf_tree();
+            foreground_trees[i]->warning_detector->resetChange();
+        }
+
+        // detect drift
+        if (detect_change(error_count, foreground_trees[i]->drift_detector)) {
+            if (foreground_trees[i]->bg_arf_tree) {
+                foreground_trees[i] = foreground_trees[i]->bg_arf_tree;
+                foreground_trees[i]->bg_arf_tree = nullptr;
+            } else {
+                foreground_trees[i] = make_arf_tree();
+            }
+        }
     }
 }
 
@@ -127,19 +118,6 @@ bool adaptive_random_forest::init_data_source(const string& filename) {
     return true;
 }
 
-void adaptive_random_forest::prepare_instance(Instance& instance) {
-    vector<int> attribute_indices;
-
-    // select random features
-    for (int i = 0; i < arf_max_features; i++) {
-        std::uniform_int_distribution<> uniform_distr(0, num_features);
-        int feature_idx = uniform_distr(mrand);
-        attribute_indices.push_back(feature_idx);
-    }
-
-    instance.setAttributeStatus(attribute_indices);
-}
-
 bool adaptive_random_forest::get_next_instance() {
     if (!reader->hasNextInstance()) {
         return false;
@@ -148,7 +126,7 @@ bool adaptive_random_forest::get_next_instance() {
     instance = reader->nextInstance();
 
     num_features = instance->getNumberInputAttributes();
-    arf_max_features = log2(num_features) + 1;
+    arf_max_features = sqrt(num_features) + 1;
 
     return true;
 }
@@ -175,15 +153,14 @@ arf_tree::arf_tree(double warning_delta,
 }
 
 int arf_tree::predict(Instance& instance) {
-    double numberClasses = instance.getNumberClasses();
     double* classPredictions = tree->getPrediction(instance);
     int result = 0;
-    double max = classPredictions[0];
+    double max_val = classPredictions[0];
 
     // Find class label with the highest probability
-    for (int i = 1; i < numberClasses; i++) {
-        if (max < classPredictions[i]) {
-            max = classPredictions[i];
+    for (int i = 1; i < instance.getNumberClasses(); i++) {
+        if (max_val < classPredictions[i]) {
+            max_val = classPredictions[i];
             result = i;
         }
     }

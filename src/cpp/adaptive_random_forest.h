@@ -37,12 +37,10 @@ class adaptive_random_forest {
         bool get_next_instance();
         int get_cur_instance_label();
         void delete_cur_instance();
-        void prepare_instance(Instance& instance);
 
         virtual int predict();
-        void train();
+        virtual void train();
         int vote(const vector<int>& votes);
-
 
     protected:
 
@@ -59,7 +57,6 @@ class adaptive_random_forest {
 
         virtual void init();
         shared_ptr<arf_tree> make_arf_tree();
-        void online_bagging(Instance& instance, arf_tree& tree);
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
 };
 
