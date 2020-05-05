@@ -69,22 +69,12 @@ shared_ptr<pearl_tree> pearl::make_pearl_tree(int tree_pool_id) {
                                    drift_delta);
 }
 
-int pearl::predict() {
+void pearl::train() {
     if (foreground_trees.empty()) {
         init();
     }
 
     int actual_label = instance->getLabel();
-
-    int num_classes = instance->getNumberClasses();
-    vector<int> votes(num_classes, 0);
-
-    predict_with_state_adaption(votes, actual_label);
-
-    return vote(votes);
-}
-
-void pearl::predict_with_state_adaption(vector<int>& votes, int actual_label) {
 
     // keep track of actual labels for candidate tree evaluations
     if (actual_labels.size() >= kappa_window_size) {
@@ -92,35 +82,37 @@ void pearl::predict_with_state_adaption(vector<int>& votes, int actual_label) {
     }
     actual_labels.push_back(actual_label);
 
-    int predicted_label;
     vector<int> warning_tree_pos_list;
     vector<int> drifted_tree_pos_list;
 
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
     for (int i = 0; i < num_trees; i++) {
+        std::poisson_distribution<int> poisson_distr(1);
+        int weight = poisson_distr(mrand);
+        instance->setWeight(weight);
+
         cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[i]);
+        cur_tree->train(*instance);
 
-        predicted_label = cur_tree->predict(*instance, true);
-
-        votes[predicted_label]++;
-        int error_count = (int)(actual_label != predicted_label);
+        int predicted_label = cur_tree->predict(*instance, true);
+        int error_count = (int)(predicted_label != actual_label);
 
         bool warning_detected_only = false;
 
         // detect warning
         if (detect_change(error_count, cur_tree->warning_detector)) {
-            warning_detected_only = false;
-
+            warning_detected_only = true;
             cur_tree->bg_pearl_tree = make_pearl_tree(-1);
             cur_tree->warning_detector->resetChange();
         }
 
         // detect drift
         if (detect_change(error_count, cur_tree->drift_detector)) {
-            warning_detected_only = true;
+            warning_detected_only = false;
             drifted_tree_pos_list.push_back(i);
 
+            cur_tree->warning_detector->resetChange();
             cur_tree->drift_detector->resetChange();
         }
 
@@ -226,7 +218,6 @@ void pearl::pattern_match_candidate_trees(const vector<int>& warning_tree_pos_li
             tree_pool[i]->is_candidate = true;
             candidate_trees.push_back(tree_pool[i]);
         }
-
     }
 }
 
