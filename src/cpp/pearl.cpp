@@ -66,7 +66,8 @@ shared_ptr<pearl_tree> pearl::make_pearl_tree(int tree_pool_id) {
     return make_shared<pearl_tree>(tree_pool_id,
                                    kappa_window_size,
                                    warning_delta,
-                                   drift_delta);
+                                   drift_delta,
+                                   mrand);
 }
 
 void pearl::train() {
@@ -88,7 +89,7 @@ void pearl::train() {
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
     for (int i = 0; i < num_trees; i++) {
-        std::poisson_distribution<int> poisson_distr(1);
+        std::poisson_distribution<int> poisson_distr(6);
         int weight = poisson_distr(mrand);
         instance->setWeight(weight);
 
@@ -351,12 +352,13 @@ bool pearl::is_state_graph_stable() {
 pearl_tree::pearl_tree(int tree_pool_id,
                        int kappa_window_size,
                        double warning_delta,
-                       double drift_delta) :
-        arf_tree(warning_delta, drift_delta),
+                       double drift_delta,
+                       mt19937 mrand) :
+        arf_tree(warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size) {
 
-    tree = make_unique<HT::HoeffdingTree>();
+    tree = make_unique<HT::HoeffdingTree>(mrand);
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
 }
@@ -365,12 +367,13 @@ pearl_tree::pearl_tree(int tree_pool_id,
                        int kappa_window_size,
                        double warning_delta,
                        double drift_delta,
-                       double drift_tension) :
-        arf_tree(warning_delta, drift_delta),
+                       double drift_tension,
+                       std::mt19937 mrand) :
+        arf_tree(warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size) {
 
-    tree = make_unique<HT::HoeffdingTree>();
+    tree = make_unique<HT::HoeffdingTree>(mrand);
     warning_detector = make_unique<HT::ADWIN>(warning_delta, drift_tension);
     drift_detector = make_unique<HT::ADWIN>(drift_delta, drift_tension);
 }

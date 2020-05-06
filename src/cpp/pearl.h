@@ -83,13 +83,15 @@ class pearl_tree : public arf_tree {
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
                    double warning_delta,
-                   double drift_delta);
+                   double drift_delta,
+                   std::mt19937 mrand);
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
                    double warning_delta,
                    double drift_delta,
-                   double drift_tension);
+                   double drift_tension,
+                   std::mt19937 mrand);
 
         virtual void train(Instance& instance);
         virtual int predict(Instance& instance, bool track_performance);

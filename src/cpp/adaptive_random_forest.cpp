@@ -20,7 +20,8 @@ void adaptive_random_forest::init() {
 
 shared_ptr<arf_tree> adaptive_random_forest::make_arf_tree() {
     return make_shared<arf_tree>(warning_delta,
-                                 drift_delta);
+                                 drift_delta,
+                                 mrand);
 }
 
 int adaptive_random_forest::predict() {
@@ -45,7 +46,7 @@ void adaptive_random_forest::train() {
     }
 
     for (int i = 0; i < num_trees; i++) {
-        std::poisson_distribution<int> poisson_distr(1);
+        std::poisson_distribution<int> poisson_distr(6);
         int weight = poisson_distr(mrand);
         instance->setWeight(weight);
 
@@ -142,11 +143,13 @@ void adaptive_random_forest::delete_cur_instance() {
 
 // class arf_tree
 arf_tree::arf_tree(double warning_delta,
-                   double drift_delta) :
+                   double drift_delta,
+                   std::mt19937 mrand) :
         warning_delta(warning_delta),
-        drift_delta(drift_delta) {
+        drift_delta(drift_delta),
+        mrand(mrand) {
 
-    tree = make_unique<HT::HoeffdingTree>();
+    tree = make_unique<HT::HoeffdingTree>(mrand);
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
     bg_arf_tree = nullptr;

@@ -63,7 +63,8 @@ class adaptive_random_forest {
 class arf_tree {
     public:
         arf_tree(double warning_delta,
-                 double drift_delta);
+                 double drift_delta,
+                 std::mt19937 mrand);
 
         virtual void train(Instance& instance);
         virtual int predict(Instance& instance);
@@ -76,6 +77,7 @@ class arf_tree {
     protected:
         double warning_delta;
         double drift_delta;
+        std::mt19937 mrand;
 };
 
 #endif
