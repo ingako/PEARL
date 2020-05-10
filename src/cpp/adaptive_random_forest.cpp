@@ -2,14 +2,17 @@
 
 adaptive_random_forest::adaptive_random_forest(int num_trees,
                                                int arf_max_features,
+                                               int lambda,
+                                               int seed,
                                                double warning_delta,
                                                double drift_delta) :
         num_trees(num_trees),
         arf_max_features(arf_max_features),
+        lambda(lambda),
         warning_delta(warning_delta),
         drift_delta(drift_delta) {
 
-    mrand = std::mt19937(0);
+    mrand = std::mt19937(seed);
 }
 
 void adaptive_random_forest::init() {
@@ -46,7 +49,7 @@ void adaptive_random_forest::train() {
     }
 
     for (int i = 0; i < num_trees; i++) {
-        std::poisson_distribution<int> poisson_distr(6);
+        std::poisson_distribution<int> poisson_distr(lambda);
         int weight = poisson_distr(mrand);
         instance->setWeight(weight);
 
@@ -65,9 +68,9 @@ void adaptive_random_forest::train() {
         if (detect_change(error_count, foreground_trees[i]->drift_detector)) {
             if (foreground_trees[i]->bg_arf_tree) {
                 foreground_trees[i] = foreground_trees[i]->bg_arf_tree;
-                foreground_trees[i]->bg_arf_tree = nullptr;
             } else {
                 foreground_trees[i] = make_arf_tree();
+                foreground_trees[i]->bg_arf_tree = nullptr;
             }
         }
     }

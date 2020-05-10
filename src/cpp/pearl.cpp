@@ -8,6 +8,8 @@ pearl::pearl(int num_trees,
              int lossy_window_size,
              int reuse_window_size,
              int arf_max_features,
+             int lambda,
+             int seed,
              double bg_kappa_threshold,
              double cd_kappa_threshold,
              double reuse_rate_upper_bound,
@@ -17,6 +19,8 @@ pearl::pearl(int num_trees,
              bool enable_state_graph) :
         adaptive_random_forest(num_trees,
                                arf_max_features,
+                               lambda,
+                               seed,
                                warning_delta,
                                drift_delta),
         max_num_candidate_trees(max_num_candidate_trees),
@@ -89,7 +93,7 @@ void pearl::train() {
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
     for (int i = 0; i < num_trees; i++) {
-        std::poisson_distribution<int> poisson_distr(6);
+        std::poisson_distribution<int> poisson_distr(lambda);
         int weight = poisson_distr(mrand);
         instance->setWeight(weight);
 

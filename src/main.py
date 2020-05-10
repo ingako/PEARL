@@ -78,6 +78,9 @@ if __name__ == '__main__':
     parser.add_argument("--kappa_window",
                         dest="kappa_window", default=50, type=int,
                         help="number of instances must be seen for calculating kappa")
+    parser.add_argument("--poisson_lambda",
+                        dest="poisson_lambda", default=6, type=int,
+                        help="lambda for poisson distribution")
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
@@ -258,6 +261,8 @@ if __name__ == '__main__':
             if not args.enable_state_adaption and not args.enable_state_graph:
                 pearl = adaptive_random_forest(args.num_trees,
                                                arf_max_features,
+                                               args.poisson_lambda,
+                                               args.random_state,
                                                args.warning_delta,
                                                args.drift_delta)
                 print("init adaptive_random_forest")
@@ -271,6 +276,8 @@ if __name__ == '__main__':
                               args.lossy_window_size,
                               args.reuse_window_size,
                               arf_max_features,
+                              args.poisson_lambda,
+                              args.random_state,
                               args.bg_kappa_threshold,
                               args.cd_kappa_threshold,
                               args.reuse_rate_upper_bound,
