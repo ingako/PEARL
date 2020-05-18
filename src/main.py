@@ -39,11 +39,6 @@ if __name__ == '__main__':
                         help="Enable cpp backend")
     parser.set_defaults(cpp=False)
 
-    parser.add_argument("--proactive",
-                        dest="proactive", action="store_true",
-                        help="Enable ProPearl")
-    parser.set_defaults(cpp=False)
-
     parser.add_argument("--dataset_name",
                         dest="dataset_name", default="", type=str,
                         help="dataset path")
@@ -78,6 +73,9 @@ if __name__ == '__main__':
     parser.add_argument("--kappa_window",
                         dest="kappa_window", default=50, type=int,
                         help="number of instances must be seen for calculating kappa")
+    parser.add_argument("--poisson_lambda",
+                        dest="poisson_lambda", default=6, type=int,
+                        help="lambda for poisson distribution")
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
@@ -173,9 +171,6 @@ if __name__ == '__main__':
     if args.enable_generator_noise:
         result_directory = f"{result_directory}-noise"
 
-    if args.proactive:
-        result_directory = f"{result_directory}-pro"
-
     metric_output_file = "result"
     time_output_file = "time"
 
@@ -238,48 +233,35 @@ if __name__ == '__main__':
     process_logger = setup_logger('process', f'{result_directory}/processes-{args.generator_seed}.info')
 
     if args.cpp:
-        if args.proactive:
-            pearl = pro_pearl(args.num_trees,
-                              args.max_num_candidate_trees,
-                              repo_size,
-                              args.edit_distance_threshold,
-                              args.kappa_window,
-                              args.lossy_window_size,
-                              args.reuse_window_size,
-                              arf_max_features,
-                              args.bg_kappa_threshold,
-                              args.cd_kappa_threshold,
-                              args.reuse_rate_upper_bound,
-                              args.warning_delta,
-                              args.drift_delta)
-            eval_func = Evaluator.prequential_evaluation_proactive
+        if not args.enable_state_adaption and not args.enable_state_graph:
+            pearl = adaptive_random_forest(args.num_trees,
+                                           arf_max_features,
+                                           args.poisson_lambda,
+                                           args.random_state,
+                                           args.warning_delta,
+                                           args.drift_delta)
+            print("init adaptive_random_forest")
 
         else:
-            if not args.enable_state_adaption and not args.enable_state_graph:
-                pearl = adaptive_random_forest(args.num_trees,
-                                               arf_max_features,
-                                               args.warning_delta,
-                                               args.drift_delta)
-                print("init adaptive_random_forest")
-
-            else:
-                pearl = pearl(args.num_trees,
-                              args.max_num_candidate_trees,
-                              repo_size,
-                              args.edit_distance_threshold,
-                              args.kappa_window,
-                              args.lossy_window_size,
-                              args.reuse_window_size,
-                              arf_max_features,
-                              args.bg_kappa_threshold,
-                              args.cd_kappa_threshold,
-                              args.reuse_rate_upper_bound,
-                              args.warning_delta,
-                              args.drift_delta,
-                              args.enable_state_adaption,
-                              args.enable_state_graph)
-                print("init pearl")
-            eval_func = Evaluator.prequential_evaluation_cpp
+            pearl = pearl(args.num_trees,
+                          args.max_num_candidate_trees,
+                          repo_size,
+                          args.edit_distance_threshold,
+                          args.kappa_window,
+                          args.lossy_window_size,
+                          args.reuse_window_size,
+                          arf_max_features,
+                          args.poisson_lambda,
+                          args.random_state,
+                          args.bg_kappa_threshold,
+                          args.cd_kappa_threshold,
+                          args.reuse_rate_upper_bound,
+                          args.warning_delta,
+                          args.drift_delta,
+                          args.enable_state_adaption,
+                          args.enable_state_graph)
+            print("init pearl")
+        eval_func = Evaluator.prequential_evaluation_cpp
 
     else:
         pearl = Pearl(num_trees=args.num_trees,

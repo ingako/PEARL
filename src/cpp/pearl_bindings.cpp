@@ -10,6 +10,8 @@ PYBIND11_MODULE(pearl, m) {
     py::class_<adaptive_random_forest>(m, "adaptive_random_forest")
         .def(py::init<int,
                       int,
+                      int, // lambda
+                      int, // seed
                       double,
                       double>())
         .def("init_data_source", &adaptive_random_forest::init_data_source)
@@ -28,6 +30,8 @@ PYBIND11_MODULE(pearl, m) {
                       int,
                       int,
                       int,
+                      int, // lambda
+                      int, // seed
                       double,
                       double,
                       double,

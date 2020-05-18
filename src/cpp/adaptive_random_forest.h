@@ -28,6 +28,8 @@ class adaptive_random_forest {
 
         adaptive_random_forest(int num_trees,
                                int arf_max_features,
+                               int lambda,
+                               int seed,
                                double warning_delta,
                                double drift_delta);
 
@@ -47,6 +49,7 @@ class adaptive_random_forest {
         int num_trees;
         int num_features;
         int arf_max_features;
+        int lambda;
         double warning_delta;
         double drift_delta;
 
