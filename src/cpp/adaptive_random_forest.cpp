@@ -48,6 +48,11 @@ void adaptive_random_forest::train() {
     for (int i = 0; i < num_trees; i++) {
         std::poisson_distribution<int> poisson_distr(6);
         int weight = poisson_distr(mrand);
+
+        if (weight == 0) {
+            continue;
+        }
+
         instance->setWeight(weight);
 
         foreground_trees[i]->train(*instance);
@@ -65,10 +70,10 @@ void adaptive_random_forest::train() {
         if (detect_change(error_count, foreground_trees[i]->drift_detector)) {
             if (foreground_trees[i]->bg_arf_tree) {
                 foreground_trees[i] = foreground_trees[i]->bg_arf_tree;
-                foreground_trees[i]->bg_arf_tree = nullptr;
             } else {
                 foreground_trees[i] = make_arf_tree();
             }
+            foreground_trees[i]->bg_arf_tree = nullptr;
         }
     }
 }
@@ -174,7 +179,7 @@ int arf_tree::predict(Instance& instance) {
 void arf_tree::train(Instance& instance) {
     tree->train(instance);
 
-    if (bg_arf_tree) {
+    if (bg_arf_tree != nullptr) {
         bg_arf_tree->train(instance);
     }
 }

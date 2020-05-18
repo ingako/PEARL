@@ -91,6 +91,11 @@ void pearl::train() {
     for (int i = 0; i < num_trees; i++) {
         std::poisson_distribution<int> poisson_distr(6);
         int weight = poisson_distr(mrand);
+
+        if (weight == 0) {
+            continue;
+        }
+
         instance->setWeight(weight);
 
         cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[i]);
