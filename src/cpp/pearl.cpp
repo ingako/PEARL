@@ -404,6 +404,13 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
     int correct_count = (int) (result == instance.getLabel());
 
     if (track_performance) {
+
+        if (predicted_labels_window.size() >= kappa_window_size) {
+            predicted_result_left_window.pop_front();
+        }
+        predicted_result_left_window.push_back(result);
+
+
         if (predicted_result_right_window.size() >= kappa_window_size) {
             int right_front_label = predicted_result_right_window.front();
             predicted_result_right_window.pop_front();
