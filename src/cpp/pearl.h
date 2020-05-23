@@ -79,8 +79,9 @@ class pearl_tree : public arf_tree {
         int tree_pool_id;
         double kappa = INT_MIN;
         bool is_candidate = false;
-        deque<int> predicted_labels_right_window;
-        deque<int> predicted_labels_left_window;
+        deque<int> predicted_result_right_window;
+        deque<int> predicted_result_left_window;
+        deque<int> predicted_labels_window; // of size kappa_window_size
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,

@@ -401,21 +401,23 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
         }
     }
 
+    int correct_count = (int) (result == instance.getLabel());
+
     if (track_performance) {
-        if (predicted_labels_right_window.size() >= kappa_window_size) {
-            int right_front_label = predicted_labels_right_window.front();
-            predicted_labels_right_window.pop_front();
+        if (predicted_result_right_window.size() >= kappa_window_size) {
+            int right_front_label = predicted_result_right_window.front();
+            predicted_result_right_window.pop_front();
             right_correct_count -= right_front_label;
 
-            if (predicted_labels_left_window.size() >= kappa_window_size) {
-                left_correct_count -= predicted_labels_left_window.front();
-                predicted_labels_left_window.pop_front();
+            if (predicted_result_left_window.size() >= kappa_window_size) {
+                left_correct_count -= predicted_result_left_window.front();
+                predicted_result_left_window.pop_front();
             }
             left_correct_count += right_front_label;
-            predicted_labels_left_window.push_back(right_front_label);
+            predicted_result_left_window.push_back(right_front_label);
         }
-        right_correct_count += result;
-        predicted_labels_right_window.push_back(result);
+        right_correct_count += correct_count;
+        predicted_result_right_window.push_back(correct_count);
 
         // the background tree performs prediction for performance eval
         if (bg_pearl_tree) {
@@ -427,7 +429,7 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
 }
 
 double pearl_tree::get_variance() {
-    if (predicted_labels_left_window.size() < kappa_window_size) {
+    if (predicted_result_left_window.size() < kappa_window_size) {
         return 0;
     }
 
@@ -435,11 +437,11 @@ double pearl_tree::get_variance() {
         (left_correct_count + right_correct_count) / (kappa_window_size * 2);
     double sum = 0.0;
 
-    for (int v : predicted_labels_right_window) {
+    for (int v : predicted_result_right_window) {
         sum += ((v - avg) * (v - avg));
     }
 
-    for (int v : predicted_labels_left_window) {
+    for (int v : predicted_result_left_window) {
         sum += ((v - avg) * (v - avg));
     }
     cout << to_string(sum / (kappa_window_size * 2)) << endl;
@@ -448,7 +450,7 @@ double pearl_tree::get_variance() {
 }
 
 bool pearl_tree::has_actual_drift() {
-    if (predicted_labels_left_window.size() < kappa_window_size) {
+    if (predicted_result_right_window.size() < kappa_window_size) {
         return false;
     }
 
@@ -481,7 +483,7 @@ double pearl_tree::compute_adaptive_bound(double variance, double window_size, d
 
 void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) {
 
-    if (predicted_labels_right_window.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
+    if (predicted_labels_window.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
         kappa = INT_MIN;
         return;
     }
@@ -490,8 +492,8 @@ void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) 
     int correct = 0;
 
     for (int i = 0; i < kappa_window_size; i++) {
-        confusion_matrix[actual_labels[i]][predicted_labels_right_window[i]]++;
-        if (actual_labels[i] == predicted_labels_right_window[i]) {
+        confusion_matrix[actual_labels[i]][predicted_labels_window[i]]++;
+        if (actual_labels[i] == predicted_labels_window[i]) {
             correct++;
         }
     }
@@ -538,8 +540,9 @@ void pearl_tree::reset() {
     is_candidate = false;
     warning_detector->resetChange();
     drift_detector->resetChange();
-    predicted_labels_right_window.clear();
-    predicted_labels_left_window.clear();
+    predicted_result_right_window.clear();
+    predicted_result_left_window.clear();
+    predicted_labels_window.clear();
     left_correct_count = 0.0;
     right_correct_count = 0.0;
     kappa = INT_MIN;
