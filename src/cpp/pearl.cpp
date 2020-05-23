@@ -401,8 +401,6 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
         }
     }
 
-    int correct_count = (int) (result == instance.getLabel());
-
     if (track_performance) {
 
         if (predicted_labels_window.size() >= kappa_window_size) {
@@ -411,6 +409,7 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
         predicted_result_left_window.push_back(result);
 
 
+        int correct_count = (int) (result == instance.getLabel());
         if (predicted_result_right_window.size() >= kappa_window_size) {
             int right_front_label = predicted_result_right_window.front();
             predicted_result_right_window.pop_front();
@@ -436,10 +435,6 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
 }
 
 double pearl_tree::get_variance() {
-    if (predicted_result_left_window.size() < kappa_window_size) {
-        return 0;
-    }
-
     double avg =
         (left_correct_count + right_correct_count) / (kappa_window_size * 2);
     double sum = 0.0;
