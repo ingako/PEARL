@@ -170,6 +170,12 @@ void pearl::select_candidate_trees(const vector<int>& warning_tree_pos_list) {
 }
 
 void pearl::tree_transition(const vector<int>& warning_tree_pos_list) {
+    tree_transition(warning_tree_pos_list, candidate_trees);
+}
+
+void pearl::tree_transition(
+        const vector<int>& warning_tree_pos_list,
+        deque<shared_ptr<pearl_tree>>& _candidate_trees) {
     shared_ptr<pearl_tree> cur_tree = nullptr;
     for (auto warning_tree_pos : warning_tree_pos_list) {
         cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[warning_tree_pos]);
@@ -182,18 +188,24 @@ void pearl::tree_transition(const vector<int>& warning_tree_pos_list) {
         } else {
             if (!tree_pool[next_id]->is_candidate) {
                 // TODO
-                if (candidate_trees.size() >= max_num_candidate_trees) {
-                    candidate_trees[0]->is_candidate = false;
-                    candidate_trees.pop_front();
+                if (_candidate_trees.size() >= max_num_candidate_trees) {
+                    _candidate_trees[0]->is_candidate = false;
+                    _candidate_trees.pop_front();
                 }
                 tree_pool[next_id]->is_candidate = true;
-                candidate_trees.push_back(tree_pool[next_id]);
+                _candidate_trees.push_back(tree_pool[next_id]);
             }
         }
     }
 }
 
 void pearl::pattern_match_candidate_trees(const vector<int>& warning_tree_pos_list) {
+    pattern_match_candidate_trees(warning_tree_pos_list, candidate_trees);
+}
+
+void pearl::pattern_match_candidate_trees(
+        const vector<int>& warning_tree_pos_list,
+        deque<shared_ptr<pearl_tree>>& _candidate_trees) {
 
     set<int> ids_to_exclude;
     shared_ptr<pearl_tree> cur_tree = nullptr;
@@ -220,13 +232,13 @@ void pearl::pattern_match_candidate_trees(const vector<int>& warning_tree_pos_li
         if (cur_state.find(i) == cur_state.end()
             && !tree_pool[i]->is_candidate) {
 
-            if (candidate_trees.size() >= max_num_candidate_trees) {
-                candidate_trees[0]->is_candidate = false;
-                candidate_trees.pop_front();
+            if (_candidate_trees.size() >= max_num_candidate_trees) {
+                _candidate_trees[0]->is_candidate = false;
+                _candidate_trees.pop_front();
             }
 
             tree_pool[i]->is_candidate = true;
-            candidate_trees.push_back(tree_pool[i]);
+            _candidate_trees.push_back(tree_pool[i]);
         }
     }
 }
@@ -404,9 +416,9 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
     if (track_performance) {
 
         if (predicted_labels_window.size() >= kappa_window_size) {
-            predicted_result_left_window.pop_front();
+            predicted_labels_window.pop_front();
         }
-        predicted_result_left_window.push_back(result);
+        predicted_labels_window.push_back(result);
 
 
         int correct_count = (int) (result == instance.getLabel());

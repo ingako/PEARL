@@ -38,7 +38,13 @@ class pearl : public adaptive_random_forest {
 
         void select_candidate_trees(const vector<int>& warning_tree_pos_list);
         void tree_transition(const vector<int>& warning_tree_pos_list);
+        void tree_transition(
+                const vector<int>& warning_tree_pos_list,
+                deque<shared_ptr<pearl_tree>>& _candidate_trees);
         void pattern_match_candidate_trees(const vector<int>& warning_tree_pos_list);
+        void pattern_match_candidate_trees(
+                const vector<int>& warning_tree_pos_list,
+                deque<shared_ptr<pearl_tree>>& _candidate_trees);
 
         static bool compare_kappa(shared_ptr<pearl_tree>& tree1,
                                   shared_ptr<pearl_tree>& tree2);
