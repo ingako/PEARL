@@ -458,22 +458,26 @@ double pearl_tree::get_variance() {
     for (int v : predicted_result_left_window) {
         sum += ((v - avg) * (v - avg));
     }
-    cout << to_string(sum / (kappa_window_size * 2)) << endl;
 
     return sum / (kappa_window_size * 2);
 }
 
 bool pearl_tree::has_actual_drift() {
-    if (predicted_result_right_window.size() < kappa_window_size) {
+    if (predicted_result_left_window.size() < kappa_window_size) {
         return false;
     }
 
-    double left_window_accuracy = left_correct_count / kappa_window_size;
-    double right_window_accuracy = right_correct_count / kappa_window_size;
+    double left_window_mean = left_correct_count / kappa_window_size;
+    double right_window_mean = right_correct_count / kappa_window_size;
 
-    double bound = compute_adaptive_bound(get_variance(), kappa_window_size, drift_delta);
+    double bound = compute_adaptive_bound(get_variance(), kappa_window_size, warning_delta);
 
-    return (right_window_accuracy - left_window_accuracy) > bound;
+    cout << to_string(right_window_mean) << " - "
+         << to_string(left_window_mean) << ">"
+         << to_string(bound)
+         << endl;
+
+    return (left_window_mean - right_window_mean) > bound;
 }
 
 void pearl_tree::train(Instance& instance) {
