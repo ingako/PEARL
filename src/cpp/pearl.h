@@ -97,9 +97,9 @@ class pearl_tree : public arf_tree {
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
+                   int pro_drift_window_size,
                    double warning_delta,
                    double drift_delta,
-                   double drift_tension,
                    std::mt19937 mrand);
 
         virtual void train(Instance& instance);
@@ -114,11 +114,12 @@ class pearl_tree : public arf_tree {
 
     private:
         int kappa_window_size;
+        int pro_drift_window_size = 0;
         double left_correct_count = 0.0;
         double right_correct_count = 0.0;
 
         double get_variance();
-        double compute_adaptive_bound(double variance, double window_size, double delta);
+        double compute_hoeffding_bound(double variance, double window_size, double delta);
 
         double compute_kappa(const vector<vector<int>>& confusion_matrix,
                              double accuracy,
