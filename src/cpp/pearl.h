@@ -100,6 +100,7 @@ class pearl_tree : public arf_tree {
                    int pro_drift_window_size,
                    double warning_delta,
                    double drift_delta,
+                   double hybrid_delta,
                    std::mt19937 mrand);
 
         virtual void train(Instance& instance);
@@ -115,6 +116,8 @@ class pearl_tree : public arf_tree {
     private:
         int kappa_window_size;
         int pro_drift_window_size = 0;
+        double hybrid_delta = 0.001;
+
         double left_correct_count = 0.0;
         double right_correct_count = 0.0;
 

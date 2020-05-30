@@ -389,11 +389,13 @@ pearl_tree::pearl_tree(int tree_pool_id,
                        int pro_drift_window_size,
                        double warning_delta,
                        double drift_delta,
+                       double hybrid_delta,
                        std::mt19937 mrand) :
         arf_tree(warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size),
-        pro_drift_window_size(pro_drift_window_size) {
+        pro_drift_window_size(pro_drift_window_size),
+        hybrid_delta(hybrid_delta) {
 
     tree = make_unique<HT::HoeffdingTree>(mrand);
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
@@ -481,15 +483,15 @@ bool pearl_tree::has_actual_drift() {
     double left_window_mean = left_correct_count / pro_drift_window_size;
     double right_window_mean = right_correct_count / pro_drift_window_size;
 
-    // double bound = compute_hoeffding_bound(get_variance(), pro_drift_window_size, warning_delta);
-    double bound = compute_hoeffding_bound(get_variance(), pro_drift_window_size, warning_delta) * 0.1;
+    double bound = compute_hoeffding_bound(get_variance(), pro_drift_window_size, hybrid_delta);
+    double hybrid_bound = (bound - bound * (1-hybrid_delta)) / ((1-hybrid_delta) - 2 * abs(bound) * (1-hybrid_delta) + 1);
 
     cout << to_string(right_window_mean) << " - "
          << to_string(left_window_mean) << ">"
          << to_string(bound)
          << endl;
 
-    return (left_window_mean - right_window_mean) > bound;
+    return (left_window_mean - right_window_mean) > hybrid_bound;
 }
 
 double pearl_tree::compute_hoeffding_bound(double variance, double window_size, double delta) {
