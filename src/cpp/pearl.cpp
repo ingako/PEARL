@@ -483,8 +483,8 @@ bool pearl_tree::has_actual_drift() {
     double left_window_mean = left_correct_count / pro_drift_window_size;
     double right_window_mean = right_correct_count / pro_drift_window_size;
 
-    double bound = compute_hoeffding_bound(get_variance(), pro_drift_window_size, hybrid_delta);
-    double hybrid_bound = (bound - bound * (1-hybrid_delta)) / ((1-hybrid_delta) - 2 * abs(bound) * (1-hybrid_delta) + 1);
+    double bound = compute_hoeffding_bound(get_variance(), pro_drift_window_size, drift_delta);
+    double hybrid_bound = (bound - bound*hybrid_delta) / (hybrid_delta - 2 * abs(bound) * hybrid_delta + 1);
 
     cout << to_string(right_window_mean) << " - "
          << to_string(left_window_mean) << ">"
