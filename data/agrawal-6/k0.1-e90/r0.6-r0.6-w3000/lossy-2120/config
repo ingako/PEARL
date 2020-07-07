@@ -1,0 +1,10 @@
+metric_output_file: agrawal-6/k0.1-e90/r0.6-r0.6-w3000/lossy-2120/result-parf-9.csv
+warning_delta: 0.0001
+drift_delta: 1e-05
+max_samples: 400000
+wait_samples: 100
+sample_freq: 1000
+kappa_window: 50
+random_state: 0
+enable_state_adaption: True
+enable_state_graph: True
