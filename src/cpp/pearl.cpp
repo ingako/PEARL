@@ -272,8 +272,11 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
         bool add_to_repo = false;
 
         if (candidate_trees.size() > 0
-            && candidate_trees.back()->kappa
-                - drifted_tree->kappa >= cd_kappa_threshold) {
+                && drifted_tree->eval_ready
+                && candidate_trees.back()->eval_ready
+                && candidate_trees.back()->kappa
+                    - drifted_tree->kappa >= cd_kappa_threshold) {
+
             candidate_trees.back()->is_candidate = false;
             swap_tree = candidate_trees.back();
             candidate_trees.pop_back();
@@ -281,9 +284,10 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
             if (enable_state_graph) {
                 graph_switch->update_reuse_count(1);
             }
+
         }
 
-        if (swap_tree == nullptr) {
+        if (!swap_tree) {
             add_to_repo = true;
 
             if (enable_state_graph) {
@@ -298,18 +302,16 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
             } else {
                 bg_tree->update_kappa(actual_labels, class_count);
 
-                if (bg_tree->kappa == INT_MIN) {
-                    // add bg tree to the repo even if it didn't fill the window
+                if (!bg_tree->eval_ready || !drifted_tree->eval_ready
+                        || bg_tree->kappa - drifted_tree->kappa >= bg_kappa_threshold) {
 
-                } else if (bg_tree->kappa - drifted_tree->kappa >= bg_kappa_threshold) {
+                    swap_tree = bg_tree;
 
                 } else {
-                    // false positive
+                    // bg tree is a false positive
                     add_to_repo = false;
 
                 }
-
-                swap_tree = bg_tree;
             }
 
             if (add_to_repo) {
@@ -320,27 +322,22 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
                 swap_tree->tree_pool_id = tree_pool.size();
                 tree_pool.push_back(swap_tree);
 
-            } else {
-                swap_tree->tree_pool_id = drifted_tree->tree_pool_id;
-
-                // TODO
-                // swap_tree = move(drifted_tree);
             }
         }
 
-        if (!swap_tree) {
-            LOG("swap_tree is nullptr");
-            exit(1);
+        if (swap_tree) {
+            // update current state pattern
+            cur_state.insert(swap_tree->tree_pool_id);
+
+            // replace drifted_tree with swap tree
+            foreground_trees[drifted_pos] = swap_tree;
+
+
+            if (enable_state_graph) {
+                state_graph->add_edge(drifted_tree->tree_pool_id, swap_tree->tree_pool_id);
+            }
+
         }
-
-        if (enable_state_graph) {
-            state_graph->add_edge(drifted_tree->tree_pool_id, swap_tree->tree_pool_id);
-        }
-
-        cur_state.insert(swap_tree->tree_pool_id);
-
-        // replace drifted_tree with swap tree
-        foreground_trees[drifted_pos] = swap_tree;
 
         drifted_tree->reset();
     }
@@ -508,9 +505,11 @@ double pearl_tree::compute_hoeffding_bound(double variance, double window_size, 
 void pearl_tree::update_kappa(const deque<int>& actual_labels, int class_count) {
 
     if (predicted_labels_window.size() < kappa_window_size || actual_labels.size() < kappa_window_size) {
-        kappa = INT_MIN;
+        eval_ready = false;
         return;
     }
+
+    eval_ready = true;
 
     vector<vector<int>> confusion_matrix(class_count, vector<int>(class_count, 0));
     int correct = 0;
@@ -570,6 +569,7 @@ void pearl_tree::reset() {
     left_correct_count = 0.0;
     right_correct_count = 0.0;
     kappa = INT_MIN;
+    eval_ready = false;
 }
 
 void pearl_tree::set_expected_drift_prob(double p) {
