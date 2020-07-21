@@ -400,18 +400,7 @@ pearl_tree::pearl_tree(int tree_pool_id,
 }
 
 int pearl_tree::predict(Instance& instance, bool track_performance) {
-    double numberClasses = instance.getNumberClasses();
-    double* classPredictions = tree->getPrediction(instance);
-    int result = 0;
-    double max = classPredictions[0];
-
-    // Find class label with the highest probability
-    for (int i = 1; i < numberClasses; i++) {
-        if (max < classPredictions[i]) {
-            max = classPredictions[i];
-            result = i;
-        }
-    }
+    int result = arf_tree::predict(instance);
 
     if (track_performance) {
 
