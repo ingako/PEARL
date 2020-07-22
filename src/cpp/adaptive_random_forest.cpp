@@ -165,14 +165,14 @@ arf_tree::arf_tree(double warning_delta,
 }
 
 int arf_tree::predict(Instance& instance) {
-    double* classPredictions = tree->getPrediction(instance);
+    double* class_predictions = tree->getPrediction(instance);
     int result = 0;
-    double max_val = classPredictions[0];
+    double max_val = class_predictions[0];
 
     // Find class label with the highest probability
     for (int i = 1; i < instance.getNumberClasses(); i++) {
-        if (max_val < classPredictions[i]) {
-            max_val = classPredictions[i];
+        if (max_val < class_predictions[i]) {
+            max_val = class_predictions[i];
             result = i;
         }
     }
