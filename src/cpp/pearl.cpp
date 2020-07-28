@@ -92,20 +92,23 @@ void pearl::train() {
 
     shared_ptr<pearl_tree> cur_tree = nullptr;
 
-    for (int i = 0; i < num_trees; i++) {
-        std::poisson_distribution<int> poisson_distr(lambda);
-        int weight = poisson_distr(mrand);
+    std::poisson_distribution<int> poisson_distr(lambda);
 
+    for (int i = 0; i < num_trees; i++) {
+        cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[i]);
+
+        // for tracking performance
+        int predicted_label = cur_tree->predict(*instance, true);
+
+        int weight = poisson_distr(mrand);
         if (weight == 0) {
             continue;
         }
 
         instance->setWeight(weight);
-
-        cur_tree = static_pointer_cast<pearl_tree>(foreground_trees[i]);
         cur_tree->train(*instance);
 
-        int predicted_label = cur_tree->predict(*instance, true);
+        predicted_label = cur_tree->predict(*instance, false);
         int error_count = (int)(predicted_label != actual_label);
 
         bool warning_detected_only = false;
@@ -409,7 +412,12 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
         }
         predicted_labels_window.push_back(result);
 
+        // the background tree performs prediction for performance eval
+        if (bg_pearl_tree) {
+            bg_pearl_tree->predict(instance, track_performance);
+        }
 
+        // propearl specific
         if (pro_drift_window_size > 0) {
             int correct_count = (int) (result == instance.getLabel());
             if (predicted_result_right_window.size() >= pro_drift_window_size) {
@@ -426,11 +434,6 @@ int pearl_tree::predict(Instance& instance, bool track_performance) {
             }
             right_correct_count += correct_count;
             predicted_result_right_window.push_back(correct_count);
-        }
-
-        // the background tree performs prediction for performance eval
-        if (bg_pearl_tree) {
-            bg_pearl_tree->predict(instance, track_performance);
         }
     }
 
