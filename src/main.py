@@ -12,7 +12,7 @@ import numpy as np
 from skmultiflow.data.file_stream import FileStream
 
 from evaluator import Evaluator
-from pearl import Pearl
+# from pearl import Pearl
 
 import sys
 path = r'../'
@@ -79,6 +79,10 @@ if __name__ == '__main__':
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
+    parser.add_argument("--leaf_prediction_type",
+                        dest="leaf_prediction_type", default=0, type=int,
+                        help="0=MC, 1=NB, 2=NBAdaptive")
+
     parser.add_argument("--generator_seed",
                         dest="generator_seed", default=0, type=int,
                         help="Seed used for generating synthetic data")
@@ -238,6 +242,7 @@ if __name__ == '__main__':
                                            arf_max_features,
                                            args.poisson_lambda,
                                            args.random_state,
+                                           args.leaf_predictoin_type,
                                            args.warning_delta,
                                            args.drift_delta)
             print("init adaptive_random_forest")
@@ -253,6 +258,7 @@ if __name__ == '__main__':
                           arf_max_features,
                           args.poisson_lambda,
                           args.random_state,
+                          args.leaf_prediction_type,
                           args.bg_kappa_threshold,
                           args.cd_kappa_threshold,
                           args.reuse_rate_upper_bound,

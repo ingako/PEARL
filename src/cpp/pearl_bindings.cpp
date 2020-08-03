@@ -12,6 +12,7 @@ PYBIND11_MODULE(pearl, m) {
                       int,
                       int, // lambda
                       int, // seed
+                      int, // leaf_prediction_type
                       double,
                       double>())
         .def("init_data_source", &adaptive_random_forest::init_data_source)
@@ -32,6 +33,7 @@ PYBIND11_MODULE(pearl, m) {
                       int,
                       int, // lambda
                       int, // seed
+                      int, // leaf_prediction_type
                       double,
                       double,
                       double,
