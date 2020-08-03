@@ -24,6 +24,7 @@ class pearl : public adaptive_random_forest {
               int arf_max_features,
               int lambda,
               int seed,
+              int leaf_prediction_type,
               double bg_kappa_threshold,
               double cd_kappa_threshold,
               double reuse_rate_upper_bound,
@@ -92,6 +93,7 @@ class pearl_tree : public arf_tree {
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
+                   int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
                    std::mt19937 mrand);
@@ -99,6 +101,7 @@ class pearl_tree : public arf_tree {
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
                    int pro_drift_window_size,
+                   int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
                    double hybrid_delta,

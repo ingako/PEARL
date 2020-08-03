@@ -10,6 +10,7 @@ pearl::pearl(int num_trees,
              int arf_max_features,
              int lambda,
              int seed,
+             int leaf_prediction_type,
              double bg_kappa_threshold,
              double cd_kappa_threshold,
              double reuse_rate_upper_bound,
@@ -21,6 +22,7 @@ pearl::pearl(int num_trees,
                                arf_max_features,
                                lambda,
                                seed,
+                               leaf_prediction_type,
                                warning_delta,
                                drift_delta),
         max_num_candidate_trees(max_num_candidate_trees),
@@ -69,6 +71,7 @@ void pearl::init() {
 shared_ptr<pearl_tree> pearl::make_pearl_tree(int tree_pool_id) {
     return make_shared<pearl_tree>(tree_pool_id,
                                    kappa_window_size,
+                                   leaf_prediction_type,
                                    warning_delta,
                                    drift_delta,
                                    mrand);
@@ -372,34 +375,31 @@ bool pearl::is_state_graph_stable() {
 // class pearl_tree
 pearl_tree::pearl_tree(int tree_pool_id,
                        int kappa_window_size,
+                       int leaf_prediction_type,
                        double warning_delta,
                        double drift_delta,
                        mt19937 mrand) :
-        arf_tree(warning_delta, drift_delta, mrand),
+        arf_tree(leaf_prediction_type, warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size) {
 
-    tree = make_unique<HT::HoeffdingTree>(mrand);
-    warning_detector = make_unique<HT::ADWIN>(warning_delta);
-    drift_detector = make_unique<HT::ADWIN>(drift_delta);
 }
 
+// propearl tree
 pearl_tree::pearl_tree(int tree_pool_id,
                        int kappa_window_size,
                        int pro_drift_window_size,
+                       int leaf_prediction_type,
                        double warning_delta,
                        double drift_delta,
                        double hybrid_delta,
                        std::mt19937 mrand) :
-        arf_tree(warning_delta, drift_delta, mrand),
+        arf_tree(leaf_prediction_type, warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size),
         pro_drift_window_size(pro_drift_window_size),
         hybrid_delta(hybrid_delta) {
 
-    tree = make_unique<HT::HoeffdingTree>(mrand);
-    warning_detector = make_unique<HT::ADWIN>(warning_delta);
-    drift_detector = make_unique<HT::ADWIN>(drift_delta);
 }
 
 int pearl_tree::predict(Instance& instance, bool track_performance) {
