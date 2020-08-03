@@ -242,7 +242,7 @@ if __name__ == '__main__':
                                            arf_max_features,
                                            args.poisson_lambda,
                                            args.random_state,
-                                           args.leaf_predictoin_type,
+                                           args.leaf_prediction_type,
                                            args.warning_delta,
                                            args.drift_delta)
             print("init adaptive_random_forest")
