@@ -4,11 +4,13 @@ adaptive_random_forest::adaptive_random_forest(int num_trees,
                                                int arf_max_features,
                                                int lambda,
                                                int seed,
+                                               int leaf_prediction_type,
                                                double warning_delta,
                                                double drift_delta) :
         num_trees(num_trees),
         arf_max_features(arf_max_features),
         lambda(lambda),
+        leaf_prediction_type(leaf_prediction_type),
         warning_delta(warning_delta),
         drift_delta(drift_delta) {
 
@@ -22,7 +24,8 @@ void adaptive_random_forest::init() {
 }
 
 shared_ptr<arf_tree> adaptive_random_forest::make_arf_tree() {
-    return make_shared<arf_tree>(warning_delta,
+    return make_shared<arf_tree>(leaf_prediction_type,
+                                 warning_delta,
                                  drift_delta,
                                  mrand);
 }
@@ -151,14 +154,15 @@ void adaptive_random_forest::delete_cur_instance() {
 
 
 // class arf_tree
-arf_tree::arf_tree(double warning_delta,
+arf_tree::arf_tree(int leaf_prediction_type,
+                   double warning_delta,
                    double drift_delta,
                    std::mt19937 mrand) :
         warning_delta(warning_delta),
         drift_delta(drift_delta),
         mrand(mrand) {
 
-    tree = make_unique<HT::HoeffdingTree>(mrand);
+    tree = make_unique<HT::HoeffdingTree>(leaf_prediction_type, mrand);
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
     bg_arf_tree = nullptr;

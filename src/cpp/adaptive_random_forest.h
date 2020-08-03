@@ -30,6 +30,7 @@ class adaptive_random_forest {
                                int arf_max_features,
                                int lambda,
                                int seed,
+                               int leaf_prediction_type,
                                double warning_delta,
                                double drift_delta);
 
@@ -50,6 +51,7 @@ class adaptive_random_forest {
         int num_features;
         int arf_max_features;
         int lambda;
+        int leaf_prediction_type;
         double warning_delta;
         double drift_delta;
 
@@ -65,7 +67,8 @@ class adaptive_random_forest {
 
 class arf_tree {
     public:
-        arf_tree(double warning_delta,
+        arf_tree(int leaf_prediction_type,
+                 double warning_delta,
                  double drift_delta,
                  std::mt19937 mrand);
 
