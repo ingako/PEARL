@@ -273,8 +273,6 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
 
         drifted_tree->update_kappa(actual_labels, class_count);
 
-        cur_state.erase(drifted_tree->tree_pool_id);
-
         bool add_to_repo = false;
 
         if (candidate_trees.size() > 0
@@ -333,6 +331,7 @@ void pearl::adapt_state(const vector<int>& drifted_tree_pos_list) {
 
         if (swap_tree) {
             // update current state pattern
+            cur_state.erase(drifted_tree->tree_pool_id);
             cur_state.insert(swap_tree->tree_pool_id);
 
             // replace drifted_tree with swap tree
