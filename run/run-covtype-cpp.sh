@@ -14,19 +14,24 @@ reuse_window_size=0
 reuse_rate=0.18
 lossy_window_size=100000000
 
+leaf_prediction_type=2
+
 # ARF
 nohup ../src/main.py --max_samples $MAX_SAMPLES --dataset_name $dataset_name \
         --data_format $data_format \
+        --leaf_prediction_type $leaf_prediction_type \
         --cpp -t 60 &
 
 # PEARL with pattern matching only
 nohup ../src/main.py --max_samples $MAX_SAMPLES --dataset_name $dataset_name --data_format $data_format \
     --cpp -t 60 -s \
+    --leaf_prediction_type $leaf_prediction_type \
     --cd_kappa_threshold $kappa --edit_distance_threshold $ed -c 120 &
 
 # PEARL
 nohup ../src/main.py --max_samples $MAX_SAMPLES --dataset_name $dataset_name --data_format $data_format \
     --cpp -t 60 -c 120 \
+    --leaf_prediction_type $leaf_prediction_type \
     -s --cd_kappa_threshold $kappa --edit_distance_threshold $ed \
     -p \
     --reuse_rate_upper_bound $reuse_rate \
