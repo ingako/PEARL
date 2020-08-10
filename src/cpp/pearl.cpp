@@ -377,7 +377,7 @@ pearl_tree::pearl_tree(int tree_pool_id,
                        int leaf_prediction_type,
                        double warning_delta,
                        double drift_delta,
-                       mt19937 mrand) :
+                       mt19937& mrand) :
         arf_tree(leaf_prediction_type, warning_delta, drift_delta, mrand),
         tree_pool_id(tree_pool_id),
         kappa_window_size(kappa_window_size) {

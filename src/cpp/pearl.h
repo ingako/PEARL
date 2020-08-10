@@ -96,7 +96,7 @@ class pearl_tree : public arf_tree {
                    int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
-                   std::mt19937 mrand);
+                   std::mt19937& mrand);
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,

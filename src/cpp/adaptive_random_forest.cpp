@@ -157,7 +157,7 @@ void adaptive_random_forest::delete_cur_instance() {
 arf_tree::arf_tree(int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
-                   std::mt19937 mrand) :
+                   std::mt19937& mrand) :
         warning_delta(warning_delta),
         drift_delta(drift_delta),
         mrand(mrand) {
