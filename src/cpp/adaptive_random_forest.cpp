@@ -1,12 +1,13 @@
 #include "adaptive_random_forest.h"
 
-adaptive_random_forest::adaptive_random_forest(int num_trees,
-                                               int arf_max_features,
-                                               int lambda,
-                                               int seed,
-                                               int leaf_prediction_type,
-                                               double warning_delta,
-                                               double drift_delta) :
+adaptive_random_forest::adaptive_random_forest(
+        int num_trees,
+        int arf_max_features,
+        int lambda,
+        int seed,
+        int leaf_prediction_type,
+        double warning_delta,
+        double drift_delta) :
         num_trees(num_trees),
         arf_max_features(arf_max_features),
         lambda(lambda),
@@ -17,6 +18,38 @@ adaptive_random_forest::adaptive_random_forest(int num_trees,
     mrand = std::mt19937(seed);
 }
 
+adaptive_random_forest::adaptive_random_forest(
+        int num_trees,
+        int arf_max_features,
+        int lambda,
+        int seed,
+        int grace_period,
+        float split_confidence,
+        float tie_threshold,
+        bool binary_splits,
+        bool no_pre_prune,
+        int nb_threshold,
+        int leaf_prediction_type,
+        double warning_delta,
+        double drift_delta) :
+        num_trees(num_trees),
+        arf_max_features(arf_max_features),
+        lambda(lambda),
+        warning_delta(warning_delta),
+        drift_delta(drift_delta) {
+
+    mrand = std::mt19937(seed);
+    tree_params = {
+        grace_period,
+        split_confidence,
+        tie_threshold,
+        binary_splits,
+        no_pre_prune,
+        nb_threshold,
+        leaf_prediction_type
+    };
+}
+
 void adaptive_random_forest::init() {
     for (int i = 0; i < num_trees; i++) {
         foreground_trees.push_back(make_arf_tree());
@@ -24,10 +57,17 @@ void adaptive_random_forest::init() {
 }
 
 shared_ptr<arf_tree> adaptive_random_forest::make_arf_tree() {
-    return make_shared<arf_tree>(leaf_prediction_type,
-                                 warning_delta,
-                                 drift_delta,
-                                 mrand);
+    return make_shared<arf_tree>(
+                tree_params.grace_period,
+                tree_params.split_confidence,
+                tree_params.tie_threshold,
+                tree_params.binary_splits,
+                tree_params.no_pre_prune,
+                tree_params.nb_threshold,
+                tree_params.leaf_prediction_type,
+                warning_delta,
+                drift_delta,
+                mrand);
 }
 
 int adaptive_random_forest::predict() {
@@ -162,7 +202,39 @@ arf_tree::arf_tree(int leaf_prediction_type,
         drift_delta(drift_delta),
         mrand(mrand) {
 
-    tree = make_unique<HT::HoeffdingTree>(leaf_prediction_type, mrand);
+    tree = make_unique<HT::HoeffdingTree>(
+                leaf_prediction_type,
+                mrand);
+
+    warning_detector = make_unique<HT::ADWIN>(warning_delta);
+    drift_detector = make_unique<HT::ADWIN>(drift_delta);
+    bg_arf_tree = nullptr;
+}
+
+arf_tree::arf_tree(int grace_period,
+	               float split_confidence,
+	               float tie_threshold,
+	               bool binary_splits,
+	               bool no_pre_prune,
+	               int nb_threshold,
+                   int leaf_prediction_type,
+                   double warning_delta,
+                   double drift_delta,
+                   std::mt19937& mrand) :
+        warning_delta(warning_delta),
+        drift_delta(drift_delta),
+        mrand(mrand) {
+
+    tree = make_unique<HT::HoeffdingTree>(
+                grace_period,
+                split_confidence,
+                tie_threshold,
+                binary_splits,
+                no_pre_prune,
+                nb_threshold,
+                leaf_prediction_type,
+                mrand);
+
     warning_detector = make_unique<HT::ADWIN>(warning_delta);
     drift_detector = make_unique<HT::ADWIN>(drift_delta);
     bg_arf_tree = nullptr;

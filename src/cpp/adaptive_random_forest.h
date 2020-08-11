@@ -25,11 +25,24 @@ class arf_tree;
 class adaptive_random_forest {
 
     public:
+        adaptive_random_forest(int num_trees,
+                               int arf_max_features,
+                               int lambda,
+                               int seed,
+                               int leaf_prediction_type,
+                               double warning_delta,
+                               double drift_delta);
 
         adaptive_random_forest(int num_trees,
                                int arf_max_features,
                                int lambda,
                                int seed,
+                               int grace_period,
+                               float split_confidence,
+                               float tie_threshold,
+                               bool binary_splits,
+                               bool no_pre_prune,
+                               int nb_threshold,
                                int leaf_prediction_type,
                                double warning_delta,
                                double drift_delta);
@@ -63,11 +76,34 @@ class adaptive_random_forest {
         virtual void init();
         shared_ptr<arf_tree> make_arf_tree();
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
+
+        struct tree_params_t {
+            int grace_period = 200;
+            float split_confidence = 0.0000001f;
+            float tie_threshold = 0.05;
+            bool binary_splits = false;
+            bool no_pre_prune = false;
+            int nb_threshold = 0;
+            int leaf_prediction_type = 0;
+        };
+
+        tree_params_t tree_params;
 };
 
 class arf_tree {
     public:
         arf_tree(int leaf_prediction_type,
+                 double warning_delta,
+                 double drift_delta,
+                 std::mt19937& mrand);
+
+        arf_tree(int grace_period,
+	             float split_confidence,
+	             float tie_threshold,
+	             bool binary_splits,
+	             bool no_pre_prune,
+	             int nb_threshold,
+                 int leaf_prediction_type,
                  double warning_delta,
                  double drift_delta,
                  std::mt19937& mrand);
