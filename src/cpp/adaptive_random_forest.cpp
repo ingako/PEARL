@@ -58,13 +58,7 @@ void adaptive_random_forest::init() {
 
 shared_ptr<arf_tree> adaptive_random_forest::make_arf_tree() {
     return make_shared<arf_tree>(
-                tree_params.grace_period,
-                tree_params.split_confidence,
-                tree_params.tie_threshold,
-                tree_params.binary_splits,
-                tree_params.no_pre_prune,
-                tree_params.nb_threshold,
-                tree_params.leaf_prediction_type,
+                tree_params,
                 warning_delta,
                 drift_delta,
                 mrand);
@@ -211,13 +205,7 @@ arf_tree::arf_tree(int leaf_prediction_type,
     bg_arf_tree = nullptr;
 }
 
-arf_tree::arf_tree(int grace_period,
-	               float split_confidence,
-	               float tie_threshold,
-	               bool binary_splits,
-	               bool no_pre_prune,
-	               int nb_threshold,
-                   int leaf_prediction_type,
+arf_tree::arf_tree(tree_params_t tree_params,
                    double warning_delta,
                    double drift_delta,
                    std::mt19937& mrand) :
@@ -226,13 +214,13 @@ arf_tree::arf_tree(int grace_period,
         mrand(mrand) {
 
     tree = make_unique<HT::HoeffdingTree>(
-                grace_period,
-                split_confidence,
-                tie_threshold,
-                binary_splits,
-                no_pre_prune,
-                nb_threshold,
-                leaf_prediction_type,
+                tree_params.grace_period,
+                tree_params.split_confidence,
+                tree_params.tie_threshold,
+                tree_params.binary_splits,
+                tree_params.no_pre_prune,
+                tree_params.nb_threshold,
+                tree_params.leaf_prediction_type,
                 mrand);
 
     warning_detector = make_unique<HT::ADWIN>(warning_delta);

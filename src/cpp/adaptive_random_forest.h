@@ -20,6 +20,16 @@ using std::make_unique;
 using std::make_shared;
 using std::move;
 
+struct tree_params_t {
+    int grace_period = 200;
+    float split_confidence = 0.0000001f;
+    float tie_threshold = 0.05;
+    bool binary_splits = false;
+    bool no_pre_prune = false;
+    int nb_threshold = 0;
+    int leaf_prediction_type = 0;
+};
+
 class arf_tree;
 
 class adaptive_random_forest {
@@ -77,16 +87,6 @@ class adaptive_random_forest {
         shared_ptr<arf_tree> make_arf_tree();
         bool detect_change(int error_count, unique_ptr<HT::ADWIN>& detector);
 
-        struct tree_params_t {
-            int grace_period = 200;
-            float split_confidence = 0.0000001f;
-            float tie_threshold = 0.05;
-            bool binary_splits = false;
-            bool no_pre_prune = false;
-            int nb_threshold = 0;
-            int leaf_prediction_type = 0;
-        };
-
         tree_params_t tree_params;
 };
 
@@ -97,13 +97,7 @@ class arf_tree {
                  double drift_delta,
                  std::mt19937& mrand);
 
-        arf_tree(int grace_period,
-	             float split_confidence,
-	             float tie_threshold,
-	             bool binary_splits,
-	             bool no_pre_prune,
-	             int nb_threshold,
-                 int leaf_prediction_type,
+        arf_tree(tree_params_t tree_params,
                  double warning_delta,
                  double drift_delta,
                  std::mt19937& mrand);
