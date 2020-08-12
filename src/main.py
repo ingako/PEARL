@@ -12,7 +12,7 @@ import numpy as np
 from skmultiflow.data.file_stream import FileStream
 
 from evaluator import Evaluator
-# from pearl import Pearl
+from pearl import Pearl
 
 import sys
 path = r'../'
@@ -79,6 +79,28 @@ if __name__ == '__main__':
     parser.add_argument("--random_state",
                         dest="random_state", default=0, type=int,
                         help="Seed used for adaptive hoeffding tree")
+
+    # tree params
+    parser.add_argument("--grace_period",
+                        dest="grace_period", default=200, type=int,
+                        help="grace period")
+    parser.add_argument("--split_confidence",
+                        dest="split_confidence", default=0.0000001, type=float,
+                        help="split confidence")
+    parser.add_argument("--tie_threshold",
+                        dest="tie_threshold", default=0.05, type=float,
+                        help="tie threshold")
+    parser.add_argument("--binary_splits",
+                        dest="binary_splits", action="store_true",
+                        help="Enable binary splits")
+    parser.set_defaults(binary_splits=False)
+    parser.add_argument("--no_pre_prune",
+                        dest="no_pre_prune", action="store_true",
+                        help="Enable no pre prune")
+    parser.set_defaults(no_pre_prune=False)
+    parser.add_argument("--nb_threshold",
+                        dest="nb_threshold", default=0, type=int,
+                        help="nb threshold")
     parser.add_argument("--leaf_prediction_type",
                         dest="leaf_prediction_type", default=0, type=int,
                         help="0=MC, 1=NB, 2=NBAdaptive")
@@ -242,7 +264,15 @@ if __name__ == '__main__':
                                            arf_max_features,
                                            args.poisson_lambda,
                                            args.random_state,
+
+                                           args.grace_period,
+                                           args.split_confidence,
+                                           args.tie_threshold,
+                                           args.binary_splits,
+                                           args.no_pre_prune,
+                                           args.nb_threshold,
                                            args.leaf_prediction_type,
+
                                            args.warning_delta,
                                            args.drift_delta)
             print("init adaptive_random_forest")
@@ -258,14 +288,20 @@ if __name__ == '__main__':
                           arf_max_features,
                           args.poisson_lambda,
                           args.random_state,
-                          args.leaf_prediction_type,
                           args.bg_kappa_threshold,
                           args.cd_kappa_threshold,
                           args.reuse_rate_upper_bound,
                           args.warning_delta,
                           args.drift_delta,
                           args.enable_state_adaption,
-                          args.enable_state_graph)
+                          args.enable_state_graph,
+                          args.grace_period,
+                          args.split_confidence,
+                          args.tie_threshold,
+                          args.binary_splits,
+                          args.no_pre_prune,
+                          args.nb_threshold,
+                          args.leaf_prediction_type)
             print("init pearl")
         eval_func = Evaluator.prequential_evaluation_cpp
 
