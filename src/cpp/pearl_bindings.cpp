@@ -8,10 +8,16 @@ PYBIND11_MODULE(pearl, m) {
     m.doc() = "PEARL's implementation in C++"; // module docstring
 
     py::class_<adaptive_random_forest>(m, "adaptive_random_forest")
-        .def(py::init<int,
-                      int,
+        .def(py::init<int, // num_trees
+                      int, // arf_max_features
                       int, // lambda
                       int, // seed
+                      int, // grace_period,
+                      float, // split_confidence,
+                      float, // tie_threshold,
+                      bool, // binary_splits,
+                      bool, // no_pre_prune,
+                      int, // nb_threshold,
                       int, // leaf_prediction_type
                       double,
                       double>())
@@ -33,14 +39,21 @@ PYBIND11_MODULE(pearl, m) {
                       int,
                       int, // lambda
                       int, // seed
-                      int, // leaf_prediction_type
                       double,
                       double,
                       double,
                       double,
                       double,
                       bool,
-                      bool>())
+                      bool,
+                      int, // grace_period,
+                      float, // split_confidence,
+                      float, // tie_threshold,
+                      bool, // binary_splits,
+                      bool, // no_pre_prune,
+                      int, // nb_threshold,
+                      int // leaf_prediction_type
+                      >())
         .def("get_candidate_tree_group_size", &pearl::get_candidate_tree_group_size)
         .def("get_tree_pool_size", &pearl::get_tree_pool_size)
         .def("is_state_graph_stable", &pearl::is_state_graph_stable)

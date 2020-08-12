@@ -24,14 +24,20 @@ class pearl : public adaptive_random_forest {
               int arf_max_features,
               int lambda,
               int seed,
-              int leaf_prediction_type,
               double bg_kappa_threshold,
               double cd_kappa_threshold,
               double reuse_rate_upper_bound,
               double warning_delta,
               double drift_delta,
               bool enable_state_adaption,
-              bool enable_state_graph);
+              bool enable_state_graph,
+              int grace_period,
+              float split_confidence,
+              float tie_threshold,
+              bool binary_splits,
+              bool no_pre_prune,
+              int nb_threshold,
+              int leaf_prediction_type);
 
         virtual void train();
         int get_candidate_tree_group_size() const;
@@ -96,6 +102,7 @@ class pearl_tree : public arf_tree {
                    int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
+                   tree_params_t tree_params,
                    std::mt19937& mrand);
 
         pearl_tree(int tree_pool_id,
