@@ -99,7 +99,6 @@ class pearl_tree : public arf_tree {
 
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
-                   int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
                    tree_params_t tree_params,
@@ -108,10 +107,10 @@ class pearl_tree : public arf_tree {
         pearl_tree(int tree_pool_id,
                    int kappa_window_size,
                    int pro_drift_window_size,
-                   int leaf_prediction_type,
                    double warning_delta,
                    double drift_delta,
                    double hybrid_delta,
+                   tree_params_t tree_params,
                    std::mt19937 mrand);
 
         virtual void train(Instance& instance);
