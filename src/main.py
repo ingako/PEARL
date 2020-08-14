@@ -323,13 +323,8 @@ if __name__ == '__main__':
                       logger=process_logger)
         eval_func = Evaluator.prequential_evaluation
 
-    start = time.process_time()
     eval_func(classifier=pearl,
               stream=stream,
               max_samples=args.max_samples,
               sample_freq=args.sample_freq,
               metrics_logger=metrics_logger)
-    elapsed = time.process_time() - start
-
-    with open(f"{time_output_file}", 'w') as out:
-        out.write(str(elapsed) + '\n')

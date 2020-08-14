@@ -1,5 +1,6 @@
 import copy
 from collections import deque
+import time
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -57,39 +58,6 @@ class Evaluator:
 
 
     @staticmethod
-    def _prequential_evaluation_cpp(classifier,
-                                   stream,
-                                   max_samples,
-                                   sample_freq,
-                                   metrics_logger):
-        correct = 0
-        window_actual_labels = []
-        window_predicted_labels = []
-
-        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
-
-        classifier.init_data_source(stream);
-
-        for count in range(0, max_samples):
-            if not classifier.get_next_instance():
-                break
-
-            correct += 1 if classifier.process() else 0
-
-            if count % sample_freq == 0 and count != 0:
-                accuracy = correct / sample_freq
-                candidate_tree_size = classifier.get_candidate_tree_group_size()
-                tree_pool_size = classifier.get_tree_pool_size()
-
-                print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
-                metrics_logger.info(f"{count},{accuracy}," \
-                                    f"{candidate_tree_size},{tree_pool_size}")
-
-                correct = 0
-                window_actual_labels = []
-                window_predicted_labels = []
-
-    @staticmethod
     def prequential_evaluation_cpp(classifier,
                                    stream,
                                    max_samples,
@@ -103,7 +71,8 @@ class Evaluator:
 
         log_size = isinstance(classifier, pearl)
 
-        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size")
+        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size,time")
+        start_time = time.process_time()
 
         classifier.init_data_source(stream);
 
@@ -121,10 +90,9 @@ class Evaluator:
             window_actual_labels.append(actual_label)
             window_predicted_labels.append(prediction)
 
-            # classifier.handle_drift(count)
-
             if count % sample_freq == 0 and count != 0:
                 accuracy = correct / sample_freq
+                elapsed_time = time.process_time() - start_time
 
                 candidate_tree_size = 0
                 tree_pool_size = 60
@@ -134,7 +102,9 @@ class Evaluator:
 
                 print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
                 metrics_logger.info(f"{count},{accuracy}," \
-                                    f"{candidate_tree_size},{tree_pool_size}")
+                                    f"{candidate_tree_size}," \
+                                    f"{tree_pool_size}," \
+                                    f"{str(elapsed_time)}")
 
                 correct = 0
                 window_actual_labels = []
