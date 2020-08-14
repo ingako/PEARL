@@ -17,6 +17,7 @@ class pearl : public adaptive_random_forest {
         pearl(int num_trees,
               int max_num_candidate_trees,
               int repo_size,
+              int state_queue_size,
               int edit_distance_threshold,
               int kappa_window_size,
               int lossy_window_size,

@@ -29,9 +29,10 @@ PYBIND11_MODULE(pearl, m) {
         .def("train", &adaptive_random_forest::train);
 
     py::class_<pearl, adaptive_random_forest>(m, "pearl")
-        .def(py::init<int,
-                      int,
-                      int,
+        .def(py::init<int, // num_trees
+                      int, // max_num_candidate_trees
+                      int, // repo_size
+                      int, // state_queue_size
                       int,
                       int,
                       int,

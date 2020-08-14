@@ -3,6 +3,7 @@
 pearl::pearl(int num_trees,
              int max_num_candidate_trees,
              int repo_size,
+             int state_queue_size,
              int edit_distance_threshold,
              int kappa_window_size,
              int lossy_window_size,
@@ -50,7 +51,8 @@ pearl::pearl(int num_trees,
         enable_state_graph(enable_state_graph) {
 
     // initialize LRU state pattern queue
-    state_queue = make_unique<lru_state>(10000000, edit_distance_threshold); // TODO
+    state_queue = make_unique<lru_state>(state_queue_size,
+                                         edit_distance_threshold);
 
     cur_state = set<int>();
     for (int i = 0; i < num_trees; i++) {

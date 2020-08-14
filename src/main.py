@@ -55,9 +55,12 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--candidate_tree",
                         dest="max_num_candidate_trees", default=60, type=int,
                         help="max number of candidate trees in the forest")
-    # parser.add_argument("--pool",
-    #                     dest="tree_pool_size", default=180, type=int,
-    #                     help="number of trees in the online tree repository")
+    parser.add_argument("--state_queue_size",
+                        dest="state_queue_size", default=10000000, type=int,
+                        help="size of the LRU state queue")
+    parser.add_argument("--repo_size",
+                        dest="repo_size", default=96000, type=int,
+                        help="number of trees in the online tree repository")
     parser.add_argument("-w", "--warning",
                         dest="warning_delta", default=0.0001, type=float,
                         help="delta value for drift warning detector")
@@ -246,8 +249,6 @@ if __name__ == '__main__':
         num_features = stream.n_features
         arf_max_features = int(math.log2(num_features)) + 1
 
-    # repo_size = args.num_trees * 160
-    repo_size = args.num_trees * 1600
     np.random.seed(args.random_state)
     random.seed(0)
 
@@ -264,7 +265,6 @@ if __name__ == '__main__':
                                            arf_max_features,
                                            args.poisson_lambda,
                                            args.random_state,
-
                                            args.grace_period,
                                            args.split_confidence,
                                            args.tie_threshold,
@@ -272,7 +272,6 @@ if __name__ == '__main__':
                                            args.no_pre_prune,
                                            args.nb_threshold,
                                            args.leaf_prediction_type,
-
                                            args.warning_delta,
                                            args.drift_delta)
             print("init adaptive_random_forest")
@@ -280,7 +279,8 @@ if __name__ == '__main__':
         else:
             pearl = pearl(args.num_trees,
                           args.max_num_candidate_trees,
-                          repo_size,
+                          args.repo_size,
+                          args.state_queue_size,
                           args.edit_distance_threshold,
                           args.kappa_window,
                           args.lossy_window_size,
@@ -307,7 +307,7 @@ if __name__ == '__main__':
 
     else:
         pearl = Pearl(num_trees=args.num_trees,
-                      repo_size=repo_size,
+                      repo_size=args.repo_size,
                       edit_distance_threshold=args.edit_distance_threshold,
                       bg_kappa_threshold=args.bg_kappa_threshold,
                       cd_kappa_threshold=args.cd_kappa_threshold,
