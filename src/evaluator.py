@@ -44,7 +44,6 @@ class Evaluator:
                 kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
                 memory_usage = classifier.get_size()
 
-                print(f"{count},{accuracy},{kappa},{memory_usage}")
                 metrics_logger.info(f"{count},{accuracy},{kappa},{memory_usage}")
 
                 correct = 0
@@ -71,7 +70,7 @@ class Evaluator:
 
         log_size = isinstance(classifier, pearl)
 
-        metrics_logger.info("count,accuracy,candidate_tree_size,tree_pool_size,time")
+        metrics_logger.info("count,accuracy,kappa,candidate_tree_size,tree_pool_size,time")
         start_time = time.process_time()
 
         classifier.init_data_source(stream);
@@ -92,6 +91,7 @@ class Evaluator:
 
             if count % sample_freq == 0 and count != 0:
                 accuracy = correct / sample_freq
+                kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
                 elapsed_time = time.process_time() - start_time
 
                 candidate_tree_size = 0
@@ -100,8 +100,7 @@ class Evaluator:
                     candidate_tree_size = classifier.get_candidate_tree_group_size()
                     tree_pool_size = classifier.get_tree_pool_size()
 
-                print(f"{count},{accuracy},{candidate_tree_size},{tree_pool_size}")
-                metrics_logger.info(f"{count},{accuracy}," \
+                metrics_logger.info(f"{count},{accuracy},{kappa}," \
                                     f"{candidate_tree_size}," \
                                     f"{tree_pool_size}," \
                                     f"{str(elapsed_time)}")
