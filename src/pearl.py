@@ -8,7 +8,6 @@ from sklearn.metrics import cohen_kappa_score
 from skmultiflow.drift_detection.adwin import ADWIN
 from skmultiflow.trees.arf_hoeffding_tree import ARFHoeffdingTree
 
-from stream_generator import RecurrentDriftStream
 from LRU_state import LRU_state
 from state_graph import LossyStateGraph
 

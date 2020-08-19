@@ -23,7 +23,8 @@ class Evaluator:
         window_actual_labels = []
         window_predicted_labels = []
 
-        metrics_logger.info("count,accuracy,kappa,memory")
+        metrics_logger.info("count,accuracy,kappa,memory,time")
+        start_time = time.process_time()
 
         for count in range(0, max_samples):
             X, y = stream.next_sample()
@@ -43,8 +44,11 @@ class Evaluator:
                 accuracy = correct / sample_freq
                 kappa = cohen_kappa_score(window_actual_labels, window_predicted_labels)
                 memory_usage = classifier.get_size()
+                # elapsed_time = time.process_time() - start_time
+                elapsed_time = 0
 
-                metrics_logger.info(f"{count},{accuracy},{kappa},{memory_usage}")
+                metrics_logger.info(f"{count},{accuracy},{kappa}" \
+                                    f"{memory_usage},{str(elapsed_time)}")
 
                 correct = 0
                 window_actual_labels = []
