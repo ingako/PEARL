@@ -39,16 +39,30 @@ if __name__ == '__main__':
                         help="Enable cpp backend")
     parser.set_defaults(cpp=False)
 
+    # real world datasets
     parser.add_argument("--dataset_name",
                         dest="dataset_name", default="", type=str,
-                        help="dataset path")
+                        help="dataset name")
     parser.add_argument("--data_format",
                         dest="data_format", default="", type=str,
                         help="dataset format {csv|arff}")
-    parser.add_argument("-g", "--generator",
-                        dest="generator", default="agrawal", type=str,
-                        help="name of the synthetic data generator")
 
+    # pre-generated synthetic datasets
+    parser.add_argument("-g", "--is_generated_data",
+                        dest="is_generated_data", action="store_true",
+                        help="Handle dataset as pre-generated synthetic dataset")
+    parser.set_defaults(is_generator_data=False)
+    parser.add_argument("--generator_name",
+                        dest="generator_name", default="agrawal", type=str,
+                        help="name of the synthetic data generator")
+    parser.add_argument("--generator_traits",
+                        dest="generator_traits", default="abrupt/0", type=str,
+                        help="Traits of the synthetic data")
+    parser.add_argument("--generator_seed",
+                        dest="generator_seed", default=0, type=int,
+                        help="Seed used for generating synthetic data")
+
+    # pearl params
     parser.add_argument("-t", "--tree",
                         dest="num_trees", default=60, type=int,
                         help="number of trees in the forest")
@@ -108,14 +122,6 @@ if __name__ == '__main__':
                         dest="leaf_prediction_type", default=0, type=int,
                         help="0=MC, 1=NB, 2=NBAdaptive")
 
-    parser.add_argument("--generator_seed",
-                        dest="generator_seed", default=0, type=int,
-                        help="Seed used for generating synthetic data")
-    parser.add_argument("--enable_generator_noise",
-                        dest="enable_generator_noise", action="store_true",
-                        help="Enable noise in synthetic data generator")
-    parser.set_defaults(enable_generator_noise=False)
-
     parser.add_argument("-s", "--enable_state_adaption",
                         dest="enable_state_adaption", action="store_true",
                         help="enable the state adaption algorithm")
@@ -153,55 +159,42 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # TODO
     if args.reuse_rate_upper_bound < args.reuse_rate_lower_bound:
         exit("reuse rate upper bound must be greater than or equal to the lower bound")
 
     if args.enable_state_graph:
         args.enable_state_adaption = True
 
-    potential_file = f"../data/{args.dataset_name}/{args.dataset_name}.{args.data_format}"
-    potential_pre_gen_file = f"../data/{args.generator}/{args.generator}-{args.generator_seed}.csv"
 
     # prepare data
-    if os.path.isfile(potential_file):
-        print(f"preparing stream from file {potential_file}...")
-
-        if args.cpp:
-            print("speed optimization with C++")
-            stream = potential_file
-        else:
-            stream = FileStream(potential_file)
-            stream.prepare_for_use()
-            args.max_samples = min(args.max_samples, stream.n_remaining_samples())
-
-        result_directory = args.dataset_name
-
-
-    elif os.path.isfile(potential_pre_gen_file):
-        print(f"preparing stream from file {potential_pre_gen_file}...")
-        stream = FileStream(potential_pre_gen_file)
-        stream.prepare_for_use()
-
-        args.max_samples = min(args.max_samples, stream.n_remaining_samples())
-        result_directory = args.generator
+    if args.is_generated_data:
+        data_file_dir = f"../data/{args.generator_name}/" \
+                        f"{args.generator_traits}/"
+        data_file_path = f"{data_file_dir}/{args.generator_seed}.{args.data_format}"
+        result_directory = f"{args.generator_name}/{args.generator_traits}/"
 
     else:
-        print(f"preparing stream from {args.generator} generator...")
-        concepts = [4,0,8]
-        stream = RecurrentDriftStream(generator=args.generator,
-                                      concepts=concepts,
-                                      has_noise=args.enable_generator_noise,
-                                      random_state=args.generator_seed)
+        data_file_dir = f"../data/" \
+                         f"{args.dataset_name}/"
+        data_file_path = f"{data_file_dir}/{args.dataset_name}.{args.data_format}"
+        result_directory = args.dataset_name
+
+    if not os.path.isfile(data_file_path):
+        print(f"Cannot locate file at {data_file_path}")
+        exit()
+
+    print(f"Preparing stream from file {data_file_path}...")
+
+    if args.cpp:
+        print("speed optimization with C++")
+        stream = data_file_path
+    else:
+        print(f"PEARL python: preparing stream from file {data_file_path}...")
+        stream = FileStream(data_file_path)
         stream.prepare_for_use()
-        print(stream.get_data_info())
+        args.max_samples = min(args.max_samples, stream.n_remaining_samples())
 
-        result_directory = args.generator
-
-    if args.enable_generator_noise:
-        result_directory = f"{result_directory}-noise"
-
-    metric_output_file = "result"
-    time_output_file = "time"
 
     if args.enable_state_graph:
         result_directory = f"{result_directory}/" \
@@ -210,20 +203,13 @@ if __name__ == '__main__':
                            f"w{args.reuse_window_size}/" \
                            f"lossy-{args.lossy_window_size}"
 
-        metric_output_file = f"{metric_output_file}-parf"
-        time_output_file = f"{time_output_file}-parf"
-
     elif args.enable_state_adaption:
         result_directory = f"{result_directory}/" \
                            f"k{args.cd_kappa_threshold}-e{args.edit_distance_threshold}/"
 
-        metric_output_file = f"{metric_output_file}-sarf"
-        time_output_file = f"{time_output_file}-sarf"
-
     pathlib.Path(result_directory).mkdir(parents=True, exist_ok=True)
 
-    metric_output_file = f"{result_directory}/{metric_output_file}-{args.generator_seed}.csv"
-    time_output_file = f"{result_directory}/{time_output_file}-{args.generator_seed}.log"
+    metric_output_file = f"{result_directory}/result-{args.generator_seed}.csv"
 
 
     configs = (
@@ -274,7 +260,7 @@ if __name__ == '__main__':
                                            args.leaf_prediction_type,
                                            args.warning_delta,
                                            args.drift_delta)
-            print("init adaptive_random_forest")
+            print("init adaptive_random_forest cpp")
 
         else:
             pearl = pearl(args.num_trees,
@@ -302,7 +288,7 @@ if __name__ == '__main__':
                           args.no_pre_prune,
                           args.nb_threshold,
                           args.leaf_prediction_type)
-            print("init pearl")
+            print("init pearl cpp")
         eval_func = Evaluator.prequential_evaluation_cpp
 
     else:
