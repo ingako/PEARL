@@ -35,8 +35,15 @@ class arf_tree;
 class adaptive_random_forest {
 
     public:
-        adaptive_random_forest(int num_trees,
-                               int arf_max_features,
+    adaptive_random_forest(int num_trees,
+                           int arf_max_features,
+                           int lambda,
+                           int seed,
+                           double warning_delta,
+                           double drift_delta);
+
+    adaptive_random_forest(int num_trees,
+                           int arf_max_features,
                                int lambda,
                                int seed,
                                int grace_period,
@@ -82,8 +89,13 @@ class adaptive_random_forest {
 };
 
 class arf_tree {
-    public:
-        arf_tree(tree_params_t tree_params,
+public:
+
+    arf_tree(double warning_delta,
+             double drift_delta,
+             std::mt19937& mrand);
+
+    arf_tree(tree_params_t tree_params,
                  double warning_delta,
                  double drift_delta,
                  std::mt19937& mrand);

@@ -14,6 +14,43 @@ class pearl : public adaptive_random_forest {
 
     public:
 
+    pearl(int num_trees,
+          int max_num_candidate_trees,
+          int repo_size,
+          int edit_distance_threshold,
+          int kappa_window_size,
+          int lossy_window_size,
+          int reuse_window_size,
+          int arf_max_features,
+          int lambda,
+          int seed,
+          double bg_kappa_threshold,
+          double cd_kappa_threshold,
+          double reuse_rate_upper_bound,
+          double warning_delta,
+          double drift_delta,
+          bool enable_state_adaption,
+          bool enable_state_graph);
+
+    pearl(int num_trees,
+          int max_num_candidate_trees,
+              int repo_size,
+              int state_queue_size,
+              int edit_distance_threshold,
+              int kappa_window_size,
+              int lossy_window_size,
+              int reuse_window_size,
+              int arf_max_features,
+              int lambda,
+              int seed,
+              double bg_kappa_threshold,
+              double cd_kappa_threshold,
+              double reuse_rate_upper_bound,
+              double warning_delta,
+              double drift_delta,
+              bool enable_state_adaption,
+              bool enable_state_graph);
+
         pearl(int num_trees,
               int max_num_candidate_trees,
               int repo_size,
@@ -89,56 +126,65 @@ class pearl : public adaptive_random_forest {
 };
 
 class pearl_tree : public arf_tree {
-    public:
-        int tree_pool_id;
-        double kappa = INT_MIN;
-        bool is_candidate = false;
-        bool eval_ready = false;
-        deque<int> predicted_result_right_window;
-        deque<int> predicted_result_left_window;
-        deque<int> predicted_labels_window; // of size kappa_window_size
 
-        pearl_tree(int tree_pool_id,
+public:
+    int tree_pool_id;
+    double kappa = INT_MIN;
+    bool is_candidate = false;
+    bool eval_ready = false;
+    deque<int> predicted_result_right_window;
+    deque<int> predicted_result_left_window;
+    deque<int> predicted_labels_window; // of size kappa_window_size
+
+    pearl_tree(int tree_pool_id,
+               int kappa_window_size,
+               double warning_delta,
+               double drift_delta,
+               std::mt19937& mrand);
+
+    pearl_tree(int tree_pool_id,
                    int kappa_window_size,
                    double warning_delta,
                    double drift_delta,
                    tree_params_t tree_params,
                    std::mt19937& mrand);
 
-        pearl_tree(int tree_pool_id,
-                   int kappa_window_size,
-                   int pro_drift_window_size,
-                   double warning_delta,
-                   double drift_delta,
-                   double hybrid_delta,
-                   tree_params_t tree_params,
-                   std::mt19937 mrand);
+    pearl_tree(int tree_pool_id,
+               int kappa_window_size,
+               int pro_drift_window_size,
+               double warning_delta,
+               double drift_delta,
+               double hybrid_delta,
+               tree_params_t tree_params,
+               std::mt19937 mrand);
 
-        virtual void train(Instance& instance);
-        virtual int predict(Instance& instance, bool track_performance);
-        virtual void reset();
-        void update_kappa(const deque<int>& actual_labels, int class_count);
-        void set_expected_drift_prob(double p);
-        bool has_actual_drift();
+    virtual void train(Instance& instance);
+    virtual int predict(Instance& instance, bool track_performance);
+    virtual void reset();
+    void update_kappa(const deque<int>& actual_labels, int class_count);
+    void set_expected_drift_prob(double p);
+    bool has_actual_drift();
 
-        shared_ptr<pearl_tree> bg_pearl_tree = nullptr;
-        shared_ptr<pearl_tree> replaced_tree = nullptr;
+    shared_ptr<pearl_tree> bg_pearl_tree = nullptr;
+    shared_ptr<pearl_tree> replaced_tree = nullptr;
 
-    private:
-        int kappa_window_size;
-        int pro_drift_window_size = 0;
-        double hybrid_delta = 0.001;
+protected:
+    int kappa_window_size;
 
-        double left_correct_count = 0.0;
-        double right_correct_count = 0.0;
+private:
+    int pro_drift_window_size = 0;
+    double hybrid_delta = 0.001;
 
-        double get_variance();
-        double compute_hoeffding_bound(double variance, double window_size, double delta);
+    double left_correct_count = 0.0;
+    double right_correct_count = 0.0;
 
-        double compute_kappa(const vector<vector<int>>& confusion_matrix,
-                             double accuracy,
-                             int sample_count,
-                             int class_count);
+    double get_variance();
+    double compute_hoeffding_bound(double variance, double window_size, double delta);
+
+    double compute_kappa(const vector<vector<int>>& confusion_matrix,
+                         double accuracy,
+                         int sample_count,
+                         int class_count);
 };
 
 #endif

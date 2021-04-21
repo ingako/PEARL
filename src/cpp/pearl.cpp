@@ -3,6 +3,123 @@
 pearl::pearl(int num_trees,
              int max_num_candidate_trees,
              int repo_size,
+             int edit_distance_threshold,
+             int kappa_window_size,
+             int lossy_window_size,
+             int reuse_window_size,
+             int arf_max_features,
+             int lambda,
+             int seed,
+             double bg_kappa_threshold,
+             double cd_kappa_threshold,
+             double reuse_rate_upper_bound,
+             double warning_delta,
+             double drift_delta,
+             bool enable_state_adaption,
+             bool enable_state_graph) :
+        adaptive_random_forest(num_trees,
+                               arf_max_features,
+                               lambda,
+                               seed,
+                               warning_delta,
+                               drift_delta),
+        max_num_candidate_trees(max_num_candidate_trees),
+        repo_size(repo_size),
+        edit_distance_threshold(edit_distance_threshold),
+        kappa_window_size(kappa_window_size),
+        lossy_window_size(lossy_window_size),
+        reuse_window_size(reuse_window_size),
+        bg_kappa_threshold(bg_kappa_threshold),
+        cd_kappa_threshold(cd_kappa_threshold),
+        reuse_rate_upper_bound(reuse_rate_upper_bound),
+        enable_state_adaption(enable_state_adaption),
+        enable_state_graph(enable_state_graph) {
+
+    // initialize LRU state pattern queue
+    state_queue = make_unique<lru_state>(100000000,
+                                         edit_distance_threshold);
+
+    cur_state = set<int>();
+    for (int i = 0; i < num_trees; i++) {
+        cur_state.insert(i);
+    }
+
+    state_queue->enqueue(cur_state);
+
+    // initialize state graph with lossy counting
+    state_graph = make_shared<lossy_state_graph>(repo_size,
+                                                 lossy_window_size,
+                                                 mrand);
+
+    // graph_switch keeps track of tree reuse rate and turns on/off state_graph
+    graph_switch = make_unique<state_graph_switch>(state_graph,
+                                                   reuse_window_size,
+                                                   reuse_rate_upper_bound);
+
+}
+
+pearl::pearl(int num_trees,
+             int max_num_candidate_trees,
+             int repo_size,
+             int state_queue_size,
+             int edit_distance_threshold,
+             int kappa_window_size,
+             int lossy_window_size,
+             int reuse_window_size,
+             int arf_max_features,
+             int lambda,
+             int seed,
+             double bg_kappa_threshold,
+             double cd_kappa_threshold,
+             double reuse_rate_upper_bound,
+             double warning_delta,
+             double drift_delta,
+             bool enable_state_adaption,
+             bool enable_state_graph) :
+        adaptive_random_forest(num_trees,
+                               arf_max_features,
+                               lambda,
+                               seed,
+                               warning_delta,
+                               drift_delta),
+        max_num_candidate_trees(max_num_candidate_trees),
+        repo_size(repo_size),
+        edit_distance_threshold(edit_distance_threshold),
+        kappa_window_size(kappa_window_size),
+        lossy_window_size(lossy_window_size),
+        reuse_window_size(reuse_window_size),
+        bg_kappa_threshold(bg_kappa_threshold),
+        cd_kappa_threshold(cd_kappa_threshold),
+        reuse_rate_upper_bound(reuse_rate_upper_bound),
+        enable_state_adaption(enable_state_adaption),
+        enable_state_graph(enable_state_graph) {
+
+    // initialize LRU state pattern queue
+    state_queue = make_unique<lru_state>(state_queue_size,
+                                         edit_distance_threshold);
+
+    cur_state = set<int>();
+    for (int i = 0; i < num_trees; i++) {
+        cur_state.insert(i);
+    }
+
+    state_queue->enqueue(cur_state);
+
+    // initialize state graph with lossy counting
+    state_graph = make_shared<lossy_state_graph>(repo_size,
+                                                 lossy_window_size,
+                                                 mrand);
+
+    // graph_switch keeps track of tree reuse rate and turns on/off state_graph
+    graph_switch = make_unique<state_graph_switch>(state_graph,
+                                                   reuse_window_size,
+                                                   reuse_rate_upper_bound);
+
+}
+
+pearl::pearl(int num_trees,
+             int max_num_candidate_trees,
+             int repo_size,
              int state_queue_size,
              int edit_distance_threshold,
              int kappa_window_size,
@@ -386,6 +503,17 @@ bool pearl::is_state_graph_stable() {
 }
 
 // class pearl_tree
+pearl_tree::pearl_tree(int tree_pool_id,
+                       int kappa_window_size,
+                       double warning_delta,
+                       double drift_delta,
+                       mt19937& mrand) :
+        arf_tree(warning_delta, drift_delta, mrand),
+        tree_pool_id(tree_pool_id),
+        kappa_window_size(kappa_window_size) {
+
+}
+
 pearl_tree::pearl_tree(int tree_pool_id,
                        int kappa_window_size,
                        double warning_delta,
