@@ -8,6 +8,8 @@ Implementation for the paper "PEARL: Probabilistic Exact Adaptive Random Forest 
 
 [Presentation at PAKDD 2020](https://youtu.be/w0HnC-hDjz4)
 
+The Java implementation under MOA for the JDSA paper is avaiable [here](https://github.com/ingako/PEARL-in-MOA).
+
 ### About the Code
 
 PEARL was originally implemented in Python for quick PoC of the paper. Since the algorithm and the random forest is CPU-intensive, the code has been rewritten in C++ for efficiency, along with a Python wrapper for ease of use.
