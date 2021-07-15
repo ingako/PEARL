@@ -8,7 +8,8 @@ Implementation for the paper "PEARL: Probabilistic Exact Adaptive Random Forest 
 
 [Presentation at PAKDD 2020](https://youtu.be/w0HnC-hDjz4)
 
-The Java implementation under MOA for the JDSA paper is avaiable [here](https://github.com/ingako/PEARL-in-MOA).
+The Journal paper is available [here](https://rdcu.be/coAVq). 
+The Java implementation under MOA for the Journal paper is available [here](https://github.com/ingako/PEARL-in-MOA).
 
 ### About the Code
 
